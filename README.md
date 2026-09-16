@@ -521,6 +521,8 @@ tools/filter_street.py   # filtr podle ulice -> data/ulice/<ulice>/
 tools/probe_sources.py   # obnova pravidel, podmínek a souřadnic (read-only)
 tools/listing_query.py   # sdílené čtení/joinování datasetu
 tools/backup.py          # týdenní archiv datasetu + ověření obnovou
+tools/episodes.py        # historie po epizodách nabízení -> data/csv/
+tools/market.py          # deset ukazatelů trhu, denní řada -> data/csv/
 docs/podminky.md         # hodnocení: jak moc projekt jde proti podmínkám portálů
 docs/robots/             # doslovné robots.txt + smluvní podmínky všech portálů
 docs/geo/                # rozřešené referenční souřadnice, i se zdrojem
@@ -533,7 +535,7 @@ tests/                   # 324 testů, běží plně offline
 
 ## Testy
 
-`python -m pytest -q` — **402 testů, plně offline** (žádná síť). Kromě
+`python -m pytest -q` — **452 testů, plně offline** (žádná síť). Kromě
 jednotlivých funkcí testují i to, co se nejhůř hledá:
 
 - **Celý běh od začátku do konce** (`tests/test_run_end_to_end.py`) proti

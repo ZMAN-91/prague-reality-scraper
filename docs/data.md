@@ -132,6 +132,48 @@ přesegmentovat bez počítání čehokoli dalšího (`--gap-days`).
 **Co ti to neřekne:** jestli se prodalo, nebo stáhlo. Žádný portál to
 nezveřejňuje. `outcome` říká `removed`, nikdy `sold`.
 
+### `data/csv/trh_denne.csv` a `trh_souhrn.csv` — deset ukazatelů trhu
+
+Denní časová řada, protože jedno číslo neříká nic. „Medián 9,1 M" není fakt
+o trhu, je to fakt o dnešku; otázka je vždycky, jestli je to víc než minulý
+měsíc a jestli to táhnou ceny, nebo složení nabídky.
+
+| ukazatel | co říká |
+|---|---|
+| `nabidka` | kolik nemovitostí je ten den na trhu |
+| `nove` | kolik ten den přibylo |
+| `zmizele` | kolik ten den odešlo |
+| `absorpce_pct` | odchody / nabídka — **nejlepší „prodává se?" číslo** |
+| `cena_median` | medián požadované ceny toho, co je na trhu |
+| `cena_m2_median` | totéž na m², jediné srovnatelné přes měnící se mix |
+| `cena_zmizelych` | medián ceny toho, co odešlo |
+| `cena_rychlych` | totéž, ale jen co odešlo do 14 dní |
+| `dnu_na_trhu_median` | medián doby na trhu u toho, co odešlo |
+| `zlevnilo_pct` | podíl nabídky, která už aspoň jednou zlevnila |
+| `zlevneni_prumer` | průměrný počet zlevnění |
+| `sleva_median_pct` | medián hloubky slevy u těch, co zlevnily |
+
+**Jak je číst dohromady.** Rostoucí nabídka + klesající absorpce + rostoucí
+zlevňování je trh otáčející se proti prodávajícím — a hýbe se to v tomhle
+pořadí. Opačně, ve stejném pořadí, je to obrat pro ně. Medián ceny je
+z těch čtyř nejpomalejší a nejvíc zamořený složením nabídky, takže
+potvrzuje, nevaruje.
+
+**Rozdíl `cena_zmizelych` vs. `cena_rychlych`** je čtení na to, co je trh
+ochoten zaplatit, proti tomu, co se za něj chce. Rychlé odchody jsou
+nejsilnější dostupný signál, že se něco skutečně prodalo — kdo to vzdává,
+málokdy to vzdá do dvou týdnů.
+
+Segmenty jsou `byt/prodej`, `dum/prodej`, `byt/pronajem`… plus řádek `vse`.
+Prodej a pronájem se nikdy neprůměrují dohromady.
+
+**Tenký den nehlásí nic** místo šumu: pod 5 nemovitostí se medián nepočítá.
+Dva byty medián mají, ale není to měření trhu, a hlásit ho jako měření dělá
+z každého klidného úterý pohyb trhu.
+
+`trh_souhrn.csv` je totéž jako poslední hodnota vedle hodnoty před 30 dny
+a procentní změna — nejmenší věc, která je ještě trend, a ne odečet.
+
 ## Na co si dát pozor
 
 **`price_per_m2` může chybět.** Když index portálu pošle cenu bez plochy,

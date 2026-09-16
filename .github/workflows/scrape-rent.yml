@@ -155,6 +155,7 @@ jobs:
         run: |
           python -m tools.export_csv --data-dir store/data
           python -m tools.episodes --data-dir store/data
+          python -m tools.market --data-dir store/data
 
       - name: Commit and push data changes
         # The whole sequence lives in tools/commit_data.sh, which both
