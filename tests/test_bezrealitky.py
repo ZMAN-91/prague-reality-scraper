@@ -221,7 +221,7 @@ def test_presence_only_sighting_keeps_a_listing_active_without_logging_a_price()
     assert len(listings) == 1
 
     presence = presence_listing("https://www.bezrealitky.cz/nemovitosti-byty-domy/1067272-nabidka-prodej-bytu-nurmiho-praha")
-    stats, obs = merge_source(
+    stats, obs, _ = merge_source(
         "bezrealitky", [presence], [], listings, last_obs, "2026-03-02T10:00:00+00:00", [], scopes
     )
 

@@ -44,7 +44,9 @@ def make_listing(
 
 
 def merge(normalized, listings, last_obs, now_iso, errors=None, scopes=ALL_SCOPES, new_ids=None):
-    return merge_source(
+    """(stats, observations). Attribute changes are a third return value that
+    these tests do not examine - tests/test_changes.py does."""
+    stats, observations, _changes = merge_source(
         "sreality",
         normalized,
         errors or [],
@@ -54,6 +56,7 @@ def merge(normalized, listings, last_obs, now_iso, errors=None, scopes=ALL_SCOPE
         new_ids if new_ids is not None else [],
         scopes,
     )
+    return stats, observations
 
 
 # --- first sighting / updates ------------------------------------------

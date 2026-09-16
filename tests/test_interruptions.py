@@ -122,7 +122,7 @@ def test_a_source_that_suddenly_returns_nothing_is_an_error():
             "cluster_id": "", "dedup_confidence": "", "relisted_from": "", "floor": "",
         }
     }
-    stats, _ = merge_source("idnes", [], [], stored, {}, "2026-09-16T09:00:00+00:00", [], set())
+    stats, _, _ = merge_source("idnes", [], [], stored, {}, "2026-09-16T09:00:00+00:00", [], set())
     assert stats["errors"], "an empty result with stored listings must be reported"
     assert "stopped matching" in stats["errors"][0]
 
@@ -137,7 +137,7 @@ def test_an_empty_result_after_a_planned_stop_is_not_an_error():
                     "priority_zone": "False", "description": "", "floor": "",
                     "first_seen_at": "2026-09-01T00:00:00+00:00", "last_seen_at": "2026-09-15",
                     "status": "active", "cluster_id": "", "dedup_confidence": "", "relisted_from": ""}}
-    stats, _ = merge_source(
+    stats, _, _ = merge_source(
         "idnes", [], [interruptions.interruption("idnes: time budget exhausted")],
         stored, {}, "2026-09-16T09:00:00+00:00", [], set(),
     )
@@ -148,5 +148,5 @@ def test_the_very_first_run_of_a_source_is_not_an_error():
     """Zero is simply where a new source starts."""
     from run import merge_source
 
-    stats, _ = merge_source("idnes", [], [], {}, {}, "2026-09-16T09:00:00+00:00", [], set())
+    stats, _, _ = merge_source("idnes", [], [], {}, {}, "2026-09-16T09:00:00+00:00", [], set())
     assert stats["errors"] == []

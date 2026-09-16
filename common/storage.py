@@ -18,13 +18,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-from common.schema import clean_text, LISTING_FIELDS, OBSERVATION_FIELDS
+from common.schema import (clean_text, CHANGE_FIELDS, LISTING_FIELDS,
+                           OBSERVATION_FIELDS)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 LISTINGS_PATH = DATA_DIR / "listings.csv"
 OBSERVATIONS_DIR = DATA_DIR / "observations"
+CHANGES_DIR = DATA_DIR / "changes"
 STATE_DIR = DATA_DIR / "state"
 LAST_OBSERVATION_PATH = STATE_DIR / "last_observation.json"
 LOGS_DIR = REPO_ROOT / "logs"
@@ -33,6 +35,7 @@ LOGS_DIR = REPO_ROOT / "logs"
 def ensure_dirs(data_dir: Path = DATA_DIR, logs_dir: Path = LOGS_DIR) -> None:
     (data_dir / "raw").mkdir(parents=True, exist_ok=True)
     (data_dir / "observations").mkdir(parents=True, exist_ok=True)
+    (data_dir / "changes").mkdir(parents=True, exist_ok=True)
     (data_dir / "state").mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -230,6 +233,35 @@ def append_observations(rows: Iterable[dict], when: datetime, observations_dir: 
     file_exists = path.exists()
     with open(path, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=OBSERVATION_FIELDS, extrasaction="ignore")
+        if not file_exists:
+            writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+    return len(rows)
+
+
+# --- attribute changes -------------------------------------------------------
+
+
+def changes_path_for(when: datetime, changes_dir: Path = CHANGES_DIR) -> Path:
+    return changes_dir / f"{when.strftime('%Y-%m')}.csv"
+
+
+def append_changes(rows: Iterable[dict], when: datetime,
+                   changes_dir: Path = CHANGES_DIR) -> int:
+    """Append attribute-change rows to the month-bucketed CSV for `when`.
+
+    Same shape and same reasoning as append_observations: a log of events,
+    never rewritten.
+    """
+    rows = list(rows)
+    if not rows:
+        return 0
+    path = changes_path_for(when, changes_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    file_exists = path.exists()
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CHANGE_FIELDS, extrasaction="ignore")
         if not file_exists:
             writer.writeheader()
         for row in rows:

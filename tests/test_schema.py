@@ -122,7 +122,7 @@ def test_price_per_m2_survives_an_index_row_without_an_area():
     merge_source("sreality", [listing(56.0, 7_490_000)], [], listings, last_obs,
                  "2026-09-15T19:00:00+00:00", new_ids, set())
     # Second run: the index row has the new price but no area.
-    _, observations = merge_source(
+    _, observations, _ = merge_source(
         "sreality", [listing(None, 7_350_000)], [], listings, last_obs,
         "2026-09-16T05:00:00+00:00", new_ids, set(),
     )

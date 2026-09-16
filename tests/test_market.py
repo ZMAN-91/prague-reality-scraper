@@ -222,3 +222,32 @@ def test_export_writes_both_files(tmp_path):
         daily_rows = list(csv.DictReader(f))
     assert list(daily_rows[0]) == market.FIELDS
     assert daily_rows[0]["nabidka"] == "6"
+
+
+# --- 11-12: edits other than the price --------------------------------------
+
+
+def test_the_share_that_edited_something_other_than_the_price():
+    """A rewritten description is very often the move before a price cut, and
+    a corrected disposition or area is usually a re-listing dressed up as an
+    edit. This indicator turns before the discounting one does."""
+    rows = []
+    for i in range(6):
+        row = episode(f"edited{i}", "2026-01-01", "2026-01-20", outcome="active")
+        row["attribute_changes"] = 2
+        rows.append(row)
+    for i in range(6):
+        row = episode(f"quiet{i}", "2026-01-01", "2026-01-20", outcome="active")
+        row["attribute_changes"] = 0
+        rows.append(row)
+
+    row = day(market.daily(rows), "2026-01-10")
+    assert row["upravilo_pct"] == 50.0
+    assert row["uprav_prumer"] == 1.0, "two edits among half of them"
+
+
+def test_a_property_that_never_edited_anything_is_not_counted():
+    rows = market_of(6, first="2026-01-01", last="2026-01-20", outcome="active")
+    for r in rows:
+        r["attribute_changes"] = 0
+    assert day(market.daily(rows), "2026-01-10")["upravilo_pct"] == 0.0

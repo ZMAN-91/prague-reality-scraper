@@ -358,6 +358,23 @@ SOURCE_FETCHERS = {
 RESUMABLE_SOURCES = {"idnes"}
 
 
+def _same_value(before, after) -> bool:
+    """Whether a stored value and a freshly-read one mean the same thing.
+
+    Everything in listings.csv has been through a CSV, so 55.0 comes back as
+    "55.0" and would otherwise look like a change from 55.0 every single hour
+    - which would drown the change log in noise and hide the real edits.
+    """
+    if before is None or before == "":
+        return False
+    if str(before) == str(after):
+        return True
+    a, b = as_float(before), as_float(after)
+    if a is not None and b is not None:
+        return abs(a - b) < 1e-9
+    return str(before).strip().lower() == str(after).strip().lower()
+
+
 def merge_source(
     source_name: str,
     normalized: list,
@@ -482,6 +499,7 @@ def merge_source(
     run_complete = bool(scopes) and not real_errors
 
     observation_rows: list[dict] = []
+    change_rows: list[dict] = []
     new_count = 0
     reactivated_count = 0
     updated_count = 0
@@ -541,20 +559,39 @@ def merge_source(
             # Only overwrite slow-changing fields with a non-empty new
             # value: a field that came back blank this run (a temporary API
             # hiccup on that one field) must not clobber good history.
-            if listing.disposition:
-                row["disposition"] = listing.disposition
-            if listing.area_m2 is not None:
-                row["area_m2"] = listing.area_m2
-            if listing.floor is not None:
-                row["floor"] = listing.floor
-            if listing.address:
-                row["address"] = listing.address
-            if listing.description:
-                row["description"] = listing.description
+            #
+            # And record the overwrite. These used to be applied silently, so
+            # a flat advertised as 2+kk and later as 3+1, or one whose area
+            # was corrected from 55 to 62 m2, left no trace of ever having
+            # said anything else - and those are worth knowing about: an
+            # attribute correction is usually a re-listing dressed up as an
+            # edit, or a seller repositioning, and a rewritten description
+            # very often arrives alongside a price cut.
+            def update(field, value):
+                if value is None or value == "":
+                    return
+                before = row.get(field)
+                if _same_value(before, value):
+                    row[field] = value
+                    return
+                row[field] = value
+                change_rows.append({
+                    "internal_id": internal_id,
+                    "changed_at": now_iso,
+                    "field": field,
+                    "old_value": "" if before is None else str(before)[:300],
+                    "new_value": str(value)[:300],
+                })
+
+            update("disposition", listing.disposition)
+            update("area_m2", listing.area_m2)
+            update("floor", listing.floor)
+            update("address", listing.address)
+            update("description", listing.description)
             if listing.lat is not None and listing.lon is not None:
                 row["lat"] = listing.lat
                 row["lon"] = listing.lon
-                row["priority_zone"] = listing.priority_zone
+                update("priority_zone", listing.priority_zone)
             row["url"] = listing.url or row["url"]
             # Day-granular on purpose: a second-granular value here would
             # rewrite every active row of listings.csv on every hourly run,
@@ -615,7 +652,8 @@ def merge_source(
         "interruptions": [interruptions.strip_marker(m) for m in _planned],
         "errors": real_errors,
         "observation_rows": len(observation_rows),
-    }, observation_rows
+        "attribute_changes": len(change_rows),
+    }, observation_rows, change_rows
 
 
 DEFAULT_TRANSACTIONS = ("prodej",)
@@ -669,6 +707,7 @@ def run(
     }
     new_internal_ids: list[str] = []
     all_observation_rows: list[dict] = []
+    all_change_rows: list[dict] = []
     any_errors = False
 
     for source_name in sources:
@@ -698,7 +737,7 @@ def run(
             any_errors = True
             continue
 
-        stats, observation_rows = merge_source(
+        stats, observation_rows, change_rows = merge_source(
             source_name, normalized, errors, listings, last_obs, now_iso,
             new_internal_ids, completed_scopes, absence_since,
         )
@@ -746,6 +785,7 @@ def run(
 
         run_stats["sources"][source_name] = stats
         all_observation_rows.extend(observation_rows)
+        all_change_rows.extend(change_rows)
         # Planned stops are printed, not raised: they are how a run that
         # cannot finish inside its hour is supposed to end, and treating them
         # as failures made every healthy run send a failure email - which
@@ -783,11 +823,13 @@ def run(
     storage.write_listings(listings, listings_path)
     progress_state.write(listings_path.parent, progress)
     storage.append_observations(all_observation_rows, now, observations_dir)
+    storage.append_changes(all_change_rows, now, data_dir / "changes")
     storage.write_last_observation_state(last_obs, state_path)
 
     run_stats["finished_at"] = utcnow_iso()
     run_stats["total_listings"] = len(listings)
     run_stats["total_observations_written"] = len(all_observation_rows)
+    run_stats["total_changes_written"] = len(all_change_rows)
     run_stats["budget"] = budget.summary()
     run_stats["sreality_collection_area"] = collection_area.describe()
     run_stats["progress"] = progress

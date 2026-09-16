@@ -78,7 +78,7 @@ def test_the_suspicious_drop_guard_is_not_tripped_by_a_partial_run():
     removed. The guard must measure the sweep, not the run."""
     listings = dataset({f"id{n}": "2026-09-15" for n in range(100)})
     listings[make_internal_id(IDNES, "dead")] = row("dead", "2026-09-01")
-    stats, _ = merge_source(
+    stats, _, _ = merge_source(
         IDNES, [], [], listings, {}, NOW,
         [], completed_scopes={SCOPE}, absence_since={SCOPE: "2026-09-15"},
     )
@@ -94,7 +94,7 @@ def test_a_real_collapse_still_trips_the_guard():
     """The guard must keep working: if the sweep itself saw almost nothing,
     that is a broken source, not a market event."""
     listings = dataset({f"id{n}": "2026-09-01" for n in range(100)})
-    stats, _ = merge_source(
+    stats, _, _ = merge_source(
         IDNES, [], [], listings, {}, NOW,
         [], completed_scopes={SCOPE}, absence_since={SCOPE: "2026-09-15"},
     )

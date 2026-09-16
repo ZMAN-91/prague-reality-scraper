@@ -11,6 +11,7 @@ WHAT GOES IN, AND WHAT DOES NOT
 
     data/listings.csv        one row per listing ever seen - the spine
     data/observations/       every price/status change, append-only
+    data/changes/            every other edit a listing made to itself
     data/state/              last observed value per listing
     data/progress.json       where each source's sweep stopped
     data/csv/                the browsable views, so a restore is usable
@@ -65,6 +66,7 @@ from pathlib import Path
 DATASET = (
     "data/listings.csv",
     "data/observations",
+    "data/changes",
     "data/state",
     "data/progress.json",
     "data/csv",

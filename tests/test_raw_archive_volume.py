@@ -46,7 +46,7 @@ def archived_ids(detail_pages, changed_ids, source="bezrealitky"):
 
 def test_a_new_listing_is_archived():
     listings, last_obs, new_ids = {}, {}, []
-    stats, observations = merge_source(
+    stats, observations, _ = merge_source(
         "bezrealitky", [listing("1")], [], listings, last_obs,
         "2026-09-15T10:00:00+00:00", new_ids, set(),
     )
@@ -62,7 +62,7 @@ def test_an_unchanged_re_read_is_not_archived_again():
                  "2026-09-15T10:00:00+00:00", new_ids, set())
 
     new_ids.clear()
-    stats, observations = merge_source(
+    stats, observations, _ = merge_source(
         "bezrealitky", [listing("1")], [], listings, last_obs,
         "2026-09-15T11:00:00+00:00", new_ids, set(),
     )
@@ -78,7 +78,7 @@ def test_a_price_change_is_archived():
     merge_source("bezrealitky", [listing("1", price=5_000_000)], [], listings, last_obs,
                  "2026-09-15T10:00:00+00:00", new_ids, set())
     new_ids.clear()
-    _, observations = merge_source(
+    _, observations, _ = merge_source(
         "bezrealitky", [listing("1", price=4_500_000)], [], listings, last_obs,
         "2026-09-15T11:00:00+00:00", new_ids, set(),
     )
@@ -120,7 +120,7 @@ def test_an_hour_of_unchanged_re_reads_writes_nothing(tmp_path):
                  "2026-09-15T10:00:00+00:00", new_ids, set())
 
     new_ids.clear()
-    _, observations = merge_source(
+    _, observations, _ = merge_source(
         "bezrealitky", batch, [], listings, last_obs,
         "2026-09-15T11:00:00+00:00", new_ids, set(),
     )

@@ -69,6 +69,37 @@ LISTING_FIELDS = [
     "relisted_from",
 ]
 
+# What a property said about itself, when it changed its mind.
+#
+# Price and status have their own layer (observations); everything else about
+# a listing was simply overwritten in listings.csv, so a flat advertised as
+# 2+kk and later as 3+1, or one whose area was corrected from 55 to 62 m2,
+# left no trace at all. That is worth knowing: an attribute correction is
+# usually either a re-listing dressed up as an edit, or a seller repositioning
+# - and a rewritten description very often arrives with a price cut.
+#
+# Append-only, like observations, and for the same reason: it is a log of
+# events, and events do not get edited.
+CHANGE_FIELDS = [
+    "internal_id",
+    "changed_at",
+    "field",
+    "old_value",
+    "new_value",
+]
+
+# The fields worth logging a change to. Deliberately not `url` (portals
+# reshuffle slugs constantly and it means nothing) and not `last_seen_at`
+# or `status`, which are not descriptions of the property.
+TRACKED_CHANGE_FIELDS = (
+    "disposition",
+    "area_m2",
+    "floor",
+    "address",
+    "description",
+    "priority_zone",
+)
+
 OBSERVATION_FIELDS = [
     "internal_id",
     "observed_at",

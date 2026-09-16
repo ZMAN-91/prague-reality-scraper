@@ -66,6 +66,18 @@ měnící vlastnosti: adresa, dispozice, plocha, patro, GPS, URL, zdroj,
 `last_seen_at` je schválně **jen datum**, ne čas — ze stejného důvodu, proč
 tu není cena.
 
+### `data/changes/<YYYY-MM>.csv` — co o sobě inzerát změnil
+Jen přírůstky. Sloupce: `internal_id`, `changed_at`, `field`, `old_value`,
+`new_value`. Sleduje `disposition`, `area_m2`, `floor`, `address`,
+`description`, `priority_zone` — tedy všechno kromě ceny a stavu, které mají
+vlastní vrstvu.
+
+Proč to stojí za to: dřív se tyhle hodnoty prostě přepsaly, takže byt
+inzerovaný jako 2+kk a později jako 3+1 nezanechal stopu, že kdy říkal něco
+jiného. Oprava atributu je přitom obvykle buď re-listing převlečený za
+editaci, nebo přeceňování pozice — a přepsaný popis velmi často přichází
+spolu se slevou.
+
 ### `data/observations/<YYYY-MM>.csv` — co se kdy stalo
 Jen přírůstky, nikdy se nepřepisuje. Sloupce: `internal_id`, `observed_at`,
 `price`, `price_per_m2`, `status`. Tohle je zdroj pravdy pro jakoukoli
@@ -132,7 +144,7 @@ přesegmentovat bez počítání čehokoli dalšího (`--gap-days`).
 **Co ti to neřekne:** jestli se prodalo, nebo stáhlo. Žádný portál to
 nezveřejňuje. `outcome` říká `removed`, nikdy `sold`.
 
-### `data/csv/trh_denne.csv` a `trh_souhrn.csv` — deset ukazatelů trhu
+### `data/csv/trh_denne.csv` a `trh_souhrn.csv` — dvanáct ukazatelů trhu
 
 Denní časová řada, protože jedno číslo neříká nic. „Medián 9,1 M" není fakt
 o trhu, je to fakt o dnešku; otázka je vždycky, jestli je to víc než minulý
@@ -152,6 +164,8 @@ měsíc a jestli to táhnou ceny, nebo složení nabídky.
 | `zlevnilo_pct` | podíl nabídky, která už aspoň jednou zlevnila |
 | `zlevneni_prumer` | průměrný počet zlevnění |
 | `sleva_median_pct` | medián hloubky slevy u těch, co zlevnily |
+| `upravilo_pct` | podíl, který upravil něco jiného než cenu |
+| `uprav_prumer` | průměrný počet takových úprav |
 
 **Jak je číst dohromady.** Rostoucí nabídka + klesající absorpce + rostoucí
 zlevňování je trh otáčející se proti prodávajícím — a hýbe se to v tomhle

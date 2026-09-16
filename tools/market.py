@@ -1,4 +1,4 @@
-"""Ten market indicators, computed per day so trends are visible.
+"""Twelve market indicators, computed per day so trends are visible.
 
 A single number tells you nothing. "Average price 9.3M" is not a fact about
 the market, it is a fact about today; the question is always whether it is
@@ -38,6 +38,13 @@ WHAT EACH INDICATOR IS FOR
                         before prices do.
  10  sleva_median_pct   Median discount among those that cut. How deep sellers
                         have to go, as opposed to how many of them go.
+ 11  upravilo_pct       Share that has edited something other than the price -
+     uprav_prumer       disposition, area, address, description - and the
+                        average number of such edits. A rewritten description
+                        is very often the move before a price cut, and a
+                        corrected disposition or area is usually a re-listing
+                        dressed up as an edit. This turns before indicator 9
+                        does, which turns before prices do.
 
 HOW TO READ THEM TOGETHER
 
@@ -81,6 +88,7 @@ FIELDS = [
     "cena_zmizelych", "cena_rychlych",
     "dnu_na_trhu_median",
     "zlevnilo_pct", "zlevneni_prumer", "sleva_median_pct",
+    "upravilo_pct", "uprav_prumer",
 ]
 
 
@@ -197,6 +205,8 @@ def measure(day: date, segment: str, group: dict) -> dict:
 
     discounted = [r for r in on_market if (as_num(r.get("discount_czk")) or 0) > 0]
     cuts = [as_num(r.get("price_changes")) or 0 for r in on_market]
+    edited = [r for r in on_market if (as_num(r.get("attribute_changes")) or 0) > 0]
+    edits = [as_num(r.get("attribute_changes")) or 0 for r in on_market]
     quick = [r for r in left
              if (as_num(r.get("days_on_market")) or 0) <= QUICK_DAYS]
 
@@ -216,6 +226,9 @@ def measure(day: date, segment: str, group: dict) -> dict:
         "zlevneni_prumer": (round(sum(cuts) / len(cuts), 2)
                             if len(cuts) >= MIN_SAMPLE else None),
         "sleva_median_pct": median(as_num(r.get("discount_pct")) for r in discounted),
+        "upravilo_pct": share(len(edited), len(on_market)),
+        "uprav_prumer": (round(sum(edits) / len(edits), 2)
+                         if len(edits) >= MIN_SAMPLE else None),
     }
 
 

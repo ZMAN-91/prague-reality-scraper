@@ -72,6 +72,7 @@ FIELDS = [
     "first_price", "last_price", "min_price", "max_price",
     "price_changes", "discount_czk", "discount_pct",
     "price_per_m2_first", "price_per_m2_last",
+    "attribute_changes",
 ]
 
 
@@ -98,6 +99,18 @@ def as_int(value) -> Optional[int]:
         return int(float(value))
     except (TypeError, ValueError):
         return None
+
+
+def load_changes(data_dir: Path) -> dict[str, list[dict]]:
+    """Attribute edits, keyed by listing. Same month-bucketing as
+    observations, and read the same way: all of them, because an episode that
+    ran for a year spans twelve files."""
+    by_id: dict[str, list[dict]] = defaultdict(list)
+    for path in sorted(glob.glob(str(data_dir / "changes" / "*.csv"))):
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f):
+                by_id[row["internal_id"]].append(row)
+    return by_id
 
 
 def load_observations(data_dir: Path) -> dict[str, list[dict]]:
@@ -186,7 +199,8 @@ def segment(spans: list[tuple[date, date, str]], gap_days: int = GAP_DAYS):
 
 
 def build(listings: dict[str, dict], observations: dict[str, list[dict]],
-          gap_days: int = GAP_DAYS) -> list[dict]:
+          gap_days: int = GAP_DAYS,
+          changes: Optional[dict] = None) -> list[dict]:
     keys = group_properties(listings)
     by_property: dict[str, list[str]] = defaultdict(list)
     for internal_id, key in keys.items():
@@ -211,13 +225,13 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
             rows = [listings[i] for i in members]
 
             series: list[tuple[str, int]] = []
-            changes = 0
+            price_cuts = 0
             for internal_id in members:
                 own = price_series(observations.get(internal_id, []))
                 series.extend(own)
                 # Counted per advert, so two portals quoting slightly
                 # different figures do not read as the price oscillating.
-                changes += sum(1 for a, b in zip(own, own[1:]) if a[1] != b[1])
+                price_cuts += sum(1 for a, b in zip(own, own[1:]) if a[1] != b[1])
             series.sort()
 
             first_price = series[0][1] if series else None
@@ -228,8 +242,11 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
                          if as_float(r.get("area_m2"))), None)
             live = any(r.get("status") == STATUS_ACTIVE for r in rows)
 
+            edits = sum(len((changes or {}).get(i, [])) for i in members)
+
             discount = (first_price - last_price) if series else None
             out.append({
+                "attribute_changes": edits,
                 "property_key": key,
                 "episode": index,
                 "property_type": rows[0].get("property_type", ""),
@@ -253,7 +270,7 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
                 "last_price": last_price if last_price is not None else "",
                 "min_price": min(prices) if prices else "",
                 "max_price": max(prices) if prices else "",
-                "price_changes": changes,
+                "price_changes": price_cuts,
                 "discount_czk": discount if discount is not None else "",
                 "discount_pct": (round(100 * discount / first_price, 2)
                                  if series and first_price else ""),
@@ -268,7 +285,7 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
 def export(data_dir: Path = storage.DATA_DIR, gap_days: int = GAP_DAYS) -> dict:
     listings = storage.read_listings(data_dir / "listings.csv")
     observations = load_observations(data_dir)
-    rows = build(listings, observations, gap_days)
+    rows = build(listings, observations, gap_days, load_changes(data_dir))
 
     out_dir = data_dir / "csv"
     out_dir.mkdir(parents=True, exist_ok=True)
