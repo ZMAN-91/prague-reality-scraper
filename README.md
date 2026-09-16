@@ -228,6 +228,10 @@ ani ČeskéReality (robots.txt `Disallow: /`). Viz `docs/podminky.md`.
 
 ## Datový model (tři vrstvy)
 
+> **Jak číst výstupní soubory a jak se zapisuje změna ceny:
+> [`docs/data.md`](docs/data.md).** Nejčastější omyl: `listings.csv`
+> neobsahuje cenu — ta je v `observations/`, a spojená v `data/csv/`.
+
 ### 1. Raw archiv — `data/raw/<source>/<YYYY-MM-DD>/<kind>-<HH>.json.gz`
 
 Syrové odpovědi, gzipované. Nic se nefiltruje — i inzeráty mimo cílovou

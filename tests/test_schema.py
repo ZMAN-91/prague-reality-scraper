@@ -79,3 +79,38 @@ def test_safe_float_parses_czech_formatted_numbers():
 
 def test_safe_int_rounds():
     assert safe_int("41.6") == 42
+
+
+def test_price_per_m2_survives_an_index_row_without_an_area():
+    """An index row that carries a price but no area must not blank out the
+    price per m2 that an earlier detail fetch established.
+
+    Otherwise the same listing shows a figure in one observation and nothing
+    in the next, which reads as the number having changed when in fact only
+    the source of the area did. Seen in the live data: 2 of 3054 observations.
+    """
+    from common.schema import NormalizedListing
+    from run import merge_source
+
+    def listing(area, price):
+        return NormalizedListing(
+            source="sreality", source_id="1", url="https://x/1",
+            property_type="byt", transaction_type="prodej", disposition="2+kk",
+            area_m2=area, price=price, lat=50.04, lon=14.48,
+            address="Zabehlicka, Praha",
+        )
+
+    listings, last_obs, new_ids = {}, {}, []
+    # First run: a detail fetch establishes the area.
+    merge_source("sreality", [listing(56.0, 7_490_000)], [], listings, last_obs,
+                 "2026-09-15T19:00:00+00:00", new_ids, set())
+    # Second run: the index row has the new price but no area.
+    _, observations = merge_source(
+        "sreality", [listing(None, 7_350_000)], [], listings, last_obs,
+        "2026-09-16T05:00:00+00:00", new_ids, set(),
+    )
+
+    assert len(observations) == 1, "the price change must be recorded"
+    assert observations[0]["price"] == 7_350_000
+    assert observations[0]["price_per_m2"], \
+        "price per m2 went blank although the stored row still knows the area"

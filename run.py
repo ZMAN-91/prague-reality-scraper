@@ -338,6 +338,14 @@ SOURCE_FETCHERS = {
 RESUMABLE_SOURCES = {"idnes"}
 
 
+def as_float(value):
+    """A number that has been through a CSV and back, or None."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def merge_source(
     source_name: str,
     normalized: list,
@@ -548,6 +556,13 @@ def merge_source(
             # nothing to observe. Writing a row here would log the price as
             # having vanished.
             continue
+        if pm2 is None:
+            # The index row that carried this price did not carry an area, but
+            # the stored row may already know one from an earlier detail fetch.
+            # Without this the same listing has a price per m2 in one
+            # observation and a blank in the next, which reads as the figure
+            # having changed when only the source of the area did.
+            pm2 = price_per_m2(listing.price, as_float(row.get("area_m2")))
         record_observation(internal_id, STATUS_ACTIVE, listing.price, pm2)
 
     missing_count = 0
