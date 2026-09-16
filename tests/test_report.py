@@ -239,3 +239,22 @@ def test_an_axis_does_not_run_below_zero_for_a_count():
     low, high = axis.split('"')[2].strip().split(" --> ")
     assert float(low) >= 0, axis
     assert float(high) > float(low)
+
+
+def test_a_price_that_went_up_is_not_printed_as_a_negative_discount():
+    """The first real report printed "-0.45 %" under "sleva" for a property
+    whose asking price had risen - the opposite of what happened."""
+    rows = [{"address": "Zdrazilo", "disposition": "1+kk", "outcome": "active",
+             "last_price": "6550000", "days_on_market": "10",
+             "discount_pct": "-0.77", "attribute_changes": "2"}]
+    text = render(days(3, nabidka=5), rows)
+    assert "změna ceny" in text
+    assert "+0.77 %" in text
+    assert "-0.77 %" not in text
+
+
+def test_a_real_discount_reads_as_a_fall():
+    rows = [{"address": "Zlevnilo", "disposition": "2+kk", "outcome": "active",
+             "last_price": "7000000", "days_on_market": "40",
+             "discount_pct": "6.50", "attribute_changes": "0"}]
+    assert "-6.50 %" in render(days(3, nabidka=5), rows)

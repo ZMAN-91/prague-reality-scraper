@@ -101,6 +101,21 @@ def as_num(value):
         return None
 
 
+def price_move(discount_pct) -> str:
+    """A price move from the price's point of view, signed.
+
+    `discount_pct` is positive when the asking price has come down, so a
+    property that went UP carries a negative discount - and the first real
+    report printed "-0.45 %" in a column headed "sleva", which says the
+    opposite of what happened. Negating it once here means the column can
+    say what it means: minus is cheaper, plus is dearer.
+    """
+    value = as_num(discount_pct)
+    if value is None:
+        return "—"
+    return f"{-value:+.2f} %"
+
+
 def dny(n: int) -> str:
     """Czech agreement, because "řada pokrývá 1 dnů" reads like a bug report."""
     n = int(n)
@@ -324,7 +339,7 @@ def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
         if not rows:
             out += ["", "_nic_", ""]
             continue
-        out += ["", "| adresa | dispozice | cena | dnů | sleva | úprav |",
+        out += ["", "| adresa | dispozice | cena | dnů | změna ceny | úprav |",
                 "|---|---|---:|---:|---:|---:|"]
         for r in rows:
             out.append(
@@ -332,7 +347,7 @@ def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
                 f"| {r.get('disposition') or '?'} "
                 f"| {fmt(as_num(r.get('last_price')), 'Kč')} "
                 f"| {r.get('days_on_market')} "
-                f"| {fmt(as_num(r.get('discount_pct')), '%')} "
+                f"| {price_move(r.get('discount_pct'))} "
                 f"| {r.get('attribute_changes') or 0} |")
         out.append("")
     return out
