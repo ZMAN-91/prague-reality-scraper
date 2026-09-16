@@ -83,8 +83,12 @@ def test_arrivals_are_counted_over_the_window():
 
 
 def test_arrivals_per_day_makes_windows_comparable():
-    rows = [episode(f"p{i}", first=f"2026-02-{i+1:02d}", last="2026-03-31",
-                    outcome="active") for i in range(10)]
+    """Once the dataset reaches back further than the window, the divisor is
+    the window: ten arrivals over thirty days is a third of one a day."""
+    rows = ([episode("anchor", first="2025-12-01", last="2026-03-31",
+                     outcome="active")]
+            + [episode(f"p{i}", first=f"2026-02-{i+1:02d}", last="2026-03-31",
+                       outcome="active") for i in range(10)])
     assert cell(market.daily(rows), "2026-02-10", window=30)["nove_denne"] == \
         round(10 / 30, 2)
 
@@ -300,3 +304,29 @@ def test_the_series_does_not_get_quadratically_slower():
         f"twice the episodes took {large / max(small, 1e-6):.1f}x the time - "
         "the day loop is scanning everything again"
     )
+
+
+def test_a_rate_is_per_day_of_data_not_per_nominal_day():
+    """On the first day the 30-day window covers 29 days that do not exist.
+    Dividing by them reported 3354 arrivals as "111.80 per day" - a number
+    about nothing. Seen in the first clean test run."""
+    rows = market_of(100, first="2026-01-01", last="2026-03-31", outcome="active")
+    series = market.daily(rows)
+
+    first = cell(series, "2026-01-01", window=30)
+    assert first["nove"] == 100
+    assert first["nove_denne"] == 100.0, "one day of data, one day of divisor"
+
+    # A month in, the window is real and the divisor is the window.
+    later = cell(series, "2026-02-01", window=30)
+    assert later["nove_denne"] == 0.0, "nothing arrived in that window"
+
+
+def test_the_absorption_rate_uses_the_same_honest_denominator():
+    rows = (market_of(30, first="2026-01-01", last="2026-03-31", outcome="active")
+            + [episode(f"g{i}", first="2026-01-01", last="2026-01-01")
+               for i in range(3)])
+    row = cell(market.daily(rows), "2026-01-01", window=30)
+    # Three of thirty-three left on the only day there is: that is 3 a day,
+    # 90 a month, not 3 a month.
+    assert row["absorpce_pct"] == pytest.approx(272.7, abs=1.0)

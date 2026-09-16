@@ -233,7 +233,7 @@ def levels_on(day: date, on_market: list[dict]) -> dict:
 
 def measure(day: date, window: int, segment: str, first_day: date,
             on_market: list[dict], arrived: list[dict], left: list[dict],
-            supply_mean: float, levels: dict) -> dict:
+            supply_mean: float, levels: dict, covered: int) -> dict:
     """Every indicator for one (day, window, segment).
 
     The caller does the slicing. It used to be done here, by scanning every
@@ -252,8 +252,13 @@ def measure(day: date, window: int, segment: str, first_day: date,
     edited_in_window = [r for r in on_market
                         if any(since <= d <= day for d in r["edits"])]
 
-    # Departures per 30 days, which is what both of the rate metrics need.
-    per_30 = len(left) * (30.0 / window)
+    # Every rate is per DAY OF DATA, not per nominal day of the window. On
+    # the first day the 30-day window covers 29 days that do not exist, and
+    # dividing by them reported 3354 arrivals as "111.80 per day" - a number
+    # about nothing. `covered` is how much of the window the dataset actually
+    # reaches, which is the only denominator that is true on day one and
+    # still true in a year.
+    per_30 = len(left) * (30.0 / covered)
 
     return {
         "den": day.isoformat(),
@@ -271,9 +276,9 @@ def measure(day: date, window: int, segment: str, first_day: date,
         **levels,
 
         "nove": len(arrived),
-        "nove_denne": round(len(arrived) / window, 2),
+        "nove_denne": round(len(arrived) / covered, 2),
         "zmizele": len(left),
-        "zmizele_denne": round(len(left) / window, 2),
+        "zmizele_denne": round(len(left) / covered, 2),
         "absorpce_pct": share(per_30, supply_mean),
         # Months of inventory: at this rate of departures, how long the
         # current stock would take to clear. The one number that answers
@@ -376,7 +381,7 @@ def daily(rows: list[dict], today: Optional[date] = None,
                     supply_mean = (running[offset + 1] - running[low]) / covered
                     out.append(measure(day, window, segment, first_day,
                                        on_market, arrived, left, supply_mean,
-                                       levels))
+                                       levels, covered))
 
             for index in leaving_on.get(offset, []):
                 live.pop(id(segment_rows[index]), None)
