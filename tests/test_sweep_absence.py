@@ -70,7 +70,10 @@ def test_a_listing_not_seen_anywhere_in_the_sweep_is_marked_missing():
     )
     statuses = {sid: listings[make_internal_id(IDNES, sid)]["status"] for sid in ("live0", "gone0")}
     assert statuses["live0"] == STATUS_ACTIVE
-    assert statuses["gone0"] == "missing_1"
+    # Last seen on the 10th, and NOW is the 16th: six days gone, and the
+    # number says so. It used to say "missing_1" because it counted misses
+    # rather than days, and this was that listing's first miss.
+    assert statuses["gone0"] == "missing_6"
 
 
 def test_the_suspicious_drop_guard_is_not_tripped_by_a_partial_run():

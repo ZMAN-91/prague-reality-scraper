@@ -45,7 +45,22 @@ def test_many_misses_inside_the_week_do_not_remove_anything():
     for _ in range(200):
         status = next_missing_status(status, days_absent=2)
     assert is_missing_status(status)
-    assert status == "missing_200", "the sweep counter is still worth having"
+
+
+def test_the_status_holds_still_while_the_day_does():
+    """N counts days, not misses. It used to count misses, and since every
+    new status writes an observation row, one listing that vanished for its
+    week wrote 168 rows on the way to `removed` - one an hour, all saying
+    the same thing."""
+    statuses = {next_missing_status("active", days_absent=2) for _ in range(200)}
+    assert statuses == {"missing_2"}, "200 runs in one day must be one status"
+
+
+def test_the_number_says_how_many_days():
+    assert next_missing_status(STATUS_ACTIVE, days_absent=0) == "missing_1"
+    assert next_missing_status("missing_1", days_absent=1) == "missing_1"
+    assert next_missing_status("missing_1", days_absent=3) == "missing_3"
+    assert next_missing_status("missing_3", days_absent=6) == "missing_6"
 
 
 def test_not_knowing_how_long_is_never_evidence_of_removal():

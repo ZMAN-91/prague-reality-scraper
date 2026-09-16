@@ -181,19 +181,35 @@ def next_missing_status(current_status: str, days_absent: Optional[float] = None
                         removal_after_days: float = REMOVAL_AFTER_DAYS) -> str:
     """Advance a listing one step through the absence state machine.
 
-    active -> missing_1 -> missing_2 -> ... -> removed, where the step to
-    `removed` is taken on ELAPSED TIME, not on the number of misses:
-    `days_absent` days since it was last seen must reach
-    `removal_after_days`. The missing_N counter is kept because it says how
-    many sweeps have gone by, which is worth having, but it no longer decides
-    anything.
+    active -> missing_1 -> missing_2 -> ... -> removed, where N is DAYS
+    absent and the step to `removed` is taken when `days_absent` reaches
+    `removal_after_days`.
+
+    N used to count misses rather than days. It decided nothing - removal was
+    already on elapsed time - but it cost a great deal: every increment is a
+    different status, and a different status writes an observation row. At an
+    hourly cadence a single listing that vanished for its week wrote 168 rows
+    on its way to `removed`, one an hour, all saying the same thing. Counting
+    days writes 7 of them, and "missing_3" now means what a reader assumes it
+    means.
 
     `days_absent=None` means the caller could not work out how long it has
     been - a row with no usable last_seen_at. That never removes anything:
     not knowing how long something has been gone is not evidence that it is.
+    Absent a day count there is nothing to be day-granular about, so those
+    fall back to counting misses.
     """
     if current_status == STATUS_REMOVED:
         return STATUS_REMOVED
+
+    if days_absent is not None:
+        if days_absent >= removal_after_days:
+            return STATUS_REMOVED
+        # N is the day of absence: missing_1 on the first, missing_6 on the
+        # last before removal. A listing is never "missing_0", so a gap of
+        # under a day still counts as the first day.
+        return f"{MISSING_STATUS_PREFIX}{max(1, int(days_absent))}"
+
     if current_status == STATUS_ACTIVE:
         streak = 1
     elif current_status.startswith(MISSING_STATUS_PREFIX):
@@ -202,9 +218,6 @@ def next_missing_status(current_status: str, days_absent: Optional[float] = None
         # Unknown/legacy status value: treat conservatively as a first miss
         # rather than crashing a run that must survive unattended for years.
         streak = 1
-
-    if days_absent is not None and days_absent >= removal_after_days:
-        return STATUS_REMOVED
     return f"{MISSING_STATUS_PREFIX}{streak}"
 
 
