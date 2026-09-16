@@ -96,7 +96,16 @@ ROBOTS_OVERRIDE_HOSTS: set[str] = {
 class RequestFailed(Exception):
     """Raised when a request could not be completed after all retries, or
     got a non-retryable client error. Callers should catch this per-source
-    so one broken endpoint doesn't take down the whole run."""
+    so one broken endpoint doesn't take down the whole run.
+
+    `status` carries the HTTP status when there was one, because some of them
+    are not failures to the caller: iDNES answers 404 past the last page of a
+    search, which is how the end of the index announces itself.
+    """
+
+    def __init__(self, message: str, status: "int | None" = None):
+        super().__init__(message)
+        self.status = status
 
 
 def build_session() -> requests.Session:
@@ -219,7 +228,8 @@ def _request_with_retry(
                 # Non-retryable client error (400, 403, 404, ...): retrying
                 # identical params won't help, surface it immediately.
                 raise RequestFailed(
-                    f"HTTP {resp.status_code} for {url} (params={params}): {resp.text[:300]}"
+                    f"HTTP {resp.status_code} for {url} (params={params}): {resp.text[:300]}",
+                    status=resp.status_code,
                 )
 
         if attempt < max_retries:

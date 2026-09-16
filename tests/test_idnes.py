@@ -430,3 +430,64 @@ def test_a_network_failure_on_a_detail_page_is_still_an_error(monkeypatch):
         known=watched(2), page_cursor={}, max_pages=2,
     )
     assert any("HTTP 500" in e for e in errors), errors
+
+
+# --- the end of the index ---------------------------------------------------
+
+
+def _walk(monkeypatch, responder):
+    """Run the index walk against a fake iDNES."""
+    from common import net
+    from scrapers import idnes as mod
+
+    monkeypatch.setattr(net, "polite_sleep", lambda *a, **k: None)
+    monkeypatch.setattr(net, "fetch_text", responder)
+    return mod.fetch_all(object(), None, known={}, page_cursor={},
+                         max_pages=50, transactions=["pronajem"])
+
+
+def test_a_404_past_the_first_page_ends_the_index_rather_than_failing(monkeypatch):
+    """iDNES answers 404 past the last page instead of serving an empty one.
+
+    Treating that as a broken request cost more than a spurious error line:
+    the walk only marks a scope complete when it reaches the end, and a scope
+    that is never complete is never absence-marked - so no iDNES listing could
+    ever be found to have gone. Seen live at page 114 of the rentals.
+    """
+    from common import net
+
+    def responder(session, url, **kwargs):
+        if "page=" in url and int(url.rsplit("page=", 1)[1]) >= 3:
+            raise net.RequestFailed(f"HTTP 404 for {url}", status=404)
+        return "<html></html>"
+
+    _, _, errors, completed, _, cursors = _walk(monkeypatch, responder)
+
+    assert errors == [], f"the end of the index was reported as a failure: {errors}"
+    assert ("byt", "pronajem") in completed, \
+        "the scope must be marked complete, or absence is never judged"
+    assert cursors["byt/pronajem"] == 1, "the next pass starts from the front"
+
+
+def test_a_404_on_the_first_page_is_still_a_failure(monkeypatch):
+    """That is the search URL itself having changed, which must stay loud."""
+    from common import net
+
+    def responder(session, url, **kwargs):
+        raise net.RequestFailed(f"HTTP 404 for {url}", status=404)
+
+    _, _, errors, completed, _, _ = _walk(monkeypatch, responder)
+    assert errors, "a 404 on page one was swallowed"
+    assert ("byt", "pronajem") not in completed
+
+
+def test_other_http_errors_are_still_failures(monkeypatch):
+    from common import net
+
+    def responder(session, url, **kwargs):
+        if "page=" in url:
+            raise net.RequestFailed(f"HTTP 403 for {url}", status=403)
+        return "<html></html>"
+
+    _, _, errors, _, _, _ = _walk(monkeypatch, responder)
+    assert errors, "a 403 must not be mistaken for the end of the index"

@@ -220,12 +220,28 @@ def page_url(property_type: str, transaction_type: str, page: int) -> str:
     return base if page <= 1 else f"{base}?page={page}"
 
 
+class EndOfIndex(Exception):
+    """Past the last page of a search.
+
+    iDNES answers 404 there rather than serving an empty page, so the end of
+    the index arrives as what looks exactly like a broken request. Treating it
+    as one cost more than a spurious error in the log: the walk only marks a
+    scope complete when it reaches the end, and a scope that is never complete
+    is never absence-marked - so no iDNES listing could ever have been found to
+    have gone. Seen in the first rental run, at page 114.
+    """
+
+
 def fetch_search_page(session, property_type: str, transaction_type: str, page: int):
-    """(listings, raw page record, error). Never raises."""
+    """(listings, raw page record, error). Never raises except EndOfIndex."""
     url = page_url(property_type, transaction_type, page)
     try:
         html = net.fetch_text(session, url)
     except net.RequestFailed as exc:
+        if getattr(exc, "status", None) == 404 and page > 1:
+            # Only past the first page. A 404 on page one is the search URL
+            # itself having changed, which is a real failure and must stay one.
+            raise EndOfIndex(url) from exc
         return [], None, f"idnes {transaction_type} page={page}: {exc}"
     listings = parse_search_page(html)
     return listings, {"kind": "index", "url": url, "listings": len(listings)}, None
@@ -388,7 +404,13 @@ def fetch_all(
                     "idnes: stopped during newest-first pages - time budget exhausted"))
                 break
             net.polite_sleep()
-            batch, raw, error = fetch_search_page(session, scope[0], scope[1], page)
+            try:
+                batch, raw, error = fetch_search_page(session, scope[0], scope[1], page)
+            except EndOfIndex:
+                # Fewer pages than NEWEST_PAGES_PER_RUN in this category -
+                # a small one, not a fault. Nothing more to read here.
+                pages_consumed += 1
+                break
             pages_consumed += 1
             if error:
                 errors.append(error)
@@ -472,7 +494,14 @@ def fetch_all(
                     f"idnes {key}: index rotation stopped at page {page} - time budget exhausted"))
                 break
             net.polite_sleep()
-            batch, raw, error = fetch_search_page(session, scope[0], scope[1], page)
+            try:
+                batch, raw, error = fetch_search_page(session, scope[0], scope[1], page)
+            except EndOfIndex:
+                # The same thing an empty page means, said with a status code.
+                pages_consumed += 1
+                completed.add(scope)
+                page = 1
+                break
             pages_consumed += 1
             walked += 1
             if error:
