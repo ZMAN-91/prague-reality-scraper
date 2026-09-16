@@ -214,24 +214,34 @@ def prepare(rows: list[dict]) -> list[dict]:
     return out
 
 
-def measure(day: date, window: int, segment: str, rows: list[dict],
-            first_day: date) -> dict:
-    """Every indicator for one (day, window, segment)."""
+def levels_on(day: date, on_market: list[dict]) -> dict:
+    """The indicators that describe the stock rather than the flow.
+
+    Hoisted out of measure() because they do not depend on the window, and a
+    median over five thousand prices computed once per window instead of once
+    per day is three times the work for one answer.
+    """
+    return {
+        "nabidka": len(on_market),
+        "cena_median": median(r["price"] for r in on_market),
+        "cena_prumer": mean(r["price"] for r in on_market),
+        "cena_m2_median": median(r["pm2"] for r in on_market),
+        "cena_m2_prumer": mean(r["pm2"] for r in on_market),
+        "stari_median_dnu": median((day - r["start"]).days for r in on_market),
+    }
+
+
+def measure(day: date, window: int, segment: str, first_day: date,
+            on_market: list[dict], arrived: list[dict], left: list[dict],
+            supply_mean: float, levels: dict) -> dict:
+    """Every indicator for one (day, window, segment).
+
+    The caller does the slicing. It used to be done here, by scanning every
+    episode for every day of every window - which measured 48.7 seconds for
+    30 000 episodes over 180 days and extrapolated to roughly 18 minutes for
+    a year at full size, i.e. the whole hourly budget spent on arithmetic.
+    """
     since = day - timedelta(days=window - 1)
-
-    on_market = [r for r in rows if r["start"] <= day <= r["end"]]
-    arrived = [r for r in rows if since <= r["start"] <= day]
-    left = [r for r in rows if r["gone"] and since <= r["end"] <= day]
-
-    # Mean supply across the window, which is the denominator every rate
-    # here needs: dividing a month of departures by one day's stock would
-    # overstate the rate by however much the stock moved.
-    daily_supply = []
-    cursor = max(since, first_day)
-    while cursor <= day:
-        daily_supply.append(sum(1 for r in rows if r["start"] <= cursor <= r["end"]))
-        cursor += timedelta(days=1)
-    supply_mean = (sum(daily_supply) / len(daily_supply)) if daily_supply else 0
 
     quick = [r for r in left if (r["days"] or 0) <= QUICK_DAYS]
 
@@ -257,13 +267,8 @@ def measure(day: date, window: int, segment: str, rows: list[dict],
         "zmizele_potvrzeno": "ano" if (day - timedelta(days=CONFIRMATION_LAG_DAYS))
                              >= since else "ne",
 
-        "nabidka": len(on_market),
         "nabidka_prumer": round(supply_mean, 2),
-        "cena_median": median(r["price"] for r in on_market),
-        "cena_prumer": mean(r["price"] for r in on_market),
-        "cena_m2_median": median(r["pm2"] for r in on_market),
-        "cena_m2_prumer": mean(r["pm2"] for r in on_market),
-        "stari_median_dnu": median((day - r["start"]).days for r in on_market),
+        **levels,
 
         "nove": len(arrived),
         "nove_denne": round(len(arrived) / window, 2),
@@ -302,6 +307,11 @@ def daily(rows: list[dict], today: Optional[date] = None,
     Built from episodes, so a property advertised by three agencies counts
     once and one re-listed three times counts as one continuous episode. Both,
     left alone, inflate supply and shorten time on market.
+
+    Everything is bucketed by day once, and the live set is carried forward
+    day to day rather than rebuilt: the straightforward version re-scanned
+    every episode for every day of every window, which is fine for a week of
+    data and takes a quarter of an hour after a year.
     """
     prepared = prepare(rows)
     if not prepared:
@@ -318,15 +328,58 @@ def daily(rows: list[dict], today: Optional[date] = None,
         # is not a number about anything.
         by_segment["vse/" + row["segment"].split("/", 1)[-1]].append(row)
 
+    span = (last_day - first_day).days + 1
     out: list[dict] = []
-    day = first_day
-    while day <= last_day:
-        for segment, segment_rows in sorted(by_segment.items()):
-            if not any(r["start"] <= day <= r["end"] for r in segment_rows):
-                continue
-            for window in windows:
-                out.append(measure(day, window, segment, segment_rows, first_day))
-        day += timedelta(days=1)
+
+    for segment, segment_rows in sorted(by_segment.items()):
+        starts: dict[int, list[dict]] = defaultdict(list)
+        ends: dict[int, list[dict]] = defaultdict(list)
+        for row in segment_rows:
+            starts[(row["start"] - first_day).days].append(row)
+            if row["gone"]:
+                ends[(row["end"] - first_day).days].append(row)
+
+        # Supply per day, and its running total, so the mean across any
+        # window is two lookups rather than a scan.
+        supply = [0] * span
+        running = [0] * (span + 1)
+        live: dict[int, dict] = {}
+        leaving_on: dict[int, list[int]] = defaultdict(list)
+        for index, row in enumerate(segment_rows):
+            leaving_on[min((row["end"] - first_day).days, span - 1)].append(index)
+        for offset in range(span):
+            for row in starts.get(offset, []):
+                live[id(row)] = row
+            supply[offset] = len(live)
+            running[offset + 1] = running[offset] + supply[offset]
+            for index in leaving_on.get(offset, []):
+                live.pop(id(segment_rows[index]), None)
+
+        # Walked again, this time keeping the live set so the day's stock is
+        # carried forward instead of re-derived.
+        live = {}
+        for offset in range(span):
+            day = first_day + timedelta(days=offset)
+            for row in starts.get(offset, []):
+                live[id(row)] = row
+            on_market = list(live.values())
+
+            if on_market:
+                levels = levels_on(day, on_market)
+                for window in windows:
+                    low = max(0, offset - window + 1)
+                    arrived = [r for d in range(low, offset + 1)
+                               for r in starts.get(d, [])]
+                    left = [r for d in range(low, offset + 1)
+                            for r in ends.get(d, [])]
+                    covered = offset - low + 1
+                    supply_mean = (running[offset + 1] - running[low]) / covered
+                    out.append(measure(day, window, segment, first_day,
+                                       on_market, arrived, left, supply_mean,
+                                       levels))
+
+            for index in leaving_on.get(offset, []):
+                live.pop(id(segment_rows[index]), None)
     return out
 
 

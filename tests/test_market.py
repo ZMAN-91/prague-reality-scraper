@@ -258,3 +258,45 @@ def test_the_series_is_recomputed_from_scratch_every_time(tmp_path):
     rows = market_of(6, **LONG)
     first = market.daily(rows)
     assert market.daily(rows) == first
+
+
+# --- the shape of the computation -------------------------------------------
+
+
+def test_the_series_does_not_get_quadratically_slower():
+    """Measured, not asserted by inspection: the straightforward version
+    re-scanned every episode for every day of every window. That took 48.7
+    seconds for 30 000 episodes over 180 days and extrapolated to a quarter
+    of an hour for a year at full size - the whole hourly budget spent on
+    arithmetic.
+
+    Doubling the episodes must roughly double the time, not quadruple it.
+    The bound is deliberately loose: this is here to catch a return to
+    quadratic, not to police a few per cent.
+    """
+    import time
+    from datetime import timedelta
+
+    def synthetic(count, span_days):
+        start = date(2026, 1, 1)
+        rows = []
+        for i in range(count):
+            begins = start + timedelta(days=i % span_days)
+            ends = min(begins + timedelta(days=45),
+                       start + timedelta(days=span_days - 1))
+            rows.append(episode(f"p{i}", begins.isoformat(), ends.isoformat(),
+                                outcome="removed" if i % 3 else "active"))
+        return rows
+
+    def seconds(count):
+        rows = synthetic(count, 120)
+        started = time.perf_counter()
+        market.daily(rows)
+        return time.perf_counter() - started
+
+    small = seconds(4_000)
+    large = seconds(8_000)
+    assert large < small * 3.0, (
+        f"twice the episodes took {large / max(small, 1e-6):.1f}x the time - "
+        "the day loop is scanning everything again"
+    )
