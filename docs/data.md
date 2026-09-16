@@ -96,6 +96,42 @@ chybu. Není v týdenních zálohách (viz `tools/backup.py`).
 ### `logs/<YYYY-MM-DD>.jsonl` — co dělal který běh
 Jeden JSON objekt na běh: počty na zdroj, chyby, spotřebovaný rozpočet.
 
+### `data/csv/historie_nemovitosti.csv` — pro analýzy
+
+**Tohle chceš, když se ptáš na historii.** Jeden řádek na **epizodu
+nabízení fyzické nemovitosti** — napříč portály i napříč re-listingy.
+
+Vzniklo to proto, že surové vrstvy sice obsahují všechno, ale každá otázka
+je několik joinů daleko a v každé jsou tytéž čtyři pasti. Na živých datech
+posunulo zapomenutí jen té první průměrnou cenu o 6,3 %.
+
+Sloupce: `property_key`, `episode`, `first_seen`, `last_seen`,
+`days_on_market`, `gap_before_days`, `outcome`, `first_price`, `last_price`,
+`min_price`, `max_price`, `price_changes`, `discount_czk`, `discount_pct`,
+`price_per_m2_first/last`, plus vlastnosti a `sources`, `listing_count`.
+
+Tvoje dvě otázky jsou pak jeden filtr:
+
+```python
+rows = list(csv.DictReader(open("data/csv/historie_nemovitosti.csv")))
+
+# byty zmizelé do týdne
+quick = [r for r in rows if r["outcome"] == "removed"
+         and int(r["days_on_market"]) <= 7 and r["property_type"] == "byt"]
+
+# nabízené 3+ měsíce a jak zlevňovaly
+long_ = [r for r in rows if int(r["days_on_market"]) >= 90 and r["discount_pct"]]
+```
+
+**Epizoda** je souvislé období nabízení. Dva inzeráty patří do téže epizody,
+pokud jde o tutéž nemovitost a mezera mezi nimi je nejvýš 14 dní; delší
+mezera je nový pokus o prodej a nemá se průměrovat s prvním.
+`gap_before_days` je ve výstupu, takže když s tou hranicí nesouhlasíš, dá se
+přesegmentovat bez počítání čehokoli dalšího (`--gap-days`).
+
+**Co ti to neřekne:** jestli se prodalo, nebo stáhlo. Žádný portál to
+nezveřejňuje. `outcome` říká `removed`, nikdy `sold`.
+
 ## Na co si dát pozor
 
 **`price_per_m2` může chybět.** Když index portálu pošle cenu bez plochy,

@@ -163,7 +163,9 @@ jobs:
         # Cheap, offline, and makes the dataset browsable straight from the
         # repo without loading the full listings.csv.
         continue-on-error: true
-        run: python -m tools.export_csv --data-dir store/data
+        run: |
+          python -m tools.export_csv --data-dir store/data
+          python -m tools.episodes --data-dir store/data
 
       - name: Commit and push data changes
         # The whole sequence lives in tools/commit_data.sh, which both

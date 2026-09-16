@@ -160,3 +160,51 @@ def test_a_cluster_from_an_older_rule_is_not_inherited_forever():
     rows["a"]["cluster_id"] = rows["b"]["cluster_id"] = "clu_fromtheoldrule"
     cluster_listings(rows, now=NOW)
     assert rows["a"]["cluster_id"] == "" and rows["b"]["cluster_id"] == ""
+
+
+def test_two_cliques_that_split_apart_do_not_keep_one_id(monkeypatch):
+    """A cluster that breaks in two must not hand both halves its old name.
+
+    Seen live at U zakrutu: clu_e29a carried eight adverts priced 2.25M to
+    4.1M, pairs of which directly contradict each other and were never in one
+    clique. They were two clusters wearing one id, because each inherited the
+    first non-empty cluster_id among its members and that was the same id.
+
+    Downstream nothing can tell them apart, so every analysis that groups by
+    cluster_id - which is the one thing cluster_id is for - silently averaged
+    two different flats together.
+    """
+    from common import dedup
+
+    # Two pairs, far enough apart to be separate clusters, each holding one
+    # row that carries the old shared id.
+    rows = {}
+    for internal_id, lat, lon, price, old in (
+        ("a1", 50.0400, 14.4800, 3_890_000, "clu_old"),
+        ("a2", 50.0400, 14.4800, 3_890_000, ""),
+        ("b1", 50.0800, 14.5300, 2_250_000, "clu_old"),
+        ("b2", 50.0800, 14.5300, 2_250_000, ""),
+    ):
+        rows[internal_id] = {
+            "internal_id": internal_id, "source": "sreality", "source_id": internal_id,
+            "property_type": "byt", "transaction_type": "prodej",
+            "disposition": "1+kk", "area_m2": 18.0, "lat": lat, "lon": lon,
+            "address": "U zakrutu, Praha", "status": "active",
+            "first_seen_at": "2026-09-15T10:00:00+00:00",
+            "last_seen_at": "2026-09-16", "cluster_id": old,
+            "dedup_confidence": "", "relisted_from": "", "url": f"https://x/{internal_id}",
+        }
+
+    dedup.cluster_listings(rows, prices={i: r["area_m2"] and None for i, r in rows.items()}
+                           | {"a1": 3_890_000, "a2": 3_890_000,
+                              "b1": 2_250_000, "b2": 2_250_000})
+
+    a_id = rows["a1"]["cluster_id"]
+    b_id = rows["b1"]["cluster_id"]
+    assert a_id and b_id, "both pairs should still cluster"
+    assert rows["a2"]["cluster_id"] == a_id
+    assert rows["b2"]["cluster_id"] == b_id
+    assert a_id != b_id, (
+        "two separate clusters were handed the same id, so grouping by "
+        "cluster_id merges flats that directly contradict on price"
+    )

@@ -505,12 +505,30 @@ def cluster_listings(
     # old chaining rule must be allowed to break up, or one bad merge would
     # outlive every fix to the matcher.
     clustered: set = set()
+    # An inherited id may only be inherited once. Two separate cliques can
+    # each contain a row carrying the same old cluster_id - a cluster that has
+    # since split in two, which is exactly what the matcher is supposed to be
+    # able to do - and taking the first non-empty id in each would hand both
+    # halves the same id. Downstream nothing can tell them apart, so the two
+    # halves read as one cluster and the clique rule appears to have failed.
+    #
+    # Seen live: clu_e29a held eight adverts at U zakrutu, prices from 2.25M
+    # to 4.1M, pairs of which directly contradict each other. They were never
+    # one clique; they were two, wearing one name.
+    taken: set = set()
     for members in clusters:
         clustered.update(members)
         cluster_id = next(
-            (listings[m]["cluster_id"] for m in sorted(members) if listings[m].get("cluster_id")),
+            (listings[m]["cluster_id"] for m in sorted(members)
+             if listings[m].get("cluster_id")
+             and listings[m]["cluster_id"] not in taken),
             None,
         ) or make_cluster_id(members)
+        while cluster_id in taken:
+            # make_cluster_id is a hash of the members, so a collision here
+            # means a genuinely different set; salt until it is unique.
+            cluster_id = make_cluster_id(sorted(members) + [cluster_id])
+        taken.add(cluster_id)
         for member in members:
             listings[member]["cluster_id"] = cluster_id
             listings[member]["dedup_confidence"] = best_pair_confidence.get(member, "medium")
