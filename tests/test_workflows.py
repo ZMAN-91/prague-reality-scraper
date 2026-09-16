@@ -271,3 +271,41 @@ def test_the_heartbeat_is_independent_of_the_scrape():
     for path in (SALE, RENT):
         steps = load(path)["jobs"]["scrape"]["steps"]
         assert not any("STATUS.md" in str(s.get("run", "")) for s in steps)
+
+
+# --- paths that must follow the dataset checkout ----------------------------
+
+
+def test_every_data_path_points_into_the_dataset_checkout():
+    """The dataset lives in store/, not beside the code. A path that was
+    missed reads as an empty directory rather than as an error, so the
+    symptom is silence: the first split rent run announced its success with
+    "No run log was written" in place of every number, and was green doing it.
+    """
+    for path in (SALE, RENT):
+        spec = load(path)
+        steps = spec["jobs"]["scrape"]["steps"]
+        body = "\n".join(str(s.get("run", "")) for s in steps)
+
+        for stray in ('glob.glob("logs/', 'glob.glob("data/',
+                      '--data-dir data', '--logs-dir logs'):
+            assert stray not in body, (
+                f"{path.name} still reads {stray!r}, which is empty under the "
+                f"split layout and fails silently"
+            )
+        assert 'glob.glob("store/logs/' in body, \
+            f"{path.name} does not read the run log at all"
+
+
+def test_the_scraper_and_the_notification_read_the_same_logs():
+    """A notification pointed at a different directory than the scraper wrote
+    to is the exact failure above, and it cannot be seen from either half."""
+    for path in (SALE, RENT):
+        steps = load(path)["jobs"]["scrape"]["steps"]
+        scrape = next(s for s in steps if s.get("name") == "Run scraper")
+        announce = next(s for s in steps
+                        if s.get("name") == "Announce a successful run")
+        written = str(scrape.get("run", "")).split("--logs-dir")[1].split()[0]
+        assert f'glob.glob("{written}/' in str(announce.get("run", "")), \
+            f"{path.name}: the scraper writes {written} and the notification " \
+            "reads somewhere else"

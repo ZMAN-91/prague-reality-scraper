@@ -215,7 +215,13 @@ jobs:
           # was collected rather than just that something happened.
           SUMMARY=$(python - <<'PY'
           import glob, json
-          logs = sorted(glob.glob("logs/*.jsonl"))
+          # store/, not logs/: the dataset is checked out into a
+          # subdirectory now. Reading the old path found nothing and the
+          # notification quietly said "No run log was written" - a green run
+          # announcing itself with no numbers in it, which is exactly the
+          # kind of half-working that survives because nobody reads a
+          # success message closely.
+          logs = sorted(glob.glob("store/logs/*.jsonl"))
           if not logs:
               print("No run log was written.")
               raise SystemExit
