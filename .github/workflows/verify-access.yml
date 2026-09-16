@@ -1,0 +1,111 @@
+name: Verify data repository access
+
+# A smoke test for the one thing that cannot be checked from outside: whether
+# this public repository can actually read *and write* the private data
+# repository. It touches no data - the write test is a dry run - so it is safe
+# to run as often as you like.
+#
+# Each failure mode below prints which of the setup steps was missed, because
+# the raw git error for "no deploy key" and for "deploy key without write
+# access" are not the same message and neither of them says what to do.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DATA_REPO: ZMAN-91/prague_reality_sector_analysis
+  DATA_BRANCH: claude/real-estate-market-scraper-1tgiei
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Is the secret set at all?
+        env:
+          # Via env rather than inline, so the key never appears in a command
+          # line - GitHub masks it in logs either way, but this keeps it out
+          # of the process table too.
+          KEY: ${{ secrets.DATA_REPO_KEY }}
+        run: |
+          if [ -z "${KEY}" ]; then
+            echo "::error::DATA_REPO_KEY is not set in this repository."
+            echo "Settings -> Secrets and variables -> Actions -> New repository secret."
+            echo "The name must be exactly DATA_REPO_KEY, and the value is the"
+            echo "PRIVATE half (the file with no .pub), including its BEGIN/END lines."
+            exit 1
+          fi
+          if printf '%s' "${KEY}" | head -n1 | grep -q '^ssh-'; then
+            echo "::error::DATA_REPO_KEY holds a PUBLIC key (it starts with 'ssh-')."
+            echo "The two halves are the wrong way round: the .pub file belongs on"
+            echo "the private repository as a deploy key, and the other file here."
+            exit 1
+          fi
+          if ! printf '%s' "${KEY}" | grep -q 'BEGIN .*PRIVATE KEY'; then
+            echo "::error::DATA_REPO_KEY does not look like a private key."
+            echo "Paste the whole file, including -----BEGIN OPENSSH PRIVATE KEY-----"
+            echo "and -----END OPENSSH PRIVATE KEY-----."
+            exit 1
+          fi
+          echo "Secret is present and looks like a private key."
+
+      - name: Can it read the data repository?
+        id: read
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: ${{ env.DATA_REPO }}
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: ${{ env.DATA_BRANCH }}
+          path: store
+
+      - name: Explain a failed read
+        if: steps.read.outcome == 'failure'
+        run: |
+          echo "::error::Could not clone ${DATA_REPO}."
+          echo "Most likely the public half was never added as a deploy key:"
+          echo "  private repo -> Settings -> Deploy keys -> Add deploy key"
+          echo "Paste the contents of data-repo-key.pub there."
+          exit 1
+
+      - name: Is the data actually there?
+        run: |
+          set -eu
+          for f in data/listings.csv data/progress.json; do
+            if [ ! -f "store/$f" ]; then
+              echo "::error::cloned, but store/$f is missing - wrong branch?"
+              exit 1
+            fi
+          done
+          rows=$(( $(wc -l < store/data/listings.csv) - 1 ))
+          echo "Read OK: ${rows} listings on ${DATA_BRANCH}."
+          echo "rows=${rows}" >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Can it write? (dry run - nothing is pushed)
+        id: write
+        continue-on-error: true
+        working-directory: store
+        run: |
+          # --dry-run still authenticates and still asks the server to open
+          # receive-pack, which is exactly what a read-only deploy key is
+          # refused. So this proves write access without writing anything.
+          git push --dry-run origin "HEAD:refs/heads/access-check-${GITHUB_RUN_ID}"
+
+      - name: Explain a failed write
+        if: steps.write.outcome == 'failure'
+        run: |
+          echo "::error::Read works, but writing is refused."
+          echo "The deploy key was added without write access - that is the"
+          echo "checkbox 'Allow write access' on the Add deploy key form."
+          echo "It cannot be toggled afterwards: delete the key and add it again"
+          echo "with the box ticked."
+          exit 1
+
+      - name: All good
+        run: |
+          echo "## Access verified" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "The deploy key reads and writes \`${DATA_REPO}\`." >> "${GITHUB_STEP_SUMMARY}"
