@@ -37,12 +37,15 @@ def test_both_workflows_parse():
 def fires_at(spec, weekday, hour):
     """Whether any of a workflow's crons fires at this UTC weekday/hour.
 
-    Only as clever as these schedules need: minute 0, and day-of-month and
-    month always "*". Anything else would be a schedule nobody meant to write.
+    Only as clever as these schedules need: day-of-month and month always
+    "*". Anything else would be a schedule nobody meant to write. The minute
+    is deliberately not 0 (see test_no_schedule_sits_on_the_top_of_the_hour)
+    and does not affect which hour a cron fires in.
     """
     for entry in spec[True]["schedule"]:
         minute, hours, dom, month, dow = entry["cron"].split()
-        assert (minute, dom, month) == ("0", "*", "*"), entry["cron"]
+        assert (dom, month) == ("*", "*"), entry["cron"]
+        assert minute.isdigit() and 0 <= int(minute) < 60, entry["cron"]
 
         def matches(field, value):
             if field == "*":
@@ -63,7 +66,7 @@ def fires_at(spec, weekday, hour):
 
 def test_rent_runs_once_a_week_on_sunday_night():
     rent = load(RENT)
-    assert fires_at(rent, 0, 0), "rent must start at 00:00 UTC on Sunday"
+    assert fires_at(rent, 0, 0), "rent must start in the 00:00 UTC hour on Sunday"
     fires = [(d, h) for d in range(7) for h in range(24) if fires_at(rent, d, h)]
     assert fires == [(0, 0)], f"rent must fire exactly once a week, got {fires}"
 
@@ -72,6 +75,22 @@ def test_sale_runs_every_hour_outside_the_rent_window():
     sale = load(SALE)
     for hour in range(24):
         assert fires_at(sale, 3, hour), f"sale must run hourly on a weekday ({hour}:00)"
+
+
+def test_no_schedule_sits_on_the_top_of_the_hour():
+    """GitHub delays and drops scheduled runs under load, and the top of the
+    hour is the busiest slot there is - every cron anybody writes by hand
+    lands on it. Asking for 24 sale runs a day at minute 0 got three on the
+    first real day: 13:17, 18:01 and 21:58 UTC, the rest dropped outright.
+
+    This is a mitigation, not a guarantee - the schedule event is best
+    effort whatever minute it names - but minute 0 is the one slot known to
+    be worst, and nothing here needs to run exactly on the hour.
+    """
+    for workflow in (SALE, RENT, REPORT):
+        for entry in load(workflow)[True]["schedule"]:
+            minute = entry["cron"].split()[0]
+            assert minute != "0", f"{workflow.name}: {entry['cron']}"
 
 
 def test_sale_stays_out_of_the_window_rent_owns():
@@ -85,7 +104,8 @@ def test_sale_stays_out_of_the_window_rent_owns():
     for offset in range(int(rent_budget_hours) + 1):
         hour = (rent_start + offset) % 24
         assert not fires_at(sale, 0, hour), (
-            f"a sale run is scheduled at {hour}:00 UTC on Sunday, inside rent's window"
+            f"a sale run is scheduled in the {hour}:00 UTC hour on Sunday, "
+            "inside rent's window"
         )
 
 

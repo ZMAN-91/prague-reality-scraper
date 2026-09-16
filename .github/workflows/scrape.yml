@@ -10,10 +10,17 @@ on:
     # sale runs into a heap that all fire at once the moment rent finishes,
     # collecting the same hour four times over.
     #
-    # Sunday resumes at 05:00 UTC - one hour after rent's budget ends - so a
+    # Sunday resumes at 05:37 UTC - well after rent's budget ends - so a
     # rent pass that uses every minute it has still finishes first.
-    - cron: "0 * * * 1-6"
-    - cron: "0 5-23 * * 0"
+    #
+    # Minute 37, not minute 0. GitHub delays and drops scheduled runs under
+    # load, and the top of the hour is the busiest slot there is - every
+    # cron anybody writes by hand lands on it. Asking for 24 runs a day at
+    # minute 0 got three: 13:17, 18:01 and 21:58 UTC, each of them a cron
+    # that fired late after the ones in between were dropped entirely.
+    # An odd minute is the standard way out of that queue.
+    - cron: "37 * * * 1-6"
+    - cron: "37 5-23 * * 0"
   workflow_dispatch:
     inputs:
       transactions:

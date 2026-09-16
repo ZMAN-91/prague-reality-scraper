@@ -2,15 +2,20 @@ name: Weekly rent scrape
 
 on:
   schedule:
-    # Sundays at 00:00 UTC, which is 02:00 in Prague, with four hours to
-    # finish in - so the window is 02:00-06:00 Prague and nothing else runs
-    # inside it (see the sale workflow's schedule, which skips those hours).
+    # Sundays at 00:13 UTC, which is 02:13 in Prague, with four hours to
+    # finish in - so the window is roughly 02:00-06:00 Prague and nothing
+    # else runs inside it (see the sale workflow's schedule, which skips
+    # those hours and resumes at 05:37 UTC).
+    #
+    # Minute 13 rather than 0 for the same reason the sale run uses 37: the
+    # top of the hour is where GitHub's scheduler queue is worst, and a
+    # weekly run that gets dropped is a week of rent data lost, not an hour.
     #
     # Rent is collected once a week for the whole of Prague on every source,
     # including sreality, which the hourly sale run confines to the watched
     # area. Keeping sreality small is about not sweeping the city every hour;
     # once every seven days is a different trade.
-    - cron: "0 0 * * 0"
+    - cron: "13 0 * * 0"
   workflow_dispatch:
     inputs:
       transactions:
