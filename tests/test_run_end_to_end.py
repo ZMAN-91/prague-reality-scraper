@@ -119,6 +119,17 @@ def do_run(fake, data_dir, logs_dir, **kwargs):
         return run_module.run(["sreality"], data_dir, logs_dir, **kwargs)
 
 
+def run_over_days(fake, data_dir, logs_dir, days, start=None):
+    """One run a day for `days` days. Removal is measured in elapsed days, so
+    a test for "gone for a week" has to actually let a week go by; running the
+    same minute eight times over proves nothing."""
+    from datetime import datetime, timedelta, timezone
+
+    start = start or datetime(2026, 3, 2, 9, 0, tzinfo=timezone.utc)
+    for offset in range(days):
+        do_run(fake, data_dir, logs_dir, now=start + timedelta(days=offset))
+
+
 def read_csv_rows(path: Path) -> list[dict]:
     if not path.exists():
         return []
@@ -224,19 +235,24 @@ def test_price_change_is_logged_once(no_sleep, paths):
     assert prices == ["5000000", "4500000"]
 
 
-def test_disappearance_takes_three_runs_to_become_removed(no_sleep, paths):
+def test_disappearance_takes_a_week_to_become_removed(no_sleep, paths):
+    from datetime import datetime, timedelta, timezone
+
     data_dir, logs_dir = paths
+    start = datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc)
     fake = FakeSreality(present=[1, 2])
-    do_run(fake, data_dir, logs_dir)
+    do_run(fake, data_dir, logs_dir, now=start)
 
     fake.present = [1]  # listing 2 disappears
     statuses = []
-    for _ in range(3):
-        do_run(fake, data_dir, logs_dir)
+    for day in range(1, 9):
+        do_run(fake, data_dir, logs_dir, now=start + timedelta(days=day))
         rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
         statuses.append(rows["2"]["status"])
 
-    assert statuses == ["missing_1", "missing_2", "removed"]
+    assert all(s.startswith("missing_") for s in statuses[:6]), \
+        f"removed before the week was up: {statuses}"
+    assert statuses[6] == "removed"
     # ...and the surviving listing is untouched throughout.
     rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
     assert rows["1"]["status"] == "active"
@@ -273,18 +289,21 @@ def test_source_failure_writes_data_and_does_not_mark_anything_removed(no_sleep,
 
 def test_relisting_links_a_new_ad_to_the_removed_one(no_sleep, paths):
     data_dir, logs_dir = paths
+    from datetime import datetime, timedelta, timezone
+
+    start = datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc)
     fake = FakeSreality(present=[1])
-    do_run(fake, data_dir, logs_dir)
-    for _ in range(3):  # let listing 1 die
-        fake.present = []
-        do_run(fake, data_dir, logs_dir)
+    do_run(fake, data_dir, logs_dir, now=start)
+    fake.present = []
+    for day in range(1, 9):  # a week of absence, which is what kills it now
+        do_run(fake, data_dir, logs_dir, now=start + timedelta(days=day))
 
     rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
     assert rows["1"]["status"] == "removed"
 
     # A brand-new ad for the same physical unit (same GPS/disposition/area).
     fake.present = [999]
-    do_run(fake, data_dir, logs_dir)
+    do_run(fake, data_dir, logs_dir, now=start + timedelta(days=9))
 
     rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
     assert rows["999"]["relisted_from"] == rows["1"]["internal_id"]

@@ -27,13 +27,18 @@ STATUS_ACTIVE = "active"
 STATUS_REMOVED = "removed"
 MISSING_STATUS_PREFIX = "missing_"
 
-# How many *consecutive successful* runs a listing may be absent from the
-# source before we mark it "removed". Chosen as 3 (not the lower end of the
-# 2-3 suggested in the brief): at an hourly cadence this is still only a
-# 2-3 hour delay in noticing a real removal, but it comfortably survives a
-# single bad API response or a transient block that spans more than one run,
-# which is the exact failure mode we're protecting against. See README.
-MAX_MISSING_STREAK = 3
+# How long a listing must be absent before it counts as gone. A week, and
+# measured in DAYS rather than in runs.
+#
+# The run count it replaces was three consecutive sweeps, which at an hourly
+# cadence meant about three hours - short enough that any portal hiccup
+# lasting a morning produced a wave of false removals, and short enough that
+# an advert briefly pulled for editing came back as a "re-listing" of itself.
+#
+# Days also make the rule mean the same thing for every source, which a run
+# count never could: three misses is three hours of sreality and the better
+# part of a week of iDNES, whose sweep spans many runs.
+REMOVAL_AFTER_DAYS = 7
 
 # --- Column layouts (must match README exactly) -------------------------
 
@@ -141,11 +146,20 @@ def price_per_m2(price: Optional[float], area_m2: Optional[float]) -> Optional[i
     return round(price / area_m2)
 
 
-def next_missing_status(current_status: str) -> str:
-    """Advance a listing one step through the missing-streak state machine.
+def next_missing_status(current_status: str, days_absent: Optional[float] = None,
+                        removal_after_days: float = REMOVAL_AFTER_DAYS) -> str:
+    """Advance a listing one step through the absence state machine.
 
-    active -> missing_1 -> missing_2 -> ... -> removed (after MAX_MISSING_STREAK
-    consecutive misses). Already-removed listings stay removed.
+    active -> missing_1 -> missing_2 -> ... -> removed, where the step to
+    `removed` is taken on ELAPSED TIME, not on the number of misses:
+    `days_absent` days since it was last seen must reach
+    `removal_after_days`. The missing_N counter is kept because it says how
+    many sweeps have gone by, which is worth having, but it no longer decides
+    anything.
+
+    `days_absent=None` means the caller could not work out how long it has
+    been - a row with no usable last_seen_at. That never removes anything:
+    not knowing how long something has been gone is not evidence that it is.
     """
     if current_status == STATUS_REMOVED:
         return STATUS_REMOVED
@@ -158,7 +172,7 @@ def next_missing_status(current_status: str) -> str:
         # rather than crashing a run that must survive unattended for years.
         streak = 1
 
-    if streak >= MAX_MISSING_STREAK:
+    if days_absent is not None and days_absent >= removal_after_days:
         return STATUS_REMOVED
     return f"{MISSING_STATUS_PREFIX}{streak}"
 

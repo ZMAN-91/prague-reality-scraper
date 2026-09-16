@@ -26,7 +26,11 @@ def make_row(
     status="active",
     last_seen_at="2026-01-01T12:00:00+00:00",
     cluster_id="",
-    price=None,
+    # Clustering requires the prices to AGREE, not merely to not contradict:
+    # two adverts for one flat quote the same figure, two flats in one new
+    # development do not. A default of None would make every fixture here a
+    # test of "does not cluster", which is not what most of them are for.
+    price=6_500_000,
 ):
     return {
         "internal_id": internal_id,

@@ -1,7 +1,7 @@
 import pytest
 
 from common.schema import (
-    MAX_MISSING_STREAK,
+    REMOVAL_AFTER_DAYS,
     STATUS_ACTIVE,
     STATUS_REMOVED,
     NormalizedListing,
@@ -26,28 +26,45 @@ def test_internal_id_differs_by_source():
     assert a != b
 
 
-def test_missing_streak_progression_reaches_removed_after_configured_streak():
+def test_a_week_of_absence_is_what_removes_a_listing():
+    """Not a number of runs. An hourly source misses a listing 168 times in
+    the week a weekly source misses it once, and both mean the same thing."""
     status = STATUS_ACTIVE
-    seen = [status]
-    for _ in range(MAX_MISSING_STREAK + 2):
-        status = next_missing_status(status)
-        seen.append(status)
-    # Exactly MAX_MISSING_STREAK consecutive misses before "removed".
-    assert seen[MAX_MISSING_STREAK] == STATUS_REMOVED
-    assert all(is_missing_status(s) for s in seen[1:MAX_MISSING_STREAK])
-    # Removed is terminal - stays removed however many more misses happen.
-    assert seen[-1] == STATUS_REMOVED
+    for day in range(REMOVAL_AFTER_DAYS):
+        status = next_missing_status(status, days_absent=day)
+        assert is_missing_status(status), f"removed after only {day} days"
+    assert next_missing_status(status, days_absent=REMOVAL_AFTER_DAYS) == STATUS_REMOVED
+
+
+def test_many_misses_inside_the_week_do_not_remove_anything():
+    """The old rule removed after three misses, about three hours at an
+    hourly cadence - so a portal hiccup lasting a morning produced a wave of
+    false removals, and an advert pulled for editing came back as a
+    re-listing of itself."""
+    status = STATUS_ACTIVE
+    for _ in range(200):
+        status = next_missing_status(status, days_absent=2)
+    assert is_missing_status(status)
+    assert status == "missing_200", "the sweep counter is still worth having"
+
+
+def test_not_knowing_how_long_is_never_evidence_of_removal():
+    status = next_missing_status(STATUS_ACTIVE, days_absent=None)
+    assert is_missing_status(status)
+    for _ in range(50):
+        status = next_missing_status(status, days_absent=None)
+    assert status != STATUS_REMOVED
 
 
 def test_removed_stays_removed():
-    assert next_missing_status(STATUS_REMOVED) == STATUS_REMOVED
+    assert next_missing_status(STATUS_REMOVED, days_absent=999) == STATUS_REMOVED
 
 
 def test_reappearing_listing_resets_to_active_is_caller_responsibility():
     # next_missing_status only ever moves *away* from active; run.py itself
     # is responsible for snapping status back to "active" the moment a
     # listing is seen again (tested in tests/test_run.py).
-    assert next_missing_status(STATUS_ACTIVE) != STATUS_ACTIVE
+    assert next_missing_status(STATUS_ACTIVE, days_absent=1) != STATUS_ACTIVE
 
 
 def test_price_per_m2_rounds_to_nearest_int():

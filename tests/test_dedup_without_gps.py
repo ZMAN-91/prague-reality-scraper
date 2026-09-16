@@ -17,8 +17,13 @@ NOW = datetime(2026, 9, 15, tzinfo=timezone.utc)
 
 
 def listing(internal_id, source, address, *, lat=None, lon=None, area="55",
-            disposition="2+kk", transaction="prodej"):
+            disposition="2+kk", transaction="prodej", price=6_500_000):
+    # Clustering requires the prices to AGREE, not merely to not contradict:
+    # two adverts for one flat quote the same figure, two flats in one new
+    # development do not. So a fixture that omits the price is a fixture that
+    # must not cluster, and every one of these has to state it.
     return {
+        "price": price,
         "internal_id": internal_id,
         "source": source,
         "source_id": internal_id,

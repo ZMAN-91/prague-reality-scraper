@@ -155,34 +155,41 @@ def test_out_of_area_listing_is_never_stored():
 # --- disappearance / removal -------------------------------------------
 
 
-def test_missing_streak_reaches_removed_after_three_consecutive_complete_runs():
+def test_a_listing_is_removed_only_after_a_week_of_absence():
+    """Six days of being missed is not a removal; the seventh is. The old
+    rule was three consecutive misses, which at an hourly cadence meant three
+    hours - short enough that a portal hiccup lasting a morning produced a
+    wave of false removals."""
     listings, last_obs = {}, {}
     merge([make_listing("1")], listings, last_obs, "2026-03-01T00:00:00+00:00")
 
     statuses = []
-    for i in range(1, 4):
-        merge([], listings, last_obs, f"2026-03-0{i + 1}T00:00:00+00:00")
+    for day in range(2, 10):
+        merge([], listings, last_obs, f"2026-03-{day:02d}T00:00:00+00:00")
         statuses.append(list(listings.values())[0]["status"])
 
-    assert statuses == ["missing_1", "missing_2", STATUS_REMOVED]
+    assert statuses[:6] == [f"missing_{n}" for n in range(1, 7)], \
+        "something was removed before the week was up"
+    assert statuses[6] == STATUS_REMOVED, "seven days absent must be removed"
 
 
 def test_each_missing_step_writes_exactly_one_observation():
     listings, last_obs = {}, {}
     merge([make_listing("1")], listings, last_obs, "2026-03-01T00:00:00+00:00")
     rows = []
-    for i in range(1, 4):
-        _, obs = merge([], listings, last_obs, f"2026-03-0{i + 1}T00:00:00+00:00")
+    for day in range(2, 10):
+        _, obs = merge([], listings, last_obs, f"2026-03-{day:02d}T00:00:00+00:00")
         rows.extend(obs)
-    assert [r["status"] for r in rows] == ["missing_1", "missing_2", STATUS_REMOVED]
+    assert [r["status"] for r in rows] == \
+        [f"missing_{n}" for n in range(1, 7)] + [STATUS_REMOVED]
     assert all(r["price"] == "" for r in rows)  # no price info at a disappearance
 
 
 def test_removed_listing_is_not_re_marked_forever():
     listings, last_obs = {}, {}
     merge([make_listing("1")], listings, last_obs, "2026-03-01T00:00:00+00:00")
-    for i in range(1, 6):
-        stats, obs = merge([], listings, last_obs, f"2026-03-{i + 1:02d}T00:00:00+00:00")
+    for day in range(2, 20):
+        stats, obs = merge([], listings, last_obs, f"2026-03-{day:02d}T00:00:00+00:00")
     # Once removed, further absent runs must be no-ops (no churn, no rows).
     assert stats["missing_marked"] == 0
     assert obs == []
@@ -205,8 +212,8 @@ def test_reappearance_after_removed_reactivates_the_same_row():
     relisted_from is only ever for a genuinely new source_id."""
     listings, last_obs = {}, {}
     merge([make_listing("1")], listings, last_obs, "2026-03-01T00:00:00+00:00")
-    for i in range(3):
-        merge([], listings, last_obs, f"2026-03-{i + 2:02d}T00:00:00+00:00")
+    for day in range(2, 11):
+        merge([], listings, last_obs, f"2026-03-{day:02d}T00:00:00+00:00")
     assert list(listings.values())[0]["status"] == STATUS_REMOVED
 
     merge([make_listing("1")], listings, last_obs, "2026-04-01T00:00:00+00:00")

@@ -235,7 +235,8 @@ def _prices_agree(a: dict, b: dict) -> bool:
     return abs(price_a - price_b) <= max(price_a, price_b) * PRICE_MATCH_REL
 
 
-def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True) -> Optional[str]:
+def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
+                      require_price_agreement: bool = True) -> Optional[str]:
     """Return "exact" | "high" | "medium" | None for a pair of listing rows.
 
     Rows are plain dicts using the listings.csv column names (works for
@@ -254,7 +255,18 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True) -> Op
     disp_a, disp_b = (a.get("disposition") or "").strip(), (b.get("disposition") or "").strip()
     if not disp_a or not disp_b or disp_a != disp_b:
         return None
-    if _prices_contradict(a, b):
+    # The price has to AGREE, on both sides, at every tier - not merely fail
+    # to contradict. Two adverts for one flat quote the same figure; two flats
+    # in one new development do not, and geometry cannot tell them apart
+    # because they share a footprint and a floor plan.
+    #
+    # "Not contradicting" let a priceless advert match anything, and a
+    # priceless advert in a new development matched every unit in the
+    # building. Worse, it then bridged them: 2.25M - none - 3.89M put two
+    # flats that directly contradict each other into one cluster, which is
+    # precisely what the clique rule was added to prevent. Requiring
+    # agreement removes the bridge rather than patching around it.
+    if require_price_agreement and not _prices_agree(a, b):
         return None
 
     area_a = _to_float(a.get("area_m2"))
@@ -301,13 +313,10 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True) -> Op
     if distance_m <= GPS_HIGH_M and _area_close(area_a, area_b, AREA_HIGH_REL):
         return "high"
     if distance_m <= GPS_MEDIUM_M and _area_close(area_a, area_b, AREA_MEDIUM_REL):
-        # The weakest tier - 200 m apart and 15% different in size - is where
-        # the false merges live, so it needs corroboration that the stronger
-        # tiers do not: a price, on both sides, that agrees. Without it, one
-        # priceless listing in a new development matches every unit in the
-        # building and the cluster is nonsense.
-        if _prices_agree(a, b):
-            return "medium"
+        # Agreement on price is now required of every tier, above, so this
+        # weakest one - 200 m apart and 15% different in size - no longer
+        # needs to ask for it separately.
+        return "medium"
     return None
 
 
@@ -618,7 +627,13 @@ def find_relist_candidate(
 
         # Time overlap is deliberately NOT required here: a re-listing is by
         # definition the *absence* of overlap (old ad gone, new ad up).
-        confidence = _match_confidence(new_row, row, require_time_overlap=False)
+        # Price agreement is required of CLUSTERING - two adverts running at
+        # the same time for one flat quote the same figure. It must not be
+        # required here: a re-listing is the sequential case, and re-listing
+        # at a different price is the normal one. Usually a lower one, which
+        # is exactly the behaviour this project exists to watch.
+        confidence = _match_confidence(new_row, row, require_time_overlap=False,
+                                       require_price_agreement=False)
         if confidence is None:
             continue
         rank = _CONFIDENCE_RANK[confidence]

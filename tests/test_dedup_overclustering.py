@@ -208,3 +208,77 @@ def test_two_cliques_that_split_apart_do_not_keep_one_id(monkeypatch):
         "two separate clusters were handed the same id, so grouping by "
         "cluster_id merges flats that directly contradict on price"
     )
+
+
+def test_a_priceless_advert_clusters_with_nothing():
+    """Not contradicting is not agreeing. A priceless advert used to match
+    anything, and in a new development that means every unit in the building -
+    then it bridged them: 2.25M - none - 3.89M put two flats that directly
+    contradict each other into one cluster, which is exactly what the clique
+    rule exists to prevent."""
+    from common import dedup
+
+    rows = {}
+    for internal_id, price in (("cheap", 2_250_000), ("bridge", None), ("dear", 3_890_000)):
+        rows[internal_id] = {
+            "internal_id": internal_id, "source": "sreality", "source_id": internal_id,
+            "property_type": "byt", "transaction_type": "prodej",
+            "disposition": "1+kk", "area_m2": 17.0, "lat": 50.0400, "lon": 14.4800,
+            "address": "U zakrutu, Praha", "status": "active",
+            "first_seen_at": "2026-09-15T10:00:00+00:00", "last_seen_at": "2026-09-16",
+            "cluster_id": "", "dedup_confidence": "", "relisted_from": "",
+            "url": f"https://x/{internal_id}", "price": price,
+        }
+
+    dedup.cluster_listings(rows, prices={i: r["price"] for i, r in rows.items()})
+
+    assert rows["bridge"]["cluster_id"] == "", \
+        "a priceless advert must not be grouped with anything"
+    assert rows["cheap"]["cluster_id"] != rows["dear"]["cluster_id"] or \
+        not rows["cheap"]["cluster_id"], "prices that contradict must stay apart"
+
+
+def test_two_adverts_for_one_flat_still_cluster():
+    """The rule must not simply stop clustering: two portals carrying the same
+    flat quote the same figure, and those are what cluster_id is for."""
+    from common import dedup
+
+    rows = {}
+    for internal_id, source in (("a", "sreality"), ("b", "idnes")):
+        rows[internal_id] = {
+            "internal_id": internal_id, "source": source, "source_id": internal_id,
+            "property_type": "byt", "transaction_type": "prodej",
+            "disposition": "2+kk", "area_m2": 55.0, "lat": 50.0400, "lon": 14.4800,
+            "address": "Roztylske namesti, Praha", "status": "active",
+            "first_seen_at": "2026-09-15T10:00:00+00:00", "last_seen_at": "2026-09-16",
+            "cluster_id": "", "dedup_confidence": "", "relisted_from": "",
+            "url": f"https://x/{internal_id}", "price": 6_500_000,
+        }
+
+    dedup.cluster_listings(rows, prices={i: 6_500_000 for i in rows})
+    assert rows["a"]["cluster_id"] and rows["a"]["cluster_id"] == rows["b"]["cluster_id"]
+
+
+def test_a_relisting_at_a_lower_price_is_still_recognised():
+    """Price agreement is required of CLUSTERING - adverts running at the same
+    time. Re-listing is the sequential case, and re-listing at a lower price is
+    the normal one; requiring agreement there would blind the project to
+    exactly the behaviour it exists to watch."""
+    from common import dedup
+
+    def row(internal_id, price, status, first_seen, last_seen):
+        return {
+            "internal_id": internal_id, "source": "sreality", "source_id": internal_id,
+            "property_type": "byt", "transaction_type": "prodej",
+            "disposition": "2+kk", "area_m2": 55.0, "lat": 50.0400, "lon": 14.4800,
+            "address": "Roztylske namesti, Praha", "status": status,
+            "first_seen_at": first_seen, "last_seen_at": last_seen,
+            "cluster_id": "", "dedup_confidence": "", "relisted_from": "",
+            "url": f"https://x/{internal_id}", "price": price,
+        }
+
+    old = row("old", 7_500_000, "removed", "2026-07-01T10:00:00+00:00", "2026-08-01")
+    new = row("new", 6_900_000, "active", "2026-08-10T10:00:00+00:00", "2026-08-10")
+
+    found = dedup.find_relist_candidate(new, [old], "2026-08-10T10:00:00+00:00")
+    assert found == "old", "a re-listing 8% cheaper was not recognised"

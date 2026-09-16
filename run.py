@@ -192,10 +192,30 @@ def fetch_sreality(session, listings: dict, budget: Budget, now=None,
 
 
 def as_float(value):
+    """A number that has been through a CSV and back, or None."""
     try:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def days_absent(row: dict, now_iso: str):
+    """Days since this listing was last actually seen, or None if unknowable.
+
+    last_seen_at is day-granular by design (see README), so this is too. None
+    means the row carries nothing usable - and not knowing how long something
+    has been gone is never evidence that it is gone, so the caller must not
+    remove on it.
+    """
+    last_seen = row.get("last_seen_at")
+    if not last_seen:
+        return None
+    try:
+        last = datetime.fromisoformat(str(last_seen)[:10]).date()
+        now = datetime.fromisoformat(str(now_iso)[:10]).date()
+    except (TypeError, ValueError):
+        return None
+    return (now - last).days
 
 
 def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
@@ -336,14 +356,6 @@ SOURCE_FETCHERS = {
 # Fetchers that need to remember where they stopped between runs get the
 # progress dict passed in; the rest do not need to know it exists.
 RESUMABLE_SOURCES = {"idnes"}
-
-
-def as_float(value):
-    """A number that has been through a CSV and back, or None."""
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def merge_source(
@@ -580,7 +592,10 @@ def merge_source(
         if seen_within_sweep(row):
             # Seen earlier in this sweep, just not in this particular run.
             continue
-        new_status = next_missing_status(row["status"])
+        # Removal is a question of elapsed time, not of how many runs have
+        # gone by: an hourly source misses a listing 168 times in the week
+        # that a weekly one misses it once, and both mean the same thing.
+        new_status = next_missing_status(row["status"], days_absent(row, now_iso))
         row["status"] = new_status
         missing_count += 1
         if new_status == STATUS_REMOVED:
@@ -618,6 +633,7 @@ def run(
     max_seconds: Optional[float] = None,
     max_new_details: Optional[int] = None,
     transactions: Optional[list] = None,
+    now: Optional[datetime] = None,
 ) -> int:
     transactions = list(transactions or DEFAULT_TRANSACTIONS)
     raw_dir = data_dir / "raw"
@@ -627,8 +643,10 @@ def run(
 
     storage.ensure_dirs(data_dir, logs_dir)
 
-    now = datetime.now(timezone.utc)
-    now_iso = utcnow_iso()
+    # Injectable because removal is now a question of elapsed days: a test
+    # for "gone for a week" has to be able to let a week go by.
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    now_iso = now.replace(microsecond=0).isoformat()
     budget = Budget(max_seconds=max_seconds, max_new_details=max_new_details)
     # The budget is checked between listings; this makes it bind inside a
     # single request too, so retries and Retry-After waits cannot carry a run

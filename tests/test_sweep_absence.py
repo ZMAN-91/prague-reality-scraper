@@ -84,7 +84,10 @@ def test_the_suspicious_drop_guard_is_not_tripped_by_a_partial_run():
     )
     assert stats["scopes_absence_marked"] == ["byt/prodej"], \
         "the scope must survive the guard when the sweep really did see everything"
-    assert listings[make_internal_id(IDNES, "dead")]["status"] == "missing_1"
+    # Last seen 2026-09-01, fifteen days before NOW, so it is past the week
+    # and correctly removed. What this test is about is the line above: that
+    # the guard let the scope be marked at all.
+    assert listings[make_internal_id(IDNES, "dead")]["status"] == STATUS_REMOVED
 
 
 def test_a_real_collapse_still_trips_the_guard():
