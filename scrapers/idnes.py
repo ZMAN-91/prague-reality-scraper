@@ -265,10 +265,43 @@ OG_DESCRIPTION_RE = re.compile(r'<meta property="og:description" content="([^"]*
 OG_PARSE_RE = re.compile(
     r"^(?P<transaction>Prodej|Pron[aá]jem)\s+(?P<estate>bytu|domu)\s+"
     r"(?P<disposition>[^\s,]+)\s+(?P<area>[\d\s]+)\s*m[²2],\s*"
-    r"(?P<address>[^.]+)\.\s*"
-    r"(?:Cena\s+(?P<price>[\d\s]+)\s*K[čc])?",
-    re.I,
+    r"(?P<rest>.*)$",
+    re.I | re.S,
 )
+
+PRICE_SENTENCE_RE = re.compile(r"^Cena\s+(?P<price>[\d\s]+)\s*K[čc]\.?", re.I)
+
+# Periods that do not end the address. Czech streets are named after people,
+# and people have initials.
+ADDRESS_ABBREVIATIONS = frozenset(
+    "nam nám tr tř ul sv gen dr ing mgr mudr judr st plk pplk kpt por prof "
+    "akad bratri bratří".split()
+)
+
+
+def split_address(rest: str) -> Optional[tuple[str, str]]:
+    r"""The address, and whatever follows it.
+
+    This used to be `[^.]+\.` - the address ran to the first period. That is
+    right until a street is named after somebody with initials: "R.A.
+    Dvorskeho, Praha 10 - Horni Mecholupy" parsed as the address "R", and
+    two real listings on R.A. Dvorskeho lost their location that way on the
+    first run that fetched their detail pages.
+
+    The period that ends the address is the one that is not part of an
+    initial ("R.", "A.") or of the handful of abbreviations street names use
+    ("nam.", "sv.", "Dr."). Returns None when there is no such period, which
+    means the text is not in the shape this parser understands.
+    """
+    for match in re.finditer(r"\.", rest):
+        before = rest[:match.start()]
+        token = re.split(r"[\s,.]", before)[-1]
+        if len(token) == 1 and token.isalpha():
+            continue
+        if token.lower() in ADDRESS_ABBREVIATIONS:
+            continue
+        return before.strip(), rest[match.end():].lstrip()
+    return None
 
 TRANSACTION_WORDS = {"prodej": "prodej", "pronájem": "pronajem", "pronajem": "pronajem"}
 ESTATE_WORDS = {"bytu": "byt", "domu": "dum"}
@@ -286,11 +319,15 @@ def parse_og_description(text: str, url: str) -> Optional[NormalizedListing]:
     if estate != "byt":
         return None
 
-    address = match.group("address").strip()
-    # lstrip the sentence break the price group stops just short of,
-    # otherwise the description starts ". " and the agency boilerplate below
-    # never matches its own anchor.
-    description = text[match.end():].lstrip(" .")
+    split = split_address(match.group("rest"))
+    if split is None:
+        return None
+    address, tail = split
+
+    price_match = PRICE_SENTENCE_RE.match(tail)
+    price = (safe_int(re.sub(r"\s+", "", price_match.group("price")))
+             if price_match else None)
+    description = tail[price_match.end():].lstrip(" .") if price_match else tail
     # "Nabizi realitni kancelar X s.r.o.." is boilerplate about the agency,
     # not about the flat, and it repeats on thousands of listings. Stopping at
     # the first full stop does not work - agency names are full of them
@@ -308,7 +345,7 @@ def parse_og_description(text: str, url: str) -> Optional[NormalizedListing]:
         transaction_type=TRANSACTION_WORDS.get(match.group("transaction").lower(), "prodej"),
         disposition=match.group("disposition").lower(),
         area_m2=safe_float(re.sub(r"\s+", "", match.group("area"))),
-        price=safe_int(re.sub(r"\s+", "", match.group("price"))) if match.group("price") else None,
+        price=price,
         address=address,
         description=description,
     )

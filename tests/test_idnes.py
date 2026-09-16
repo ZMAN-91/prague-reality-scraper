@@ -491,3 +491,55 @@ def test_other_http_errors_are_still_failures(monkeypatch):
 
     _, _, errors, _, _, _ = _walk(monkeypatch, responder)
     assert errors, "a 403 must not be mistaken for the end of the index"
+
+
+# --- the address must survive a street named after a person ------------------
+
+
+OG_TEMPLATE = ("Prodej bytu {disp} {area} m², {address}. "
+               "Cena {price} Kč. Nabízí realitní kancelář PSN s.r.o.. {desc}")
+OG_URL = ("https://reality.idnes.cz/detail/prodej/byt/praha-15-r-a-dvorskeho/"
+          "6a69d5cacf096490ce03396a/")
+
+
+def og(address, disp="2+kk", area="65", price="9 500 000", desc="Hezky byt."):
+    return OG_TEMPLATE.format(disp=disp, area=area, address=address,
+                              price=price, desc=desc)
+
+
+@pytest.mark.parametrize("address", [
+    "R.A. Dvorského, Praha 10 - Horní Měcholupy",   # the one seen in the data
+    "Gen. Píky, Praha 4 - Nusle",
+    "nám. Míru, Praha 2 - Vinohrady",
+    "Dr. Zikmunda Wintra, Praha 6",
+    "sv. Čecha, Praha 9",
+    "Roztylské náměstí, Praha 4 - Spořilov",        # no period at all
+])
+def test_an_address_is_not_cut_at_an_initial_or_an_abbreviation(address):
+    """"R.A. Dvorskeho, Praha 10 - Horni Mecholupy" parsed as the address "R",
+    and two real listings lost their location that way."""
+    listing = idnes.parse_og_description(og(address), OG_URL)
+    assert listing is not None
+    assert listing.address == address
+
+
+def test_the_price_and_description_still_come_out():
+    listing = idnes.parse_og_description(
+        og("R.A. Dvorského, Praha 10 - Horní Měcholupy"), OG_URL)
+    assert listing.price == 9_500_000
+    assert listing.area_m2 == 65
+    assert listing.disposition == "2+kk"
+    assert listing.description == "Hezky byt."
+
+
+def test_a_listing_with_no_price_sentence_still_parses():
+    text = ("Prodej bytu 2+kk 65 m², R.A. Dvorského, Praha 10. "
+            "Pekny byt v cihlovem dome.")
+    listing = idnes.parse_og_description(text, OG_URL)
+    assert listing.address == "R.A. Dvorského, Praha 10"
+    assert listing.price is None
+    assert listing.description == "Pekny byt v cihlovem dome."
+
+
+def test_text_in_another_shape_is_still_refused():
+    assert idnes.parse_og_description("Neco uplne jineho", OG_URL) is None
