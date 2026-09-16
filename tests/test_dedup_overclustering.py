@@ -137,11 +137,24 @@ def test_the_loosest_tier_needs_a_price_on_both_sides():
     assert clusters_of(rows) == {}
 
 
-def test_a_small_price_difference_is_still_the_same_flat():
-    """Agencies do advertise one property at slightly different figures."""
+def test_a_small_price_difference_is_a_different_flat():
+    """Same street, same size, same disposition, a percent apart in price:
+    that is two units in one development, not one flat advertised twice.
+    Price is the only thing in the data that tells them apart, so the rule
+    is the same price, not a close one."""
     rows = {
         "a": flat("a", price=6_990_000),
         "b": flat("b", source="idnes", price=6_890_000, lat="", lon="",
+                  address="Nurmiho, Praha 15 - Hostivar"),
+    }
+    assert clusters_of(rows) == {}
+
+
+def test_the_same_price_across_portals_is_the_same_flat():
+    """The other half of the rule: agreement still merges across sources."""
+    rows = {
+        "a": flat("a", price=6_990_000),
+        "b": flat("b", source="idnes", price=6_990_000, lat="", lon="",
                   address="Nurmiho, Praha 15 - Hostivar"),
     }
     assert len(clusters_of(rows)) == 1

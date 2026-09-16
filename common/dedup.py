@@ -94,13 +94,23 @@ MAX_STREET_BUCKET = 400
 # like every other, not a duplicate.
 MAX_CLUSTER_SIZE = 8
 
-# How far two prices may differ and still be the same flat. Agencies do
-# advertise one property at slightly different figures, so this is not zero -
-# but eight units in a new development have eight different prices, and that
-# is the only thing in the data that tells them apart. Geometry cannot: they
-# are genuinely within twenty metres of each other, genuinely the same
-# disposition, and genuinely within a few square metres in size.
-PRICE_MATCH_REL = 0.02
+# Two adverts are the same flat only if they ask the same price. Not a close
+# price - the same one, to the koruna.
+#
+# This was a 2% tolerance, on the argument that agencies quote one property at
+# slightly different figures. The first full run showed what that costs: of
+# 588 clusters, 173 held adverts at differing prices, and the clearest cases
+# were pairs of iDNES adverts a percent apart - 10,890,000 and 10,970,000 -
+# which is not one flat priced twice but two units in one development. In a
+# development every unit is within twenty metres of every other, the same
+# disposition, within a few square metres in size. The price is the only
+# thing in the data that tells them apart, so a tolerance on price is a
+# tolerance on the single discriminator that works.
+#
+# Merging two units is worse than missing a duplicate: a missed duplicate
+# over-counts supply by one, while a wrong merge deletes a real property's
+# price from the series entirely.
+PRICE_MATCH_ABS_CZK = 0.0
 
 CLUSTER_RECENT_WINDOW_DAYS = 45
 
@@ -224,15 +234,15 @@ def _prices_contradict(a: dict, b: dict) -> bool:
     price_a, price_b = _to_float(a.get("price")), _to_float(b.get("price"))
     if not price_a or not price_b:
         return False
-    return abs(price_a - price_b) > max(price_a, price_b) * PRICE_MATCH_REL
+    return abs(price_a - price_b) > PRICE_MATCH_ABS_CZK
 
 
 def _prices_agree(a: dict, b: dict) -> bool:
-    """True only when both prices are known and close. Unknown is not agreement."""
+    """True only when both prices are known and equal. Unknown is not agreement."""
     price_a, price_b = _to_float(a.get("price")), _to_float(b.get("price"))
     if not price_a or not price_b:
         return False
-    return abs(price_a - price_b) <= max(price_a, price_b) * PRICE_MATCH_REL
+    return abs(price_a - price_b) <= PRICE_MATCH_ABS_CZK
 
 
 def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,

@@ -74,12 +74,12 @@ FLOWS = [
     ("dnu_na_trhu_median", "Medián dnů na trhu", "dnů"),
     ("dnu_na_trhu_prumer", "Průměr dnů na trhu", "dnů"),
     ("zlevnilo", "Zlevnilo", "ks"),
-    ("zlevnilo_pct", "Zlevnilo", "%"),
+    ("zlevnilo_pct", "Podíl zlevněných", "%"),
     ("zlevneni_prumer", "Zlevnění na nemovitost", ""),
     ("sleva_median_pct", "Medián slevy", "%"),
     ("sleva_prumer_pct", "Průměr slevy", "%"),
     ("upravilo", "Upravilo (mimo cenu)", "ks"),
-    ("upravilo_pct", "Upravilo (mimo cenu)", "%"),
+    ("upravilo_pct", "Podíl upravených (mimo cenu)", "%"),
 ]
 
 # What is worth a picture. Four, deliberately: a page of charts is a page
@@ -99,6 +99,16 @@ def as_num(value):
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def dny(n: int) -> str:
+    """Czech agreement, because "řada pokrývá 1 dnů" reads like a bug report."""
+    n = int(n)
+    if n == 1:
+        return "1 den"
+    if 2 <= n <= 4:
+        return f"{n} dny"
+    return f"{n} dnů"
 
 
 def fmt(value, unit: str) -> str:
@@ -179,14 +189,14 @@ def caveats(latest_row: dict) -> list[str]:
     history = as_num(latest_row.get("uplnost_dnu")) or 0
     if history < 90:
         out.append(
-            f"- **Historie je {history:.0f} dnů.** Nic nemůže být starší než "
+            f"- **Historie je {dny(history)}.** Nic nemůže být starší než "
             "dataset, takže `dnu_na_trhu` a `stari_median_dnu` jsou zatím "
             "**spodní meze, ne měření** — skutečná čísla mohou být jen vyšší. "
             "Srovnatelné budou, až historie přesáhne typickou dobu prodeje, "
             "tedy měsíce."
         )
     out.append(
-        f"- **Posledních {market.CONFIRMATION_LAG_DAYS} dnů podhodnocuje odchody.** "
+        f"- **Posledních {dny(market.CONFIRMATION_LAG_DAYS)} podhodnocuje odchody.** "
         "Zmizení se potvrzuje až po týdnu nepřítomnosti, takže co odešlo "
         "včera, ještě čeká ve stavu `missing`. Sloupec `zmizele_potvrzeno` "
         "v datech označuje dny, kde se to už usadilo."
@@ -209,7 +219,7 @@ def render(series: list[dict], episodes_rows: list[dict],
         "# Report trhu",
         "",
         f"Data k **{latest}** · vygenerováno {generated:%Y-%m-%d %H:%M} UTC · "
-        f"řada pokrývá {len(days)} dnů",
+        f"řada pokrývá {dny(len(days))}",
         "",
         "Šipka je směr, ne hodnocení — jestli je růst dobrá zpráva, záleží na "
         "tom, na které straně trhu stojíš.",
@@ -279,15 +289,27 @@ def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
     live = [r for r in episodes_rows if r.get("outcome") == "active"]
     gone = [r for r in episodes_rows if r.get("outcome") == "removed"]
 
-    def top(rows, key, reverse=True):
+    def top(rows, key, reverse=True, positive=True):
+        """The top of a descending ranking must be something that happened.
+
+        Ranked by discount, the first clean run listed five properties at
+        0.00 % - and the same five again under "most edited" at zero edits,
+        because with every value tied the sort just returned file order.
+        A zero is not a small discount, it is the absence of one.
+        """
         kept = [r for r in rows if as_num(r.get(key)) is not None]
+        if positive:
+            kept = [r for r in kept if as_num(r.get(key)) > 0]
         kept.sort(key=lambda r: as_num(r.get(key)), reverse=reverse)
         return kept[:limit]
 
     groups = [
         ("Největší slevy", top(live, "discount_pct")),
         ("Nejdéle na trhu", top(live, "days_on_market")),
-        ("Nejrychleji zmizelé", top(gone, "days_on_market", reverse=False)),
+        # Gone on the day it appeared is the fastest departure there is, so
+        # zero belongs in this one.
+        ("Nejrychleji zmizelé",
+         top(gone, "days_on_market", reverse=False, positive=False)),
         ("Nejvíc upravované", top(live, "attribute_changes")),
     ]
 

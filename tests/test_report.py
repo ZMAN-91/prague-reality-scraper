@@ -180,3 +180,51 @@ def test_an_empty_dataset_produces_a_report_rather_than_a_crash():
 def test_the_report_says_a_departure_is_not_a_sale():
     """The single most tempting wrong conclusion this data invites."""
     assert "neznamená prodej" in render(days(3, nabidka=5))
+
+
+# --- the first clean run's defects, written down -----------------------------
+
+
+def test_no_two_rows_carry_the_same_label():
+    """A count and a percentage both called "Zlevnilo" is two rows the reader
+    has to tell apart by squinting at the unit."""
+    labels = [label for _, label, _ in report.LEVELS + report.FLOWS]
+    assert len(labels) == len(set(labels)), sorted(labels)
+
+
+@pytest.mark.parametrize("n,expected", [
+    (1, "1 den"), (2, "2 dny"), (4, "4 dny"), (5, "5 dnů"), (30, "30 dnů")])
+def test_a_count_of_days_agrees_with_its_number(n, expected):
+    assert report.dny(n) == expected
+
+
+def test_the_header_counts_days_in_czech():
+    assert "pokrývá 1 den" in render(days(1), when="2026-01-01")
+
+
+def test_a_ranking_by_discount_excludes_what_was_never_discounted():
+    """The first clean run listed five properties under "biggest discounts"
+    at 0.00 % each - with every value tied, the sort returned file order."""
+    rows = [{"address": f"a{i}", "disposition": "2+kk", "outcome": "active",
+             "last_price": "7000000", "days_on_market": "0",
+             "discount_pct": "0.0", "attribute_changes": "0"}
+            for i in range(5)]
+    text = render(days(3, nabidka=5), rows)
+    biggest = text.split("### Největší slevy")[1].split("###")[0]
+    assert "_nic_" in biggest, biggest
+
+
+def test_a_real_discount_is_still_ranked():
+    rows = [{"address": "Zlevnena", "disposition": "2+kk", "outcome": "active",
+             "last_price": "7000000", "days_on_market": "40",
+             "discount_pct": "6.5", "attribute_changes": "0"}]
+    assert "Zlevnena" in render(days(3, nabidka=5), rows)
+
+
+def test_vanishing_on_the_day_it_appeared_is_the_fastest_departure():
+    """Zero is the absence of a discount, but it is a real time on market."""
+    rows = [{"address": "Bleskem", "disposition": "2+kk", "outcome": "removed",
+             "last_price": "7000000", "days_on_market": "0",
+             "discount_pct": "", "attribute_changes": "0"}]
+    text = render(days(3, nabidka=5), rows)
+    assert "Bleskem" in text.split("### Nejrychleji zmizelé")[1]
