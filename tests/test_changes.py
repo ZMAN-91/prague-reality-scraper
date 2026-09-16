@@ -162,3 +162,40 @@ def test_a_very_long_description_is_truncated_rather_than_stored_whole():
                           "2026-03-02T10:00:00+00:00")
     assert len(changes) == 1
     assert len(changes[0]["new_value"]) <= 300
+
+
+# --- learning a field is not the seller editing it ---------------------------
+
+
+def test_a_description_arriving_late_is_not_an_edit():
+    """The detail-fetch budget means a description usually arrives a run or
+    two after the listing. The second run of the first clean day logged 145
+    of these against 2 real edits; counted as changes they would make
+    "upravilo" a chart of our own fetch backlog."""
+    listings, last_obs = {}, {}
+    merge([listing(description=None)], listings, last_obs,
+          "2026-03-01T10:00:00+00:00")
+
+    _, _, changes = merge([listing(description="Hezky byt v cihle")],
+                          listings, last_obs, "2026-03-01T11:00:00+00:00")
+    assert changes == [], changes
+
+
+def test_the_late_value_is_still_stored():
+    """Not counting it as a change must not mean throwing it away."""
+    listings, last_obs = {}, {}
+    merge([listing(description=None)], listings, last_obs,
+          "2026-03-01T10:00:00+00:00")
+    merge([listing(description="Hezky byt v cihle")], listings, last_obs,
+          "2026-03-01T11:00:00+00:00")
+    row, = listings.values()
+    assert row["description"] == "Hezky byt v cihle"
+
+
+def test_a_rewrite_of_a_description_we_already_had_is_an_edit():
+    """The exemption is for empty to something, not for every write."""
+    listings, last_obs = first_run()
+    _, _, changes = merge([listing(description="Po rekonstrukci, nova cena")],
+                          listings, last_obs, "2026-03-01T11:00:00+00:00")
+    assert [c["field"] for c in changes] == ["description"]
+    assert changes[0]["old_value"] == "Hezky byt"

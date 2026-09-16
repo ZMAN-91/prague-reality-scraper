@@ -571,10 +571,23 @@ def merge_source(
                 if value is None or value == "":
                     return
                 before = row.get(field)
-                if _same_value(before, value):
-                    row[field] = value
-                    return
                 row[field] = value
+                if _same_value(before, value):
+                    return
+                if before is None or str(before).strip() == "":
+                    # Learning a field for the first time is not the seller
+                    # editing anything. The detail-fetch budget means a
+                    # listing's description usually arrives a run or two
+                    # after the listing itself, and the second run of the
+                    # first clean day logged 145 such arrivals against 2 real
+                    # edits. Counted as changes they would make "upravilo" a
+                    # chart of our own fetch backlog.
+                    #
+                    # A seller genuinely adding a description that was not
+                    # there before is indistinguishable from this, and is
+                    # lost. That is the right way round: undercounting real
+                    # edits beats a metric that mostly measures the queue.
+                    return
                 change_rows.append({
                     "internal_id": internal_id,
                     "changed_at": now_iso,
