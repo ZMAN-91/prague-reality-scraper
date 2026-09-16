@@ -170,13 +170,18 @@ def chart(by_day: dict[str, dict], field: str, label: str) -> list[str]:
     low = min(v for _, v in points)
     high = max(v for _, v in points)
     pad = max((high - low) * 0.1, abs(high) * 0.01, 1)
+    # Nothing this reports can be negative - a count of flats, a price, a
+    # share, a number of months of stock. Padding below zero drew the supply
+    # axis from -270 to 3623 and spent the bottom of the picture on values
+    # that cannot occur.
+    bottom = max(0.0, low - pad) if low >= 0 else low - pad
 
     return [
         "```mermaid",
         "xychart-beta",
         f'    title "{label}"',
         f"    x-axis [{labels}]",
-        f'    y-axis "{label}" {low - pad:.2f} --> {high + pad:.2f}',
+        f'    y-axis "{label}" {bottom:.2f} --> {high + pad:.2f}',
         f"    line [{values}]",
         "```",
         "",

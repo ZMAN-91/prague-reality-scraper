@@ -228,3 +228,14 @@ def test_vanishing_on_the_day_it_appeared_is_the_fastest_departure():
              "discount_pct": "", "attribute_changes": "0"}]
     text = render(days(3, nabidka=5), rows)
     assert "Bleskem" in text.split("### Nejrychleji zmizelé")[1]
+
+
+def test_an_axis_does_not_run_below_zero_for_a_count():
+    """Supply, prices, shares and months of stock are all non-negative, and
+    padding below zero drew the supply axis from -270 to 3623."""
+    series = ([row(f"2026-01-{d:02d}", okno=30, nabidka=5 * d) for d in range(1, 11)]
+              + days(10, nabidka=50))
+    axis = [l for l in render(series).splitlines() if "y-axis" in l][0]
+    low, high = axis.split('"')[2].strip().split(" --> ")
+    assert float(low) >= 0, axis
+    assert float(high) > float(low)
