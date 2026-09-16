@@ -1,10 +1,12 @@
-"""The ten indicators, tested on markets whose answer is known by hand.
+"""The indicators, on markets whose answer is known by hand.
 
-Each fixture is a small market built to produce one obvious number, so a
-regression shows up as a wrong answer rather than as a plausible one.
+Every fixture is built to produce one obvious number, so a regression shows up
+as a wrong answer rather than as a plausible one. Several tests are the first
+version's defects written down, so they cannot come back.
 """
 
 import csv
+from datetime import date
 
 import pytest
 
@@ -12,9 +14,8 @@ from tools import market
 
 
 def episode(key, first, last, outcome="removed", price=7_000_000,
-            first_price=None, days=None, changes=0, discount=0,
+            days=None, cuts=(), edits=(), discount_pct="",
             ptype="byt", transaction="prodej", pm2=130_000):
-    from datetime import date
     start, end = date.fromisoformat(first), date.fromisoformat(last)
     return {
         "property_key": key, "episode": 1,
@@ -22,250 +23,238 @@ def episode(key, first, last, outcome="removed", price=7_000_000,
         "first_seen": first, "last_seen": last,
         "days_on_market": days if days is not None else (end - start).days,
         "outcome": outcome,
-        "first_price": first_price if first_price is not None else price,
-        "last_price": price,
-        "price_changes": changes,
-        "discount_czk": discount,
-        "discount_pct": round(100 * discount / (first_price or price), 2) if discount else "",
+        "first_price": price, "last_price": price,
         "price_per_m2_last": pm2,
+        "discount_pct": discount_pct,
+        "cut_days": "|".join(cuts),
+        "edit_days": "|".join(edits),
     }
 
 
-def day(series, when, segment="vse/prodej"):
-    rows = [r for r in series if r["den"] == when and r["segment"] == segment]
-    assert len(rows) == 1, f"expected one row for {when}/{segment}, got {len(rows)}"
+def cell(series, when, window=1, segment="vse/prodej"):
+    rows = [r for r in series
+            if r["den"] == when and r["okno_dnu"] == window
+            and r["segment"] == segment]
+    assert len(rows) == 1, f"expected one row for {when}/{window}d/{segment}"
     return rows[0]
 
 
 def market_of(n, **kwargs):
-    """n identical properties, enough to clear the small-sample floor."""
     return [episode(f"p{i}", **kwargs) for i in range(n)]
 
 
-# --- 1-3: supply, arrivals, departures --------------------------------------
+LONG = dict(first="2026-01-01", last="2026-03-31", outcome="active")
+
+
+# --- level: what is on the market -------------------------------------------
 
 
 def test_supply_counts_what_is_on_the_market_that_day():
-    series = market.daily(market_of(10, first="2026-01-01", last="2026-01-10"))
-    assert day(series, "2026-01-05")["nabidka"] == 10
-    assert day(series, "2026-01-01")["nove"] == 10
-    assert day(series, "2026-01-10")["zmizele"] == 10
+    series = market.daily(market_of(10, **LONG))
+    assert cell(series, "2026-02-01")["nabidka"] == 10
 
 
-def test_a_property_still_on_the_market_never_counts_as_a_departure():
-    series = market.daily(market_of(10, first="2026-01-01", last="2026-01-10",
-                                    outcome="active"))
-    assert all(r["zmizele"] == 0 for r in series)
+def test_both_a_median_and_a_mean_are_reported():
+    """The gap between them is itself informative: a mean far above the median
+    means the top end is doing the talking."""
+    rows = market_of(9, **LONG)
+    rows.append(episode("villa", price=90_000_000, **LONG))
+    row = cell(market.daily(rows), "2026-02-01")
+    assert row["cena_median"] == 7_000_000
+    assert row["cena_prumer"] == 15_300_000.0
 
 
-def test_supply_drops_the_day_after_a_departure():
-    """A property that left on the 5th was still on the market on the 5th -
-    it is counted that day and gone the next. One survivor keeps the series
-    running past the departure, which otherwise ends with the data."""
-    rows = (market_of(10, first="2026-01-01", last="2026-01-05")
-            + [episode("stays", "2026-01-01", "2026-01-09", outcome="active")])
+def test_the_age_of_the_current_stock_is_reported():
+    series = market.daily(market_of(6, **LONG))
+    assert cell(series, "2026-01-31")["stari_median_dnu"] == 30
+
+
+# --- flow: windows, not single days -----------------------------------------
+
+
+def test_arrivals_are_counted_over_the_window():
+    """Six on one day is noise; six over thirty days is a rate."""
+    rows = [episode(f"p{i}", first=f"2026-02-{i+1:02d}", last="2026-03-31",
+                    outcome="active") for i in range(10)]
     series = market.daily(rows)
-    assert day(series, "2026-01-05")["nabidka"] == 11, "it was on the market that day"
-    assert day(series, "2026-01-06")["nabidka"] == 1
+    assert cell(series, "2026-02-10", window=1)["nove"] == 1
+    assert cell(series, "2026-02-10", window=7)["nove"] == 7
+    assert cell(series, "2026-02-10", window=30)["nove"] == 10
 
 
-# --- 4: absorption ----------------------------------------------------------
+def test_arrivals_per_day_makes_windows_comparable():
+    rows = [episode(f"p{i}", first=f"2026-02-{i+1:02d}", last="2026-03-31",
+                    outcome="active") for i in range(10)]
+    assert cell(market.daily(rows), "2026-02-10", window=30)["nove_denne"] == \
+        round(10 / 30, 2)
 
 
-def test_absorption_is_departures_over_supply():
-    rows = (market_of(8, first="2026-01-01", last="2026-01-20", outcome="active")
-            + [episode(f"gone{i}", "2026-01-01", "2026-01-10") for i in range(2)])
+def test_departures_are_counted_over_the_window():
+    rows = (market_of(20, **LONG)
+            + [episode(f"g{i}", first="2026-01-01", last=f"2026-02-{i+1:02d}")
+               for i in range(10)])
     series = market.daily(rows)
-    assert day(series, "2026-01-10")["absorpce_pct"] == 20.0
+    assert cell(series, "2026-02-10", window=7)["zmizele"] == 7
+    assert cell(series, "2026-02-10", window=30)["zmizele"] == 10
 
 
-# --- 5-6: price levels ------------------------------------------------------
+def test_the_rate_denominator_is_mean_supply_not_one_days_stock():
+    """Dividing a month of departures by a single day's stock overstates the
+    rate by however much the stock moved across the month."""
+    rows = ([episode(f"old{i}", first="2026-01-01", last="2026-03-31",
+                     outcome="active") for i in range(10)]
+            + [episode(f"new{i}", first="2026-02-25", last="2026-03-31",
+                       outcome="active") for i in range(90)])
+    row = cell(market.daily(rows), "2026-02-28", window=30)
+    assert row["nabidka"] == 100
+    assert row["nabidka_prumer"] < 60, "mean supply must reflect the whole window"
 
 
-def test_the_median_is_used_so_one_villa_cannot_move_it():
-    rows = market_of(9, first="2026-01-01", last="2026-01-20", outcome="active")
-    rows.append(episode("villa", "2026-01-01", "2026-01-20", outcome="active",
-                        price=90_000_000))
-    row = day(market.daily(rows), "2026-01-10")
-    assert row["cena_median"] == 7_000_000, "a mean would read about 15M"
+def test_months_of_inventory_answers_the_sellers_market_question():
+    """Ten on the market, five leaving a month: two months to clear."""
+    rows = (market_of(10, first="2026-01-01", last="2026-03-31", outcome="active")
+            + [episode(f"g{i}", first="2026-01-01", last="2026-02-28")
+               for i in range(5)])
+    row = cell(market.daily(rows), "2026-02-28", window=30)
+    assert row["mesicu_zasoby"] == pytest.approx(3.0, abs=0.6)
 
 
-def test_the_price_used_is_the_one_being_asked_now():
-    """An episode that cut its price twice is asking the third figure; the
-    first two are history, not the state of the market."""
-    rows = market_of(6, first="2026-01-01", last="2026-01-20", outcome="active",
-                     first_price=8_000_000, price=7_000_000, discount=1_000_000)
-    assert day(market.daily(rows), "2026-01-10")["cena_median"] == 7_000_000
+# --- the defects of the first version ---------------------------------------
 
 
-# --- 7: what left, and what left quickly ------------------------------------
+def test_the_average_number_of_cuts_is_taken_among_those_that_cut():
+    """It read 0.00 when the answer was 1.08, because it averaged over the
+    whole stock. A metric that reads zero when the answer is one is worse
+    than no metric."""
+    rows = (market_of(97, **LONG)
+            + [episode(f"c{i}", cuts=("2026-02-10",), discount_pct=8.0, **LONG)
+               for i in range(3)])
+    row = cell(market.daily(rows), "2026-02-10", window=30)
+    assert row["zlevnilo"] == 3
+    assert row["zlevneni_prumer"] == 1.0, "averaged over the stock this is 0.03"
+
+
+def test_discounting_is_counted_in_the_window_not_for_ever():
+    """"How many discounted in the last 30 days" is the question worth asking;
+    "how many have ever discounted" only ever goes up."""
+    rows = market_of(20, cuts=("2026-01-05",), discount_pct=8.0, **LONG)
+    series = market.daily(rows)
+    assert cell(series, "2026-01-10", window=30)["zlevnilo"] == 20
+    assert cell(series, "2026-03-01", window=30)["zlevnilo"] == 0, \
+        "a cut in January is not a cut in the last thirty days of March"
+
+
+def test_two_cuts_by_one_property_count_once_as_a_property():
+    rows = market_of(20, cuts=("2026-02-05", "2026-02-20"),
+                     discount_pct=12.0, **LONG)
+    row = cell(market.daily(rows), "2026-02-28", window=30)
+    assert row["zlevnilo"] == 20, "twenty properties, not forty cuts"
+    assert row["zlevneni_prumer"] == 2.0
+
+
+def test_edits_are_windowed_the_same_way():
+    rows = market_of(20, edits=("2026-02-05",), **LONG)
+    series = market.daily(rows)
+    assert cell(series, "2026-02-10", window=30)["upravilo"] == 20
+    assert cell(series, "2026-03-31", window=30)["upravilo"] == 0
+
+
+# --- the two artefacts that can only be disclosed ----------------------------
+
+
+def test_how_much_history_a_figure_had_is_reported():
+    """On day two, "median days on market" was 1 - not because Prague sells
+    flats in a day but because that is as far back as the record goes."""
+    rows = market_of(10, first="2026-01-01", last="2026-01-02", outcome="active")
+    assert cell(market.daily(rows), "2026-01-01")["uplnost_dnu"] == 1
+    assert cell(market.daily(rows), "2026-01-02")["uplnost_dnu"] == 2
+
+
+def test_the_unconfirmed_tail_of_departures_is_flagged():
+    """A departure is only confirmed after a week of absence, so the last
+    seven days always under-count."""
+    rows = market_of(10, first="2026-01-01", last="2026-03-31", outcome="active")
+    series = market.daily(rows)
+    assert cell(series, "2026-03-31", window=1)["zmizele_potvrzeno"] == "ne"
+    assert cell(series, "2026-03-31", window=30)["zmizele_potvrzeno"] == "ano"
+
+
+# --- what left, and what left quickly ---------------------------------------
 
 
 def test_quick_departures_are_measured_separately():
-    """The gap between these two is the read on what the market will pay
-    versus what it is being asked."""
-    rows = ([episode(f"q{i}", "2026-01-01", "2026-01-08", price=6_000_000)
-             for i in range(5)]
-            + [episode(f"s{i}", "2025-10-01", "2026-01-08", price=9_000_000)
-               for i in range(5)])
-    row = day(market.daily(rows), "2026-01-08")
-    assert row["cena_zmizelych"] == 7_500_000, "all ten, median across both groups"
-    assert row["cena_rychlych"] == 6_000_000, "only those gone within a fortnight"
+    rows = ([episode(f"q{i}", first="2026-02-20", last="2026-02-28",
+                     price=6_000_000) for i in range(5)]
+            + [episode(f"s{i}", first="2026-01-01", last="2026-02-28",
+                       price=9_000_000) for i in range(5)])
+    row = cell(market.daily(rows), "2026-02-28", window=30)
+    assert row["cena_zmizelych_median"] == 7_500_000
+    assert row["cena_rychlych_median"] == 6_000_000
 
 
-def test_the_quick_threshold_is_a_fortnight():
-    rows = [episode(f"p{i}", "2026-01-01", "2026-01-16") for i in range(6)]
-    assert day(market.daily(rows), "2026-01-16")["cena_rychlych"] is None
+def test_a_departure_after_a_fortnight_is_not_quick():
+    rows = [episode(f"p{i}", first="2026-01-01", last="2026-02-28")
+            for i in range(6)]
+    assert cell(market.daily(rows), "2026-02-28",
+                window=30)["cena_rychlych_median"] is None
 
 
-# --- 8: time on market ------------------------------------------------------
-
-
-def test_days_on_market_is_measured_over_what_left():
-    rows = [episode(f"p{i}", "2026-01-01", "2026-01-11") for i in range(6)]
-    assert day(market.daily(rows), "2026-01-11")["dnu_na_trhu_median"] == 10
-
-
-# --- 9-10: discounting ------------------------------------------------------
-
-
-def test_the_share_that_discounted_and_how_often():
-    rows = (market_of(6, first="2026-01-01", last="2026-01-20", outcome="active",
-                      first_price=8_000_000, price=7_200_000,
-                      discount=800_000, changes=2)
-            + [episode(f"firm{i}", "2026-01-01", "2026-01-20", outcome="active")
-               for i in range(6)])
-    row = day(market.daily(rows), "2026-01-10")
-    assert row["zlevnilo_pct"] == 50.0
-    assert row["zlevneni_prumer"] == 1.0, "two cuts among half of them"
-    assert row["sleva_median_pct"] == 10.0
-
-
-def test_a_price_rise_is_not_a_discount():
-    rows = market_of(6, first="2026-01-01", last="2026-01-20", outcome="active",
-                     first_price=7_000_000, price=7_500_000, discount=-500_000)
-    assert day(market.daily(rows), "2026-01-10")["zlevnilo_pct"] == 0.0
-
-
-# --- the small-sample floor -------------------------------------------------
-
-
-def test_a_thin_day_reports_nothing_rather_than_noise():
-    """Two properties have a median. It is not a measurement of a market, and
-    reporting it as one turns every quiet Tuesday into a market swing."""
-    rows = market_of(2, first="2026-01-01", last="2026-01-10")
-    row = day(market.daily(rows), "2026-01-05")
-    assert row["nabidka"] == 2, "the count is still a fact"
-    assert row["cena_median"] is None
-    assert row["zlevnilo_pct"] is None
-
-
-# --- segmentation -----------------------------------------------------------
+# --- segmentation ------------------------------------------------------------
 
 
 def test_sale_and_rent_are_never_averaged_together():
-    rows = (market_of(6, first="2026-01-01", last="2026-01-20", outcome="active")
-            + [episode(f"r{i}", "2026-01-01", "2026-01-20", outcome="active",
-                       transaction="pronajem", price=25_000) for i in range(6)])
+    rows = (market_of(6, **LONG)
+            + [episode(f"r{i}", transaction="pronajem", price=25_000, **LONG)
+               for i in range(6)])
     series = market.daily(rows)
-    assert day(series, "2026-01-10", "byt/prodej")["cena_median"] == 7_000_000
-    assert day(series, "2026-01-10", "byt/pronajem")["cena_median"] == 25_000
+    assert cell(series, "2026-02-01", segment="byt/prodej")["cena_median"] == 7_000_000
+    assert cell(series, "2026-02-01", segment="byt/pronajem")["cena_median"] == 25_000
+    assert "vse" not in {r["segment"] for r in series}
 
 
-def test_the_combined_row_exists_alongside_the_segments():
-    rows = (market_of(6, first="2026-01-01", last="2026-01-20", outcome="active")
-            + [episode(f"h{i}", "2026-01-01", "2026-01-20", outcome="active",
-                       ptype="dum", price=20_000_000) for i in range(6)])
+def test_the_roll_up_spans_property_types_within_one_transaction():
+    rows = (market_of(6, **LONG)
+            + [episode(f"h{i}", ptype="dum", price=20_000_000, **LONG)
+               for i in range(6)])
     series = market.daily(rows)
-    assert day(series, "2026-01-10", "vse/prodej")["nabidka"] == 12
-    assert day(series, "2026-01-10", "byt/prodej")["nabidka"] == 6
+    assert cell(series, "2026-02-01", segment="vse/prodej")["nabidka"] == 12
+    assert cell(series, "2026-02-01", segment="byt/prodej")["nabidka"] == 6
 
 
-def test_the_roll_up_never_averages_sale_with_rent():
-    """One combined row put a median of 37 900 Kc on the whole market: a rent
-    of 25 000 a month averaged with a sale price of nine million is not a
-    number about anything. Flats and houses share a scale; buying and renting
-    do not."""
-    rows = (market_of(6, first="2026-01-01", last="2026-01-20", outcome="active",
-                      price=9_000_000)
-            + [episode(f"r{i}", "2026-01-01", "2026-01-20", outcome="active",
-                       transaction="pronajem", price=25_000) for i in range(6)])
-    series = market.daily(rows)
-    segments = {r["segment"] for r in series}
-    assert "vse" not in segments, "a single all-market row is meaningless here"
-    assert day(series, "2026-01-10", "vse/prodej")["cena_median"] == 9_000_000
-    assert day(series, "2026-01-10", "vse/pronajem")["cena_median"] == 25_000
+# --- the small-sample floor --------------------------------------------------
 
 
-# --- the trend summary ------------------------------------------------------
+def test_a_thin_market_reports_counts_but_not_medians():
+    """Two properties have a median. It is not a measurement of a market, and
+    reporting it as one turns every quiet Tuesday into a market swing."""
+    row = cell(market.daily(market_of(2, **LONG)), "2026-02-01")
+    assert row["nabidka"] == 2
+    assert row["cena_median"] is None and row["cena_prumer"] is None
 
 
-def test_the_summary_compares_now_against_a_month_ago():
-    rows = ([episode(f"old{i}", "2026-01-01", "2026-03-01", outcome="active",
-                     price=8_000_000) for i in range(6)]
-            + [episode(f"new{i}", "2026-02-15", "2026-03-01", outcome="active",
-                       price=8_000_000) for i in range(6)])
-    series = market.daily(rows)
-    summary = market.summary(series, window=30)
-    supply = [r for r in summary
-              if r["segment"] == "vse/prodej" and r["ukazatel"] == "nabidka"][0]
-    assert supply["ted"] == 12 and supply["tehdy"] == 6
-    assert supply["zmena_pct"] == 100.0
-
-
-def test_the_summary_survives_an_indicator_that_was_not_measurable():
-    rows = market_of(6, first="2026-01-01", last="2026-03-01", outcome="active")
-    summary = market.summary(market.daily(rows), window=30)
-    assert summary, "a summary must still be produced"
-    assert all("zmena_pct" in r for r in summary)
-
-
-# --- the files --------------------------------------------------------------
+# --- the files ---------------------------------------------------------------
 
 
 def test_export_writes_both_files(tmp_path):
     (tmp_path / "csv").mkdir(parents=True)
-    rows = market_of(6, first="2026-01-01", last="2026-01-20", outcome="active")
+    from tools.episodes import FIELDS as EP_FIELDS
     with open(tmp_path / "csv" / "historie_nemovitosti.csv", "w",
               encoding="utf-8", newline="") as f:
-        from tools.episodes import FIELDS as EP_FIELDS
         writer = csv.DictWriter(f, fieldnames=EP_FIELDS, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(market_of(6, **LONG))
 
     stats = market.export(tmp_path)
-    assert stats["days"] == 20
-
     with open(stats["daily"], encoding="utf-8", newline="") as f:
-        daily_rows = list(csv.DictReader(f))
-    assert list(daily_rows[0]) == market.FIELDS
-    assert daily_rows[0]["nabidka"] == "6"
+        rows = list(csv.DictReader(f))
+    assert list(rows[0]) == market.FIELDS
+    assert {int(r["okno_dnu"]) for r in rows} == set(market.WINDOWS)
 
 
-# --- 11-12: edits other than the price --------------------------------------
-
-
-def test_the_share_that_edited_something_other_than_the_price():
-    """A rewritten description is very often the move before a price cut, and
-    a corrected disposition or area is usually a re-listing dressed up as an
-    edit. This indicator turns before the discounting one does."""
-    rows = []
-    for i in range(6):
-        row = episode(f"edited{i}", "2026-01-01", "2026-01-20", outcome="active")
-        row["attribute_changes"] = 2
-        rows.append(row)
-    for i in range(6):
-        row = episode(f"quiet{i}", "2026-01-01", "2026-01-20", outcome="active")
-        row["attribute_changes"] = 0
-        rows.append(row)
-
-    row = day(market.daily(rows), "2026-01-10")
-    assert row["upravilo_pct"] == 50.0
-    assert row["uprav_prumer"] == 1.0, "two edits among half of them"
-
-
-def test_a_property_that_never_edited_anything_is_not_counted():
-    rows = market_of(6, first="2026-01-01", last="2026-01-20", outcome="active")
-    for r in rows:
-        r["attribute_changes"] = 0
-    assert day(market.daily(rows), "2026-01-10")["upravilo_pct"] == 0.0
+def test_the_series_is_recomputed_from_scratch_every_time(tmp_path):
+    """It is derived, not accumulated. An incremental file drifts once and is
+    wrong for ever; this one cannot be, and back-fills history the moment a
+    metric is added."""
+    rows = market_of(6, **LONG)
+    first = market.daily(rows)
+    assert market.daily(rows) == first

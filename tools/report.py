@@ -1,20 +1,35 @@
-"""A readable report over the daily indicator series.
+"""The daily report: today, the last week, the last month, and the trend.
 
-trh_denne.csv is the record; nobody reads a record. This turns it into
-something you can look at in ten seconds and know whether anything moved:
-the current level of every indicator, what it was a week and a month ago, and
-the handful of individual properties worth a glance.
+    python -m tools.report      -> REPORT.md   (at the data repository's root)
 
-    python -m tools.report            -> data/REPORT.md
+trh_denne.csv is the record; nobody reads a record. This is the page you look
+at for ten seconds and know whether anything moved.
 
-Regenerated on every run, so it is always about the latest data and never
-about whenever somebody last remembered to produce it. That is also why it
-is a tool and not a one-off: a report you have to remember to make is a
-report that stops existing in three weeks.
+THREE COLUMNS, NOT THREE REPORTS
 
-The comparisons are against fixed horizons rather than against the previous
-run. Hour-on-hour movement in a market that turns over in months is noise,
-and a report full of noise trains you to ignore it.
+Every indicator is shown over one day, seven days and thirty days side by
+side, because the three answer different questions and disagreeing with each
+other is the interesting case: arrivals up today but flat over the month is
+noise, up over both is a trend.
+
+THE CHARTS
+
+Mermaid, so GitHub renders them where the file lives, and so they cost
+nothing but text in a repository meant to last years. They plot the 30-day
+window, which is the one worth watching move; a chart of daily values in a
+market that turns over in months is a picture of noise. They grow with the
+series - a week in they are stubs, a year in they are the point of the file.
+
+WHAT THE REPORT REFUSES TO DO
+
+Say whether a move is good. That depends on which side of the market you are
+on, and a report that quietly takes a side is worse than one that takes none.
+It marks direction and leaves it there.
+
+State a number it cannot support. Durations are censored on the left - nothing
+can be older than the dataset - and departures on the right, since a departure
+takes a week to confirm. Both are disclosed where they bite rather than
+quietly rendered as fact.
 """
 
 from __future__ import annotations
@@ -29,28 +44,51 @@ from typing import Optional
 from common import storage
 from tools import market
 
-# A week catches anything sudden; a month is the shortest horizon on which
-# this market says anything at all.
-HORIZONS = (7, 30)
+WINDOWS = (1, 7, 30)
 
-# How the indicators read, and which direction is worth noticing. The label
-# is what a person reads; `good_up` says whether a rise favours sellers, so
-# the report can mark direction without pretending to judge it.
-INDICATORS = [
-    ("nabidka", "Nabídka", "ks", None),
-    ("nove", "Nové za den", "ks", None),
-    ("zmizele", "Zmizelé za den", "ks", None),
-    ("absorpce_pct", "Absorpce", "%", None),
-    ("cena_median", "Medián ceny", "Kč", None),
-    ("cena_m2_median", "Medián Kč/m²", "Kč", None),
-    ("cena_zmizelych", "Medián ceny zmizelých", "Kč", None),
-    ("cena_rychlych", "Medián ceny rychle zmizelých", "Kč", None),
-    ("dnu_na_trhu_median", "Medián dnů na trhu", "dnů", None),
-    ("zlevnilo_pct", "Podíl zlevněných", "%", None),
-    ("zlevneni_prumer", "Průměrný počet zlevnění", "", None),
-    ("sleva_median_pct", "Medián hloubky slevy", "%", None),
-    ("upravilo_pct", "Podíl upravených (mimo cenu)", "%", None),
-    ("uprav_prumer", "Průměrný počet úprav", "", None),
+# The chart window. Thirty days of a market that turns over in months is the
+# shortest line that means anything.
+CHART_WINDOW = 30
+CHART_MAX_POINTS = 60
+
+# (column, label, unit, which windows it makes sense in)
+# A level is the same number whichever window you ask for, so it is shown once.
+LEVELS = [
+    ("nabidka", "Nabídka", "ks"),
+    ("cena_median", "Medián ceny", "Kč"),
+    ("cena_prumer", "Průměr ceny", "Kč"),
+    ("cena_m2_median", "Medián Kč/m²", "Kč"),
+    ("cena_m2_prumer", "Průměr Kč/m²", "Kč"),
+    ("stari_median_dnu", "Medián stáří nabídky", "dnů"),
+]
+FLOWS = [
+    ("nove", "Nové", "ks"),
+    ("nove_denne", "Nové za den", ""),
+    ("zmizele", "Zmizelé", "ks"),
+    ("zmizele_denne", "Zmizelé za den", ""),
+    ("nabidka_prumer", "Průměrná nabídka", "ks"),
+    ("absorpce_pct", "Absorpce / 30 dnů", "%"),
+    ("mesicu_zasoby", "Měsíců zásoby", ""),
+    ("cena_zmizelych_median", "Medián ceny zmizelých", "Kč"),
+    ("cena_rychlych_median", "Medián ceny rychle zmizelých", "Kč"),
+    ("dnu_na_trhu_median", "Medián dnů na trhu", "dnů"),
+    ("dnu_na_trhu_prumer", "Průměr dnů na trhu", "dnů"),
+    ("zlevnilo", "Zlevnilo", "ks"),
+    ("zlevnilo_pct", "Zlevnilo", "%"),
+    ("zlevneni_prumer", "Zlevnění na nemovitost", ""),
+    ("sleva_median_pct", "Medián slevy", "%"),
+    ("sleva_prumer_pct", "Průměr slevy", "%"),
+    ("upravilo", "Upravilo (mimo cenu)", "ks"),
+    ("upravilo_pct", "Upravilo (mimo cenu)", "%"),
+]
+
+# What is worth a picture. Four, deliberately: a page of charts is a page
+# nobody reads.
+CHARTS = [
+    ("nabidka", "Nabídka"),
+    ("cena_m2_median", "Medián Kč/m²"),
+    ("mesicu_zasoby", "Měsíců zásoby"),
+    ("zlevnilo_pct", "Podíl zlevněných (%)"),
 ]
 
 
@@ -66,41 +104,34 @@ def as_num(value):
 def fmt(value, unit: str) -> str:
     if value is None:
         return "—"
-    if unit == "Kč":
-        return f"{value:,.0f}".replace(",", " ")
+    if unit in ("Kč", "ks", "dnů"):
+        return f"{value:,.0f}".replace(",", " ")
     if unit == "%":
-        return f"{value:.2f} %"
-    if unit == "ks" or unit == "dnů":
-        return f"{value:,.0f}".replace(",", " ")
+        return f"{value:.2f} %"
     return f"{value:.2f}"
 
 
 def arrow(now, then) -> str:
-    """Direction only. This file does not decide whether a rise is good news -
-    that depends on which side of the market you are on, and a report that
-    quietly takes a side is worse than one that takes none."""
+    """Direction only, never judgement."""
     if now is None or then is None or then == 0:
         return ""
     change = 100.0 * (now - then) / then
     if abs(change) < 1:
         return "→"
-    return f"↑ {change:+.0f} %" if change > 0 else f"↓ {change:+.0f} %"
+    return f"↑{change:+.0f} %" if change > 0 else f"↓{change:+.0f} %"
 
 
-def series_by_day(rows: list[dict], segment: str) -> dict[str, dict]:
-    return {r["den"]: r for r in rows if r["segment"] == segment}
+def rows_for(series: list[dict], segment: str, window: int) -> dict[str, dict]:
+    return {r["den"]: r for r in series
+            if r["segment"] == segment and int(r["okno_dnu"] or 0) == window}
 
 
 def value_on_or_before(by_day: dict[str, dict], when: date, field: str):
-    """The indicator as of `when`, or the closest earlier day that has it.
-
-    A horizon that lands before the data starts, or on a day an indicator was
-    too thin to measure, must read as "no comparison" rather than as a change
-    from zero.
-    """
+    """As of `when`, or the closest earlier day that has it. Never later -
+    borrowing a reading from after the horizon reports a change over a
+    shorter window than the column claims."""
     for offset in range(0, 8):
-        key = (when - timedelta(days=offset)).isoformat()
-        row = by_day.get(key)
+        row = by_day.get((when - timedelta(days=offset)).isoformat())
         if row is not None:
             got = as_num(row.get(field))
             if got is not None:
@@ -108,23 +139,59 @@ def value_on_or_before(by_day: dict[str, dict], when: date, field: str):
     return None
 
 
-def notable(episodes_rows: list[dict], limit: int = 5) -> dict:
-    """The few individual properties worth a look, which an aggregate hides."""
-    live = [r for r in episodes_rows if r.get("outcome") == "active"]
-    gone = [r for r in episodes_rows if r.get("outcome") == "removed"]
+def chart(by_day: dict[str, dict], field: str, label: str) -> list[str]:
+    """A Mermaid line chart of one indicator over the whole series.
 
-    def top(rows, key, reverse=True, having=None):
-        kept = [r for r in rows if as_num(r.get(key)) is not None
-                and (having is None or having(r))]
-        kept.sort(key=lambda r: as_num(r.get(key)), reverse=reverse)
-        return kept[:limit]
+    Returns [] when there is not enough of a line to be worth drawing: two
+    points joined up look like a trend and are not one.
+    """
+    days = sorted(by_day)
+    points = [(d, as_num(by_day[d].get(field))) for d in days]
+    points = [(d, v) for d, v in points if v is not None]
+    if len(points) < 3:
+        return []
 
-    return {
-        "Největší slevy": top(live, "discount_pct"),
-        "Nejdéle na trhu": top(live, "days_on_market"),
-        "Nejrychleji zmizelé": top(gone, "days_on_market", reverse=False),
-        "Nejvíc upravované": top(live, "attribute_changes"),
-    }
+    if len(points) > CHART_MAX_POINTS:
+        step = len(points) // CHART_MAX_POINTS + 1
+        points = points[::step] + [points[-1]]
+
+    labels = ", ".join(f'"{d[5:]}"' for d, _ in points)
+    values = ", ".join(f"{v:.2f}" for _, v in points)
+    low = min(v for _, v in points)
+    high = max(v for _, v in points)
+    pad = max((high - low) * 0.1, abs(high) * 0.01, 1)
+
+    return [
+        "```mermaid",
+        "xychart-beta",
+        f'    title "{label}"',
+        f"    x-axis [{labels}]",
+        f'    y-axis "{label}" {low - pad:.2f} --> {high + pad:.2f}',
+        f"    line [{values}]",
+        "```",
+        "",
+    ]
+
+
+def caveats(latest_row: dict) -> list[str]:
+    """The two things the numbers cannot say for themselves."""
+    out = []
+    history = as_num(latest_row.get("uplnost_dnu")) or 0
+    if history < 90:
+        out.append(
+            f"- **Historie je {history:.0f} dnů.** Nic nemůže být starší než "
+            "dataset, takže `dnu_na_trhu` a `stari_median_dnu` jsou zatím "
+            "**spodní meze, ne měření** — skutečná čísla mohou být jen vyšší. "
+            "Srovnatelné budou, až historie přesáhne typickou dobu prodeje, "
+            "tedy měsíce."
+        )
+    out.append(
+        f"- **Posledních {market.CONFIRMATION_LAG_DAYS} dnů podhodnocuje odchody.** "
+        "Zmizení se potvrzuje až po týdnu nepřítomnosti, takže co odešlo "
+        "včera, ještě čeká ve stavu `missing`. Sloupec `zmizele_potvrzeno` "
+        "v datech označuje dny, kde se to už usadilo."
+    )
+    return out
 
 
 def render(series: list[dict], episodes_rows: list[dict],
@@ -134,50 +201,98 @@ def render(series: list[dict], episodes_rows: list[dict],
         return "# Report trhu\n\nZatím nejsou žádná data.\n"
 
     days = sorted({r["den"] for r in series})
-    latest = date.fromisoformat(days[-1])
+    latest = days[-1]
     segments = sorted({r["segment"] for r in series},
                       key=lambda s: (not s.startswith("vse/"), s))
 
     out = [
         "# Report trhu",
         "",
-        f"Data k **{latest.isoformat()}**, vygenerováno "
-        f"{generated.strftime('%Y-%m-%d %H:%M UTC')}. "
-        f"Řada pokrývá {len(days)} dnů.",
+        f"Data k **{latest}** · vygenerováno {generated:%Y-%m-%d %H:%M} UTC · "
+        f"řada pokrývá {len(days)} dnů",
         "",
         "Šipka je směr, ne hodnocení — jestli je růst dobrá zpráva, záleží na "
         "tom, na které straně trhu stojíš.",
         "",
     ]
 
-    if len(days) < max(HORIZONS):
-        out += [
-            f"> Řada je zatím {len(days)} dnů dlouhá, takže srovnání na "
-            f"{max(HORIZONS)} dnů ještě nemá o co se opřít a je prázdné. "
-            "To není chyba, jen mládí datasetu.",
-            "",
-        ]
-
     for segment in segments:
-        by_day = series_by_day(series, segment)
-        if latest.isoformat() not in by_day:
+        windows = {w: rows_for(series, segment, w) for w in WINDOWS}
+        today = windows[1].get(latest)
+        if today is None:
             continue
-        out += [f"## {segment}", "",
-                "| ukazatel | teď | " +
-                " | ".join(f"před {h} dny" for h in HORIZONS) + " |",
-                "|---|---:|" + "---:|" * len(HORIZONS)]
-        for field, label, unit, _ in INDICATORS:
-            now = as_num(by_day[latest.isoformat()].get(field))
+
+        out += [f"## {segment}", ""]
+        out += caveats(today) + [""]
+
+        out += ["### Stav", "",
+                "| ukazatel | teď | před 7 dny | před 30 dny |",
+                "|---|---:|---:|---:|"]
+        by_day = windows[1]
+        for field, label, unit in LEVELS:
+            now = as_num(today.get(field))
             cells = [f"**{fmt(now, unit)}**"]
-            for horizon in HORIZONS:
-                then = value_on_or_before(by_day, latest - timedelta(days=horizon), field)
-                mark = arrow(now, then)
-                cells.append(f"{fmt(then, unit)} {mark}".strip())
+            for horizon in (7, 30):
+                then = value_on_or_before(
+                    by_day, date.fromisoformat(latest) - timedelta(days=horizon), field)
+                cells.append(f"{fmt(then, unit)} {arrow(now, then)}".strip())
             out.append(f"| {label} | " + " | ".join(cells) + " |")
         out.append("")
 
-    out += ["## Za pozornost", ""]
-    for title, rows in notable(episodes_rows).items():
+        out += ["### Tok", "",
+                "| ukazatel | poslední den | posledních 7 dnů | posledních 30 dnů |",
+                "|---|---:|---:|---:|"]
+        for field, label, unit in FLOWS:
+            cells = []
+            for window in WINDOWS:
+                row = windows[window].get(latest) or {}
+                cells.append(fmt(as_num(row.get(field)), unit))
+            out.append(f"| {label} | " + " | ".join(cells) + " |")
+        out.append("")
+
+        drawn = [line for field, label in CHARTS
+                 for line in chart(windows[CHART_WINDOW], field, label)]
+        if drawn:
+            out += ["### Vývoj", "",
+                    f"Okno {CHART_WINDOW} dnů. Grafy porostou s řadou.", ""]
+            out += drawn
+        else:
+            out += ["### Vývoj", "",
+                    "_Zatím příliš krátká řada na graf — tři body nejsou trend._",
+                    ""]
+
+    out += ["## Za pozornost", ""] + notable_tables(episodes_rows)
+    out += [
+        "---",
+        "",
+        "Zmizení neznamená prodej — žádný portál to nezveřejňuje. Nejbližší "
+        "dostupný náhradník je *rychle zmizelé*: kdo nabídku vzdává, málokdy "
+        "to udělá do dvou týdnů.",
+        "",
+        "Zdroj: `data/csv/trh_denne.csv`, `data/csv/historie_nemovitosti.csv`.",
+        "",
+    ]
+    return "\n".join(out)
+
+
+def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
+    live = [r for r in episodes_rows if r.get("outcome") == "active"]
+    gone = [r for r in episodes_rows if r.get("outcome") == "removed"]
+
+    def top(rows, key, reverse=True):
+        kept = [r for r in rows if as_num(r.get(key)) is not None]
+        kept.sort(key=lambda r: as_num(r.get(key)), reverse=reverse)
+        return kept[:limit]
+
+    groups = [
+        ("Největší slevy", top(live, "discount_pct")),
+        ("Nejdéle na trhu", top(live, "days_on_market")),
+        ("Nejrychleji zmizelé", top(gone, "days_on_market", reverse=False)),
+        ("Nejvíc upravované", top(live, "attribute_changes")),
+    ]
+
+    out = []
+    for title, rows in groups:
         out.append(f"### {title}")
         if not rows:
             out += ["", "_nic_", ""]
@@ -191,21 +306,9 @@ def render(series: list[dict], episodes_rows: list[dict],
                 f"| {fmt(as_num(r.get('last_price')), 'Kč')} "
                 f"| {r.get('days_on_market')} "
                 f"| {fmt(as_num(r.get('discount_pct')), '%')} "
-                f"| {r.get('attribute_changes') or 0} |"
-            )
+                f"| {r.get('attribute_changes') or 0} |")
         out.append("")
-
-    out += [
-        "---",
-        "",
-        "Zmizení neznamená prodej — žádný portál to nezveřejňuje. "
-        "Nejbližší dostupný náhradník je *rychle zmizelé*: kdo nabídku "
-        "vzdává, málokdy to udělá do dvou týdnů.",
-        "",
-        "Zdroj: `data/csv/trh_denne.csv`, `data/csv/historie_nemovitosti.csv`.",
-        "",
-    ]
-    return "\n".join(out)
+    return out
 
 
 def export(data_dir: Path = storage.DATA_DIR,
@@ -219,9 +322,8 @@ def export(data_dir: Path = storage.DATA_DIR,
               encoding="utf-8", newline="") as f:
         episodes_rows = list(csv.DictReader(f))
 
-    text = render(series, episodes_rows, generated)
     path = data_dir.parent / "REPORT.md"
-    path.write_text(text, encoding="utf-8")
+    path.write_text(render(series, episodes_rows, generated), encoding="utf-8")
     return {"path": str(path), "days": len({r["den"] for r in series}),
             "segments": len({r["segment"] for r in series})}
 

@@ -54,7 +54,7 @@ from pathlib import Path
 from typing import Optional
 
 from common import storage
-from common.schema import STATUS_ACTIVE
+from common.schema import STATUS_ACTIVE, STATUS_REMOVED, is_missing_status
 
 # A property re-advertised within two weeks is still the same attempt to
 # sell; after longer, the seller has regrouped and it is a new one. The
@@ -73,6 +73,7 @@ FIELDS = [
     "price_changes", "discount_czk", "discount_pct",
     "price_per_m2_first", "price_per_m2_last",
     "attribute_changes",
+    "cut_days", "edit_days",
 ]
 
 
@@ -226,12 +227,18 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
 
             series: list[tuple[str, int]] = []
             price_cuts = 0
+            cut_days: list[str] = []
             for internal_id in members:
                 own = price_series(observations.get(internal_id, []))
                 series.extend(own)
                 # Counted per advert, so two portals quoting slightly
                 # different figures do not read as the price oscillating.
-                price_cuts += sum(1 for a, b in zip(own, own[1:]) if a[1] != b[1])
+                for before, after in zip(own, own[1:]):
+                    if before[1] != after[1]:
+                        price_cuts += 1
+                        # The day it happened, so "discounted in the last 30
+                        # days" is answerable. A total count cannot say when.
+                        cut_days.append(after[0][:10])
             series.sort()
 
             first_price = series[0][1] if series else None
@@ -240,13 +247,26 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
 
             area = next((as_float(r.get("area_m2")) for r in rows
                          if as_float(r.get("area_m2"))), None)
-            live = any(r.get("status") == STATUS_ACTIVE for r in rows)
+            # On the market unless EVERY advert for it is confirmed removed.
+            #
+            # This used to ask whether any advert was `active`, which made
+            # every listing in missing_1 or missing_2 a departure. Since
+            # removal became a week of absence rather than three misses, a
+            # listing sits in missing_N for seven days - so that reading
+            # counted 51 of 10 990 live listings as gone, and would have
+            # counted every temporary portal hiccup as a wave of departures
+            # followed by a wave of arrivals when they came back.
+            live = any(r.get("status") != STATUS_REMOVED for r in rows)
 
-            edits = sum(len((changes or {}).get(i, [])) for i in members)
+            edit_rows = [c for i in members for c in (changes or {}).get(i, [])]
+            edits = len(edit_rows)
+            edit_days = sorted((c.get("changed_at") or "")[:10] for c in edit_rows)
 
             discount = (first_price - last_price) if series else None
             out.append({
                 "attribute_changes": edits,
+                "cut_days": "|".join(sorted(cut_days)),
+                "edit_days": "|".join(d for d in edit_days if d),
                 "property_key": key,
                 "episode": index,
                 "property_type": rows[0].get("property_type", ""),

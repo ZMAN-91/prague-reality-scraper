@@ -246,3 +246,63 @@ def test_observations_are_read_from_every_month(tmp_path):
     loaded = episodes.load_observations(tmp_path)
     assert len(loaded["a"]) == 2
     assert loaded["a"][0]["observed_at"] < loaded["a"][1]["observed_at"]
+
+
+# --- on the market, or gone? ------------------------------------------------
+
+
+def test_a_temporarily_missing_listing_has_not_left_the_market():
+    """Since removal became a week of absence, a listing sits in missing_N for
+    seven days. Reading "not active" as "gone" counted 51 of 10 990 live
+    listings as departures, and would turn every portal hiccup into a wave of
+    departures followed by a wave of arrivals when they came back."""
+    for status in ("missing_1", "missing_2", "missing_6"):
+        listings = {"a": listing("a", "2026-01-01", "2026-01-10", status=status)}
+        assert one(episodes.build(listings, {}))["outcome"] == "active", \
+            f"{status} was counted as a departure"
+
+
+def test_only_a_confirmed_removal_is_a_departure():
+    listings = {"a": listing("a", "2026-01-01", "2026-01-10", status="removed")}
+    assert one(episodes.build(listings, {}))["outcome"] == "removed"
+
+
+def test_one_advert_still_up_keeps_the_property_on_the_market():
+    listings = {
+        "a": listing("a", "2026-01-01", "2026-01-10", status="removed", cluster="c1"),
+        "b": listing("b", "2026-01-01", "2026-01-10", status="active",
+                     cluster="c1", source="idnes"),
+    }
+    observations = {"a": obs("a", ("2026-01-01", "7000000")),
+                    "b": obs("b", ("2026-01-01", "7000000"))}
+    assert one(episodes.build(listings, observations))["outcome"] == "active"
+
+
+# --- when things happened, not just how often -------------------------------
+
+
+def test_the_day_of_each_price_cut_is_recorded():
+    """A total count cannot answer "how many discounted in the last 30 days",
+    which is the question actually worth asking."""
+    listings = {"a": listing("a", "2026-01-01", "2026-03-01", status="active")}
+    observations = {"a": obs("a", ("2026-01-01", "8000000"),
+                             ("2026-01-20", "7600000"),
+                             ("2026-02-15", "7200000"))}
+    row = one(episodes.build(listings, observations))
+    assert row["price_changes"] == 2
+    assert row["cut_days"] == "2026-01-20|2026-02-15"
+
+
+def test_the_day_of_each_edit_is_recorded():
+    listings = {"a": listing("a", "2026-01-01", "2026-03-01", status="active")}
+    changes = {"a": [{"changed_at": "2026-02-10T10:00:00+00:00", "field": "description"},
+                     {"changed_at": "2026-01-05T10:00:00+00:00", "field": "disposition"}]}
+    row = one(episodes.build(listings, {}, changes=changes))
+    assert row["attribute_changes"] == 2
+    assert row["edit_days"] == "2026-01-05|2026-02-10", "sorted, oldest first"
+
+
+def test_a_property_that_never_moved_has_empty_day_lists():
+    listings = {"a": listing("a", "2026-01-01", "2026-01-10", status="active")}
+    row = one(episodes.build(listings, {}))
+    assert row["cut_days"] == "" and row["edit_days"] == ""
