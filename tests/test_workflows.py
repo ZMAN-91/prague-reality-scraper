@@ -309,3 +309,64 @@ def test_the_scraper_and_the_notification_read_the_same_logs():
         assert f'glob.glob("{written}/' in str(announce.get("run", "")), \
             f"{path.name}: the scraper writes {written} and the notification " \
             "reads somewhere else"
+
+
+# --- the weekly report -------------------------------------------------------
+
+
+REPORT = WORKFLOWS / "report.yml"
+
+
+def test_the_report_is_weekly_not_hourly():
+    """The CSV series underneath keeps updating every run - that is the
+    record. The report is the page a person reads, and a page that changes
+    hourly in a market that turns over in months trains you to ignore it."""
+    spec = load(REPORT)
+    entries = spec[True]["schedule"]
+    assert len(entries) == 1
+    minute, hour, dom, month, dow = entries[0]["cron"].split()
+    assert dom == "*" and month == "*"
+    assert dow != "*", "a weekly report needs a day of the week"
+    del minute, hour
+
+
+def test_the_scrapes_no_longer_write_the_report():
+    """Two writers of one file, on two schedules, is how a weekly report
+    quietly becomes an hourly one again."""
+    for path in (SALE, RENT):
+        body = " ".join(str(s.get("run", ""))
+                        for s in load(path)["jobs"]["scrape"]["steps"])
+        assert "tools.report" not in body, f"{path.name} still writes the report"
+
+
+def test_the_scrapes_still_write_the_series():
+    """The record must stay current even though the page does not."""
+    for path in (SALE, RENT):
+        body = " ".join(str(s.get("run", ""))
+                        for s in load(path)["jobs"]["scrape"]["steps"])
+        assert "tools.episodes" in body and "tools.market" in body
+
+
+def test_the_report_rebuilds_the_whole_chain():
+    """It must never be a report about whenever the CSVs happened to last be
+    written - recomputing from listings.csv takes seconds."""
+    body = " ".join(str(s.get("run", ""))
+                    for s in load(REPORT)["jobs"]["report"]["steps"])
+    for step in ("tools.episodes", "tools.market", "tools.report"):
+        assert step in body, f"{step} missing from the weekly rebuild"
+
+
+def test_the_report_runs_after_the_rent_pass_and_its_backup():
+    """Sunday's rent run and the backup that follows it are what make the
+    week complete; a report before them is a report about six days."""
+    minute, hour, _, _, dow = load(REPORT)[True]["schedule"][0]["cron"].split()
+    assert dow == "1", "Monday, so Sunday's rent pass is already in it"
+    assert int(hour) >= 6, "after the Sunday backup at 05:30 UTC"
+    del minute
+
+
+def test_the_report_uses_the_dataset_checkout():
+    body = " ".join(str(s.get("run", ""))
+                    for s in load(REPORT)["jobs"]["report"]["steps"])
+    assert "--data-dir store/data" in body
+    assert 'glob.glob("logs/' not in body

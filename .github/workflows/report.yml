@@ -1,0 +1,78 @@
+name: Weekly report
+
+# The report is written once a week, not once an hour.
+#
+# The CSV series underneath it keeps updating every run - that is the record,
+# and it has to be current. But the report is the page a person reads, and a
+# page that changes hourly in a market that turns over in months is a page
+# that trains you to ignore it. Weekly matches the slowest thing it measures.
+#
+# Monday 06:00 UTC = 08:00 Prague: after the Sunday rent pass and its backup,
+# so the week's report is the first thing about a complete week.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-report
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DATA_REPO: ZMAN-91/prague_reality_sector_analysis
+  DATA_BRANCH: claude/real-estate-market-scraper-1tgiei
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Checkout the dataset
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.DATA_REPO }}
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: ${{ env.DATA_BRANCH }}
+          path: store
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Rebuild the series and the report
+        # The whole chain, not just the last step: the report must never be
+        # about whenever the CSVs happened to last be written. Recomputing
+        # from listings.csv and the logs takes seconds and removes the
+        # question entirely.
+        run: |
+          python -m tools.episodes --data-dir store/data
+          python -m tools.market   --data-dir store/data
+          python -m tools.report   --data-dir store/data
+
+      - name: Commit the report
+        env:
+          DATA_ROOT: store
+        run: bash tools/commit_data.sh "${DATA_BRANCH}" "Weekly report"
+
+      - name: Summarise
+        run: |
+          {
+            echo "## Weekly report"
+            echo
+            head -5 store/REPORT.md
+          } >> "${GITHUB_STEP_SUMMARY}"

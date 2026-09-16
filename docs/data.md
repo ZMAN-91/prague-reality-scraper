@@ -185,6 +185,13 @@ Prodej a pronájem se nikdy neprůměrují dohromady.
 Dva byty medián mají, ale není to měření trhu, a hlásit ho jako měření dělá
 z každého klidného úterý pohyb trhu.
 
+**Report se generuje jednou týdně** (`.github/workflows/report.yml`, pondělí
+8:00 pražského času — po nedělním běhu pronájmů a po záloze, takže je to
+první věc o kompletním týdnu). Řada pod ním se přepočítává **každý běh**:
+záznam musí být aktuální, ale stránka, kterou čte člověk, se v trhu
+obracejícím se v měsících nemá měnit každou hodinu — to jen naučí člověka ji
+ignorovat.
+
 `trh_souhrn.csv` je totéž jako poslední hodnota vedle hodnoty před 30 dny
 a procentní změna — nejmenší věc, která je ještě trend, a ne odečet.
 
