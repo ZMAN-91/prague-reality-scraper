@@ -228,3 +228,46 @@ def test_the_backup_tool_is_invoked_the_way_it_documents_itself():
              if s.get("name") == "Build and verify the archive"][0]
     assert "tools.backup" in build["run"]
     assert "--github-output" in build["run"], "the release step reads those outputs"
+
+
+# --- staying alive ----------------------------------------------------------
+
+
+HEARTBEAT = WORKFLOWS / "heartbeat.yml"
+
+
+def test_something_pushes_to_this_repository_often_enough():
+    """GitHub disables scheduled workflows in a public repository after 60
+    days without repository activity. Every commit this project produces goes
+    to the private data repository, so without a deliberate push here the
+    hourly scrape stops after two months - silently, with nothing red.
+
+    The margin matters more than the exact day: a weekly beat leaves eight
+    chances to notice before the window closes.
+    """
+    spec = load(HEARTBEAT)
+    minute, hour, dom, month, dow = spec[True]["schedule"][0]["cron"].split()
+    assert dom == "*" and month == "*", "a day-of-month schedule can skip months"
+    assert dow != "*", "must be weekly or more often, not a monthly gamble"
+    del minute, hour
+
+    body = " ".join(str(s.get("run", "")) for s in spec["jobs"]["beat"]["steps"])
+    assert "git push" in body, "a heartbeat that does not push is not activity"
+
+
+def test_the_heartbeat_fails_loudly_if_it_has_nothing_to_push():
+    """The failure that would otherwise be invisible: the step runs, commits
+    nothing because the file did not change, exits 0, and the 60-day clock
+    keeps ticking behind a green tick."""
+    body = " ".join(str(s.get("run", ""))
+                    for s in load(HEARTBEAT)["jobs"]["beat"]["steps"])
+    assert "exit 1" in body, "an empty heartbeat must fail, not pass quietly"
+
+
+def test_the_heartbeat_is_independent_of_the_scrape():
+    """It must not live inside the workflow it keeps alive - that only beats
+    when the thing is already running."""
+    assert HEARTBEAT.exists()
+    for path in (SALE, RENT):
+        steps = load(path)["jobs"]["scrape"]["steps"]
+        assert not any("STATUS.md" in str(s.get("run", "")) for s in steps)

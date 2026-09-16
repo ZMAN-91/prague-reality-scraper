@@ -59,6 +59,24 @@ zveřejnilo **celou historii**: 77 commitů, `.git` 73 MB, z toho ~45 MB
 syrových API odpovědí sreality. Kód se proto přestěhoval do nového čistého
 repozitáře — data tak historii nikdy neopustila a nic se nemuselo přepisovat.
 
+## Past, do které rozdělení šlape
+
+GitHub **vypne naplánovaná workflow ve veřejném repozitáři po 60 dnech bez
+aktivity v repozitáři**. Ta pravidla existují kvůli opuštěným forkům, ale
+tenhle projekt do nich jde přímo: každý commit, který sběr vyrobí, jde do
+privátního repa, takže sem samo od sebe nikdy nic nepřijde.
+
+Dva měsíce po posledním ručním commitu by se hodinový sběr prostě zastavil.
+GitHub pošle adminovi e-mail, ale nic nespadne a nic nesvítí červeně —
+vypadalo by to úplně stejně jako funkční systém, který jen zrovna nemá co
+dělat. To je nejhorší druh poruchy, jaký tenhle projekt může mít.
+
+Řeší to `.github/workflows/heartbeat.yml`: jednou týdně přepíše `STATUS.md`
+a pushne ho. 52 commitů ročně místo 8 760, a osm týdnů rezervy, než se okno
+zavře. Schválně **není** součástí scrape workflow — heartbeat, který tluče
+jen když to, co má udržet naživu, už běží, není heartbeat. A když nemá co
+pushnout, skončí chybou, ne tiše.
+
 ## Co tím není vyřešené
 
 Data i zálohy leží na GitHubu. Proti ztrátě účtu to nechrání — to by

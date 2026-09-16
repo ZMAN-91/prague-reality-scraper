@@ -1,0 +1,64 @@
+name: Heartbeat
+
+# GitHub disables scheduled workflows in a PUBLIC repository after 60 days
+# with no repository activity. That rule exists to stop abandoned forks
+# running forever, and this repository walks straight into it: every commit
+# the collector produces goes to the private data repository, so nothing is
+# ever pushed here. Two months after the last hand-made commit the hourly
+# scrape would simply stop - GitHub emails the admin, but nothing fails and
+# nothing is red, so it would look exactly like a working system that had
+# quietly gone silent.
+#
+# So this pushes something. Once a week is far inside the 60-day window while
+# staying out of the log: 52 commits a year, not 8760.
+#
+# It is deliberately NOT part of the scrape workflow. A heartbeat that only
+# beats when the thing it is keeping alive already ran is not a heartbeat.
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: heartbeat
+  cancel-in-progress: false
+
+jobs:
+  beat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record that the collector is still running
+        run: |
+          set -euo pipefail
+          {
+            echo "# Stav"
+            echo
+            echo "Sběr běží. Poslední heartbeat: **$(date -u +'%Y-%m-%d %H:%M UTC')**."
+            echo
+            echo "Tenhle soubor existuje z jednoho technického důvodu: GitHub"
+            echo "vypne naplánovaná workflow ve veřejném repozitáři po 60 dnech"
+            echo "bez aktivity. Data z tohohle sběru se commitují do privátního"
+            echo "repozitáře, takže sem jinak nic nepřijde a cron by za dva"
+            echo "měsíce tiše odešel. Aktualizuje ho \`.github/workflows/heartbeat.yml\`."
+            echo
+            echo "Stav samotných běhů je na"
+            echo "[záložce Actions](../../actions), ne tady - tenhle soubor"
+            echo "říká jen to, že plánovač je pořád naživu."
+          } > STATUS.md
+
+          git config user.name "prague-reality-scraper-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add STATUS.md
+          if git diff --cached --quiet; then
+            echo "STATUS.md unchanged - nothing to push, and therefore no heartbeat."
+            exit 1
+          fi
+          git commit -q -m "Heartbeat $(date -u +'%Y-%m-%d')"
+          git push origin HEAD:"${GITHUB_REF_NAME}"
