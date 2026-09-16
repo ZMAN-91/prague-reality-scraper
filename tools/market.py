@@ -187,12 +187,20 @@ def daily(rows: list[dict], today: Optional[date] = None) -> list[dict]:
 
         for segment, group in sorted(by_segment.items()):
             out.append(measure(day, segment, group))
-        if by_segment:
-            out.append(measure(day, "vse", {
-                "live": [r for g in by_segment.values() for r in g["live"]],
-                "new": [r for g in by_segment.values() for r in g["new"]],
-                "gone": [r for g in by_segment.values() for r in g["gone"]],
-            }))
+
+        # A roll-up across property types, but NEVER across sale and rent.
+        # One combined row put a median of 37 900 Kc on the whole market: a
+        # rent of 25 000 a month averaged with a sale price of nine million
+        # is not a number about anything. Flats and houses share a scale;
+        # buying and renting do not.
+        rolled: dict[str, dict] = defaultdict(lambda: {"live": [], "new": [],
+                                                       "gone": []})
+        for segment, group in by_segment.items():
+            transaction = segment.split("/", 1)[-1]
+            for bucket in ("live", "new", "gone"):
+                rolled[f"vse/{transaction}"][bucket].extend(group[bucket])
+        for segment, group in sorted(rolled.items()):
+            out.append(measure(day, segment, group))
 
         for row in leaving:
             live.pop(row["property_key"] + "|" + str(row.get("episode")), None)

@@ -204,3 +204,22 @@ def test_the_workflows_both_use_this_script(tmp_path):
                         for s in spec["jobs"]["scrape"]["steps"])
         assert "tools/commit_data.sh" in body, f"{name} does not use the script"
         assert "reset --soft" not in body, f"{name} still has an inline --soft reset"
+
+
+def test_the_report_is_committed_when_it_exists(world):
+    """REPORT.md lives at the data repository's root, not under data/, so it
+    needs naming separately - and `git add` on a missing path is an error, so
+    a run whose report step was skipped must still commit its data."""
+    run, _ = world
+    collect(run, ["base1", "new1"])
+    (run / "REPORT.md").write_text("# Report trhu\n", encoding="utf-8")
+    commit_data(run)
+    assert "REPORT.md" in git(run, "ls-tree", "-r", "--name-only", "HEAD").stdout
+
+
+def test_a_run_without_a_report_still_commits_its_data(world):
+    run, _ = world
+    collect(run, ["base1", "new1"])
+    assert not (run / "REPORT.md").exists()
+    commit_data(run)
+    assert "new1" in git(run, "show", "HEAD:data/listings.csv").stdout

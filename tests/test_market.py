@@ -31,7 +31,7 @@ def episode(key, first, last, outcome="removed", price=7_000_000,
     }
 
 
-def day(series, when, segment="vse"):
+def day(series, when, segment="vse/prodej"):
     rows = [r for r in series if r["den"] == when and r["segment"] == segment]
     assert len(rows) == 1, f"expected one row for {when}/{segment}, got {len(rows)}"
     return rows[0]
@@ -173,10 +173,28 @@ def test_sale_and_rent_are_never_averaged_together():
 
 
 def test_the_combined_row_exists_alongside_the_segments():
-    rows = market_of(6, first="2026-01-01", last="2026-01-20", outcome="active")
+    rows = (market_of(6, first="2026-01-01", last="2026-01-20", outcome="active")
+            + [episode(f"h{i}", "2026-01-01", "2026-01-20", outcome="active",
+                       ptype="dum", price=20_000_000) for i in range(6)])
     series = market.daily(rows)
-    assert day(series, "2026-01-10", "vse")["nabidka"] == 6
+    assert day(series, "2026-01-10", "vse/prodej")["nabidka"] == 12
     assert day(series, "2026-01-10", "byt/prodej")["nabidka"] == 6
+
+
+def test_the_roll_up_never_averages_sale_with_rent():
+    """One combined row put a median of 37 900 Kc on the whole market: a rent
+    of 25 000 a month averaged with a sale price of nine million is not a
+    number about anything. Flats and houses share a scale; buying and renting
+    do not."""
+    rows = (market_of(6, first="2026-01-01", last="2026-01-20", outcome="active",
+                      price=9_000_000)
+            + [episode(f"r{i}", "2026-01-01", "2026-01-20", outcome="active",
+                       transaction="pronajem", price=25_000) for i in range(6)])
+    series = market.daily(rows)
+    segments = {r["segment"] for r in series}
+    assert "vse" not in segments, "a single all-market row is meaningless here"
+    assert day(series, "2026-01-10", "vse/prodej")["cena_median"] == 9_000_000
+    assert day(series, "2026-01-10", "vse/pronajem")["cena_median"] == 25_000
 
 
 # --- the trend summary ------------------------------------------------------
@@ -190,7 +208,7 @@ def test_the_summary_compares_now_against_a_month_ago():
     series = market.daily(rows)
     summary = market.summary(series, window=30)
     supply = [r for r in summary
-              if r["segment"] == "vse" and r["ukazatel"] == "nabidka"][0]
+              if r["segment"] == "vse/prodej" and r["ukazatel"] == "nabidka"][0]
     assert supply["ted"] == 12 and supply["tehdy"] == 6
     assert supply["zmena_pct"] == 100.0
 

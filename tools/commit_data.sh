@@ -68,6 +68,13 @@ for attempt in $(seq 1 "${ATTEMPTS}"); do
 
   # Rule 2: additions and modifications only.
   git -C "${DATA_ROOT}" add --ignore-removal data/ logs/
+  # REPORT.md sits at the data repository's root rather than under data/,
+  # because it is the one file in there meant to be opened by a person. Named
+  # separately, and only when it exists: `git add` on a missing path is an
+  # error, and a run whose report step was skipped must still commit its data.
+  if [ -f "${DATA_ROOT}/REPORT.md" ]; then
+    git -C "${DATA_ROOT}" add --ignore-removal REPORT.md
+  fi
 
   if git -C "${DATA_ROOT}" diff --cached --quiet; then
     echo "No data changes to commit this run."
