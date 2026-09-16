@@ -1,0 +1,7 @@
+-r requirements.txt
+pytest>=8.0,<9
+# Only the tests need it: tests/test_workflows.py reads the two scrape
+# workflows as configuration that can drift apart. Declared here rather than
+# guarded with importorskip, because a configuration check that quietly skips
+# itself in CI is worse than not having one.
+PyYAML>=6,<7

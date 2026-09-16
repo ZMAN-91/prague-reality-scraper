@@ -1,0 +1,34 @@
+# How reality.idnes.cz serves its data
+# Probed 2026-09-15T15:43:46+00:00
+
+https://reality.idnes.cz/detail/prodej/byt/praha-12-ceskoslovenskeho-exilu/6a3a8eea20379d6ad200f2ed/
+  HTTP 200  76461 bytes  text/html; charset=utf-8
+  7 listing links, 7 distinct; first 5:
+    https://reality.idnes.cz/detail/prodej/byt/praha-12-ceskoslovenskeho-exilu/6a3a8eea20379d6ad200f2ed/
+    https://reality.idnes.cz/makler/detail/jan-prochazka/69afeffe31fc60dcd307f7d6/
+    https://reality.idnes.cz/rk/detail/psn-s-r-o/5a85b53fa26e3a321d4f021a/
+    https://www.facebook.com/sharer/sharer.php?u=https://reality.idnes.cz/detail/prodej/byt/praha-12-ceskoslovenskeho-exilu/6a3a8eea20379d6ad200f2ed/
+    https://reality.idnes.cz/detail/prodej/byt/praha-2/664e7204b47f60f37706324c/
+
+https://reality.idnes.cz/s/prodej/byty/praha/?page=2
+  HTTP 200  175392 bytes  text/html; charset=utf-8
+  ld+json (518 chars): {"@context": "https://schema.org/", "@type": "Product", "name": "Prodej bytu Praha| Reality.iDNES.cz", "description": "4051 bytů na prodej Praha. ✅ Tento týden 589 nově přidaných bytů na prodej v nabídce. ✅ Ceny za prodej bytů Praha začínají na 177000 Kč. ✅ Prohlédněte si např. Prodej bytu 3+kk 85 m², v lokalitě Federova, Praha 9 - Kyje.", "aggregateRating": {"@type": "AggregateRating", "ratingValue": "4.6", "ratingCount": "94"}, "offers": {"@type": "AggregateOffer", "lowPrice": "177000", "priceCurrency": "CZK"}}
+  26 listing links, 26 distinct; first 5:
+    https://reality.idnes.cz/detail/prodej/byt/praha-8-prvniho-pluku/6a9926c4f7436d5e070e08f8/
+    https://reality.idnes.cz/detail/prodej/byt/praha-12-ceskoslovenskeho-exilu/6a3a8cc5d62bdaeeae0209af/
+    https://reality.idnes.cz/detail/prodej/byt/praha-8-prvniho-pluku/6aa955a7cb8abeeb1e0076c7/
+    https://reality.idnes.cz/detail/prodej/byt/praha-15-frantiska-jansy/6a958231a6b4007c01079f8d/
+    https://reality.idnes.cz/detail/prodej/byt/praha-1-mezibranska/6a837a948aefb68a2b0b165a/
+  pagination links: https://reality.idnes.cz/s/prodej/byty/praha/?page=2, /s/prodej/byty/praha/?page=1, /s/prodej/byty/praha/?page=3, /s/prodej/byty/praha/?page=4, /s/prodej/byty/praha/?page=5, /s/prodej/byty/praha/?page=6
+
+https://reality.idnes.cz/s/pronajem/byty/praha/
+  HTTP 200  172677 bytes  text/html; charset=utf-8
+  ld+json (531 chars): {"@context": "https://schema.org/", "@type": "Product", "name": "Pronájem bytu Praha| Reality.iDNES.cz", "description": "2635 bytů k pronájmu Praha. ✅ Tento týden 725 nově přidaných bytů k pronájmu v nabídce. ✅ Ceny za pronájem bytů Praha začínají na 5400 Kč. ✅ Prohlédněte si např. Pronájem bytu 3+kk 123 m², v lokalitě Truhlářská, Praha 1 - Nové Město.", "aggregateRating": {"@type": "AggregateRating", "ratingValue": "4.6", "ratingCount": "94"}, "offers": {"@type": "AggregateOffer", "lowPrice": "5400", "priceCurrency": "CZK"}}
+  26 listing links, 26 distinct; first 5:
+    https://reality.idnes.cz/detail/pronajem/byt/praha-1-truhlarska/6aa02374e6ad6349a601ab48/
+    https://reality.idnes.cz/detail/pronajem/byt/praha-4-dolnokrcska/6a9482ddf21f35577609eb11/
+    https://reality.idnes.cz/detail/pronajem/byt/praha-2-slovenska/6a980cf854511780be0ad198/
+    https://reality.idnes.cz/detail/pronajem/byt/praha-5-k-vodojemu/6aa9663de41b3505f10d6288/
+    https://reality.idnes.cz/detail/pronajem/byt/praha-3-u-rajske-zahrady/6a4d403978b3e88dcf0216fd/
+  pagination links: /s/pronajem/byty/praha/?page=1, /s/pronajem/byty/praha/?page=2, /s/pronajem/byty/praha/?page=3, /s/pronajem/byty/praha/?page=4, /s/pronajem/byty/praha/?page=5, /s/pronajem/byty/praha/?page=6
+

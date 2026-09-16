@@ -1,0 +1,102 @@
+{
+  "_fetched_at": "2026-09-15T15:44:18+00:00",
+  "_note": "Resolved by tools/probe_sources.py. Keys are the exact queries sent; display_name is what the service matched them to, so a wrong match is visible rather than silent, and 'via' says which service answered. common/collection_area.py carries these numbers as constants.",
+  "places": {
+    "Sporilov, Praha, Czechia": {
+      "lat": 50.0444,
+      "lon": 14.4789,
+      "display_name": "Spořilov",
+      "via": "cs.wikipedia.org API"
+    },
+    "Horni Mecholupy, Praha, Czechia": {
+      "lat": 50.0453,
+      "lon": 14.5575,
+      "display_name": "Horní Měcholupy",
+      "via": "cs.wikipedia.org API"
+    },
+    "Dolni Mecholupy, Praha, Czechia": {
+      "lat": 50.059,
+      "lon": 14.558,
+      "display_name": "Dolní Měcholupy",
+      "via": "cs.wikipedia.org API"
+    },
+    "Hostivar, Praha, Czechia": {
+      "lat": 50.0489,
+      "lon": 14.5244,
+      "display_name": "Hostivař",
+      "via": "cs.wikipedia.org API"
+    },
+    "Hostivarsky lesopark, Praha, Czechia": {
+      "lat": 50.0438336,
+      "lon": 14.5290072,
+      "display_name": "Lesopark Hostivař",
+      "via": "cs.wikipedia.org API (title found by search)"
+    },
+    "Hostivarska prehrada, Praha, Czechia": {
+      "lat": 50.04,
+      "lon": 14.5388889,
+      "display_name": "Vodní nádrž Hostivař",
+      "via": "cs.wikipedia.org API (title found by search)"
+    },
+    "Zabehlice, Praha, Czechia": {
+      "lat": 50.05694,
+      "lon": 14.49944,
+      "display_name": "Záběhlice",
+      "via": "cs.wikipedia.org API"
+    },
+    "Zahradni Mesto, Praha, Czechia": {
+      "lat": 50.0572,
+      "lon": 14.5014,
+      "display_name": "Zahradní Město",
+      "via": "cs.wikipedia.org API"
+    },
+    "Chodov, Praha 11, Czechia": {
+      "lat": 50.0313889,
+      "lon": 14.4916667,
+      "display_name": "Chodov (Praha)",
+      "via": "cs.wikipedia.org API"
+    },
+    "Petrovice, Praha, Czechia": {
+      "lat": 50.03666667,
+      "lon": 14.56222222,
+      "display_name": "Petrovice (Praha)",
+      "via": "cs.wikipedia.org API"
+    },
+    "Michle, Praha, Czechia": {
+      "lat": 50.05028,
+      "lon": 14.45833,
+      "display_name": "Michle",
+      "via": "cs.wikipedia.org API"
+    },
+    "Krc, Praha, Czechia": {
+      "lat": 50.04083,
+      "lon": 14.44778,
+      "display_name": "Krč",
+      "via": "cs.wikipedia.org API"
+    },
+    "Strasnice, Praha, Czechia": {
+      "lat": 50.06583,
+      "lon": 14.50806,
+      "display_name": "Strašnice",
+      "via": "cs.wikipedia.org API"
+    },
+    "Trebesin, Praha, Czechia": {
+      "lat": 50.0831053,
+      "lon": 14.4870689,
+      "display_name": "Třebešín",
+      "via": "cs.wikipedia.org API"
+    },
+    "Sterboholy, Praha, Czechia": {
+      "lat": 50.0722,
+      "lon": 14.5497,
+      "display_name": "Štěrboholy",
+      "via": "cs.wikipedia.org API"
+    },
+    "Roztylske namesti, Praha, Czechia": {
+      "lat": 50.0458839,
+      "lon": 14.4771472,
+      "display_name": "Roztylské náměstí",
+      "via": "cs.wikipedia.org API"
+    }
+  }
+}

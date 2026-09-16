@@ -1,0 +1,125 @@
+# Markup windows from https://reality.idnes.cz/s/prodej/byty/praha/
+# Fetched 2026-09-15T15:43:54+00:00, 169386 bytes
+
+## anchor 'href="[^"]*/detail/prodej/byt/[^"]*"': 25 match(es)
+ell size--t-4-12 size--m-6-12 size--s-12-12">
+				<div class="c-products__item">
+					<div id="snippet-s-result-article-6a9981eb476061d4150b33d8">
+
+
+
+
+
+
+<article>
+	<div class="c-products__inner">
+
+		<span class="badges-tip">
+			
+		</span>
+
+		<a onclick="	stat.count(&apos;clickDetailEstate&apos;, [&apos;articleListing&apos;, &apos;click&apos;, &apos;estate&apos;, [null, account.66f40a696fdede08fe096526], [null, &apos;estate.6a9981eb476061d4150b33d8&apos;] ] );
+" href="https://reality.idnes.cz/detail/prodej/byt/praha-10-univerzitni/6a9981eb476061d4150b33d8/"
+		   data-brand="JRD Services s.r.o."
+		   class="c-products__link">
+
+			<span class="c-products__imgs">
+				<span class="c-products__img" style="background-image: url('https\:\/\/sta-reality2\.1gr\.cz\/sta\/compile\/thumbs\/f\/5\/4\/d7aecd2b6544b0dc066d98d948941\.webp')">
+				<img
+					class="image-preloading"
+					data-src="https://sta-reality2.1gr.cz/sta/compile/thumbs/f/8/0/43bc6825b3e1303186fa9573c5706.webp"
+					alt="Prodej bytu 1+kk 38 m², Univerzitní, Praha 10 - Malešice"
+				    width="420" height="260"
+					loading="lazy"
+				   >
+			</span>
+				<span class="badges">
+				
+
+			</span>
+			</span>
+
+			<div class="c-products__content">
+					<h2 class="c-products__title">
+<span
+	class="text-capitalize">prodej</span>
+bytu 1+kk 38 m²
+					</h2>
+					<p class="c-products__info">
+						Univerzitní, Praha 10 - Malešice
+					</p>
+					<div class="c-products__footer">
+						<p class="c-products__price">
+									<strong>7 752 704 Kč</strong>
+
+						</p>
+					</div>
+
+				<span class="c-products__btn" id="snippet-s-result-favourites-6a9981eb476061d4150b33d8">
+					<span
+	data-ajax-link="/estate/?s-result-id=6a9981eb476061d4150b33d8&amp;s-et=flat&amp;s-ot=sale&amp;s-l=VUSC-19&amp;do=s-result-addToFavourites"
+	class="btn ajax-link-fake"
+	title="Přidat do oblíbených"
+	data-ajax-off="histor
+  ---
+ell size--t-4-12 size--m-6-12 size--s-12-12">
+				<div class="c-products__item">
+					<div id="snippet-s-result-article-6aa9655ec4dbddff1f057953">
+
+
+
+
+
+
+<article>
+	<div class="c-products__inner">
+
+		<span class="badges-tip">
+			
+		</span>
+
+		<a onclick="	stat.count(&apos;clickDetailEstate&apos;, [&apos;articleListing&apos;, &apos;click&apos;, &apos;estate&apos;, [null, account.62219e4b03423534762432a7], [null, &apos;estate.6aa9655ec4dbddff1f057953&apos;] ] );
+" href="https://reality.idnes.cz/detail/prodej/byt/praha-plzenska/6aa9655ec4dbddff1f057953/"
+		   data-brand="Makers Reality"
+		   class="c-products__link">
+
+			<span class="c-products__imgs">
+				<span class="c-products__img" style="background-image: url('https\:\/\/sta-reality2\.1gr\.cz\/sta\/compile\/thumbs\/a\/f\/7\/ba0b726d1d892b9b77d964bb674f0\.webp')">
+				<img
+					class="image-preloading"
+					data-src="https://sta-reality2.1gr.cz/sta/compile/thumbs/0/7/2/c3d15420c01fafa5bddf0e595b7ad.webp"
+					alt="Prodej bytu atypického 190 m², Plzeňská, Praha 5 - Smíchov"
+				    width="420" height="260"
+					loading="lazy"
+				   >
+			</span>
+				<span class="badges">
+				<span class="badges__item badges__item--yellow">
+					Nové
+				</span>
+				
+
+			</span>
+			</span>
+
+			<div class="c-products__content">
+					<h2 class="c-products__title">
+<span
+	class="text-capitalize">prodej</span>
+bytu atypického 190 m²
+					</h2>
+					<p class="c-products__info">
+						Plzeňská, Praha 5 - Smíchov
+					</p>
+					<div class="c-products__footer">
+						<p class="c-products__price">
+									<strong>19 800 000 Kč</strong>
+
+						</p>
+					</div>
+
+				<span class="c-products__btn" id="snippet-s-result-favourites-6aa9655ec4dbddff1f057953">
+					<span
+	data-ajax-link="/estate/?s-result-id=6aa9655ec4dbddff1f057953&amp;s-et=flat&amp;s-ot=sale&amp;s-l=VUSC-19&amp;do=s-result-addToFavourites"
+	class="btn
+  ---

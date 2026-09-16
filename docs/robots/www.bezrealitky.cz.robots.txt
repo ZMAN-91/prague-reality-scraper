@@ -1,0 +1,13 @@
+# Fetched 2026-09-15T15:42:40+00:00 from https://www.bezrealitky.cz/robots.txt by tools/probe_sources.py
+# Verbatim copy, unedited. 10 lines, 338 bytes.
+# ---------------------------------------------------------------
+#CS robots.txt
+User-agent: *
+Disallow: /vyhledat*
+Disallow: /moje-bezrealitky/*
+Disallow: /*callbackUrl=*
+Disallow: /centrum-sluzeb/bezrealitky-hypoteka/form*
+Disallow: /centrum-sluzeb/bezrealitky-hypoteka*price=*
+Disallow: /centrum-sluzeb/bezrealitky-hypoteka?*
+Disallow: /search*
+Sitemap: https://www.bezrealitky.cz/sitemap/sitemap.xml

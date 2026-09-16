@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.DS_Store
+
+# Local output of `python -m tools.backup`. The real weekly archives are
+# published as GitHub releases, never committed - see .github/workflows/backup.yml.
+backup/

@@ -1,0 +1,957 @@
+# Fetched 2026-09-15T15:43:38+00:00 from https://www.realingo.cz/pravidla-pouzivani
+# Link label: 'podmínky užití'
+# Numbered clauses found: 7 (contract text)
+# Tags stripped; wording unedited.
+# ---------------------------------------------------------------
+
+
+   
+
+  
+
+Realingo.cz - Reality a nemovitosti z celé ČR
+
+            
+
+Realingo
+
+Zpět na úvodní stranu
+
+Podmínky užití
+
+obchodní společnosti
+realingo services s.r.o.
+IČO: 29617405
+se sídlem Přízova 526/9, Trnitá, 602 00 Brno
+zapsaná u Krajského soudu v Brně, oddíl C, vložka 152151
+(dále jen „Poskytovatel”)
+
+Kontaktní údaje:
+Email: 
+
+[email&#160;protected]
+
+Adresa: Přízova 526/9, Trnitá, 602 00 Brno
+
+1. Definice pojmů
+
+Pojmy
+
+Níže uvedené definice mají pro účely těchto Podmínek následující význam:
+
+„Agregovaná data“
+ — Má svůj význam uvedený v odst. 13.18 Podmínek.
+
+„Autorský zákon“
+ — Zákon č. 121/2000 Sb., o právu autorském, o právech souvisejících s právem autorským a o změně některých zákonů (autorský zákon).
+
+„Částka před slevou“
+ — Má svůj význam uvedený v odst. 9.10 Podmínek.
+
+„Dočasné soubory“
+ — Ta část Platformy, která je přenášena pomocí sítě do počítače Uživatele, zejm. soubory ve formátu HTML, CSS, JavaScript a další obdobné soubory ukládané v rámci prohlížeče do operační paměti zařízení Uživatele, které umožňují funkcionality Platformy.
+
+„Faktura“
+ — Daňový nebo účetní doklad s náležitostmi dle obecně závazných právních předpisů.
+
+„GDPR“
+ — Nařízení Evropského parlamentu a Rady (EU) 2016/679 ze dne 27. dubna 2016 o ochraně fyzických osob v souvislosti se zpracováním osobních údajů a o volném pohybu těchto údajů, ve znění účinném ke dni účinnosti Podmínek.
+
+„Kredit“
+ — Umělá jednotka hodnoty rozdílná od fiat měny, která je užívána na Platformě bez ohledu na název takové jednotky na Platformě.
+
+Kredity si Uživatel může koupit na Platformě za fiat měnu za cenu (dále jen „Cena Kreditů“).
+
+„Model strojového učení“
+ — Jakýkoliv jazykový model či model strojového učení obecně užívaný Poskytovatelem jako součást Platformy bez ohledu na to, zda práva k tomuto nástroji náleží Poskytovateli, či zda jde o nástroj třetí osoby.
+
+„Nelegální Obsah“
+ — Část Obsahu, (i) která se zobrazuje na Platformě a (ii) která skutečně či dle odůvodněného názoru Poskytovatele porušuje:
+
+a) Podmínky;
+
+b) práva Stěžovatele; nebo
+
+c) obecně závazné právní předpisy.
+
+„Obsah“
+ — Jakýkoliv obsah na Platformě, který zahrnuje:
+
+a) samotný obsah Platformy netvořený Uživateli (dále jen „Obsah Platformy“);
+
+b) vše, co je součástí Prezentace („Obsah Prezentace“); a dále pak
+
+c) jakékoliv texty, zprávy v chatu, komentáře, fotky, videa, soubory fotek či videí či obecně jakékoliv soubory, vstupy či data, která Uživatel vkládá či nahrává do Platformy (dále jen „Uživatelský obsah“).
+
+„Osobní údaje“
+ — Osobní údaje ve smyslu čl. 4 odst. 1 GDPR, které se týkají Uživatele či osob na straně Uživatele.
+
+„OZ“
+ — Zákon č. 89/2012 Sb., občanský zákoník, ve znění účinném ke dni účinnosti Podmínek.
+
+„Plán“
+ — Varianta (kombinace faktorů a zpřístupněných funkcionalit) přístupnosti Platformy. Plány jsou popsány zde: 
+www.realingo.cz/premium
+
+Plány zahrnují i
+
+a) Plán zpřístupnění Platformy zdarma, nabízí-li jej Platforma („Free Plán“) a
+
+b) jinak placený Plán zpřístupněný po určitou dobu zdarma, umožňuje-li to Platforma („Trial období“).
+
+„Platební brána“
+ — Platební brány dostupné na Platformě a podporované Platformou.
+
+„Platforma“
+ — Platforma Poskytovatele s názvem realingo dostupná na adrese:
+ 
+https://www.realingo.cz/
+
+Platforma plní funkci realitního vyhledávače a agregátoru, který Uživatelům zobrazuje inzeráty týkající se prodeje a pronájmu nemovitostí. Platforma dále Uživatelům umožňuje zejména zadávat parametry vyhledávání, zveřejňovat vlastní Prezentace, spravovat uložená hledání a přijímat notifikace o relevantních nabídkách.
+
+„Podmínky“
+ — Tyto podmínky užití.
+
+„Poplatek“
+ — Jakékoliv případné poplatky či částky, které Uživatel platí v Platformě (mimo Předplatné), a to dle toho, zda a co je uvedeno v Platformě. Poplatek může být splatný v penězích (ve fiat měně) či v Kreditech dle toho, co umožňuje Platforma.
+
+„Prezentace“
+ — Prezentace nemovitosti na Platformě bez ohledu na to, zda byla vytvořena Uživatelem či nikoliv.
+
+„Předplatné“
+ — Částka, která se platí za placené Plány vždy za Zúčtovací období.
+
+„Role“
+ — Některá z rolí Uživatele: makléř, inzerent, realitní kancelář, běžný uživatel.
+
+„Smlouva“
+ — Smlouva, která vzniká vytvořením Uživatelského účtu Uživatelem. Na základě Smlouvy je Uživatel oprávněn užívat Platformu v rozsahu, v jakém to odpovídá jeho Roli a Plánu. Další práva a povinnosti ze Smlouvy plynou z Podmínek.
+
+„Smluvní strany“
+ — Poskytovatel a Uživatel.
+
+„Stěžovatel“
+ — Uživatel nebo třetí osoba, která Poskytovateli doručila upozornění na možnou existenci Nelegálního Obsahu na Platformě.
+
+„Újma“
+ — Újma na majetku (skutečná škoda či ušlý zisk) a nemajetková újma.
+
+„Uživatel“
+ — Jakýkoliv návštěvník či uživatel Platformy bez ohledu na jeho Roli, Plán či to, zda je registrován a má Uživatelský účet či nikoliv.
+
+„Uživatelský účet“
+ — Uživatelský účet Uživatele v Platformě, jehož prostřednictvím může spravovat Předplatné či přistupovat k Platformě a využívat její funkce.
+
+„Výstup“
+ — Jakýkoliv výstup Platformy, zejména automatizované reporty o nemovitosti (např. RealScan).
+
+„Zákaznická recenze“
+ — Má svůj význam uvedený v odst. 17.9 Podmínek.
+
+„Zúčtovací období“
+ — Časový úsek u placeného Plánu, za který je účtováno jedno Předplatné, a to dle nabídky na Platformě (např. Zúčtovací období má délku jednoho měsíce, zvolil-li Uživatel variantu obnovování Plánu s periodou jednoho měsíce).
+
+Další výkladová ustanovení
+
+Pokud není v Podmínkách uvedeno jinak, mají slova v nich užitá s velkým počátečním písmenem význam uvedený výše. Nadpisy v Podmínkách jsou vloženy pouze pro usnadnění a nemají vliv na výklad Podmínek. Odkazy na ustanovení a přílohy v Podmínkách bez uvedení jiného dokumentu jsou odkazy na ustanovení a přílohy těchto Podmínek. Pokud ze smyslu a kontextu neplyne něco jiného, slova v jednotném čísle zahrnují i jejich množné číslo a naopak. Slova jsou vykládána bez ohledu na jejich rod.
+
+Na vztahy Poskytovatele a Uživatele se Podmínky použijí bez ohledu na to, zda Uživatel je či není spotřebitelem. To neplatí, plyne-li z daného ustanovení či jeho kontextu, že se použije pouze na Uživatele, který je či není spotřebitelem nebo podnikatelem. Spotřebitelem se rozumí spotřebitel ve smyslu § 419 OZ a podnikatelem podnikatel ve smyslu § 420 OZ.
+
+Povinnosti plynoucí z platformy
+
+Odkazují-li tyto Podmínky explicitně či implicitně na Platformu, její funkcionality, či na jakékoliv informace v ní obsažené, vymezují tyto odkazy konkrétní práva a povinnosti Smluvních stran plynoucí z Platformy. Rozsah, povaha a limity poskytovaných služeb i meze oprávnění Uživatele vyplývají nejen z Podmínek, ale též z výslovných textových sdělení a upozornění zobrazených na Platformě a z jejího samotného uživatelského rozhraní, interaktivních i neinteraktivních ovládacích prvků, jejich uspořádání a celkového vizuálního zpracování. Dále rovněž platí, že rozsah toho, co technické, algoritmické a softwarové nastavení Platformy Uživateli fakticky umožňuje, omezuje, či naopak absolutně znemožňuje, představuje materiální vymezení práv a povinností při užívání Platformy. Jakákoliv technická a softwarová omezení Platformy jsou pro Uživatele závazná a jakýkoliv pokus o jejich obcházení představuje porušení Smlouvy a Podmínek. Vznikne-li jakýkoliv rozpor mezi informacemi, texty, vizuálním uspořádáním či faktickým technologickým fungováním Platformy na straně jedné a ujednáními obsaženými v těchto Podmínkách na straně druhé, má aplikační a výkladovou přednost ustanovení těchto Podmínek.
+
+2. Úvodní ustanovení
+
+Působnost podmínek
+
+2.1 Poskytovatel vydává tyto Podmínky, které upravují práva a povinnosti Poskytovatele a Uživatele plynoucí ze Smlouvy. Všechna práva a povinnosti plynoucí z užívání Platformy, Uživatelského účtu a ze Smlouvy se řídí Podmínkami.
+
+2.2 Podmínky jsou neustále k dispozici na Platformě.
+
+Úvodní prohlášení uživatele
+
+2.3 Uživatel, který je fyzická osoba a který uzavírá Smlouvu, vůči Poskytovateli prohlašuje, že je plně svéprávný.
+
+2.4 Je-li Uživatel právnickou osobou ve smyslu § 20 OZ, prohlašuje osoba uzavírající Smlouvu, že je oprávněna v rozsahu Smlouvy jednat za Uživatele.
+
+2.5 Vytvořením Uživatelského účtu, uzavřením Smlouvy či jakýmkoliv užíváním Platformy Uživatel přijímá Podmínky.
+
+Vztah Podmínek a Smlouvy
+
+2.6 Ustanovení odchylná od Podmínek je možné sjednat ve Smlouvě. V případě rozporu mezi podmínkami obsaženými ve vlastním textu Smlouvy, Podmínek či jakékoliv přílohy Smlouvy jsou rozhodující ustanovení v níže uvedeném pořadí (od nejvyššího k nejnižšímu): 1. Smlouva, 2. jakákoliv jiná příloha Smlouvy a 3. Podmínky.
+
+2.7 Ustanovení Podmínek jsou nedílnou součástí Smlouvy.
+
+Jazykové verze
+
+2.8 Smlouva a Podmínky jsou vyhotoveny v českém jazyce a případně též v dalších jazykových mutacích. Pokud je Smlouva nebo její část uzavřena ve více jazycích, pak anglické znění má přednost před jakýmkoliv jiným zněním s výjimkou českého znění a české znění má přednost před všemi zněními vč. znění anglického. Je-li Smlouva uzavřena jen v jednom jazyce, je rozhodná tato jazyková mutace.
+
+3. Rozsah užití Platformy
+
+Funkcionality platformy
+
+3.1 Uživatel má přístup k funkcionalitám Platformy pouze v rozsahu funkcionalit, které mu přísluší s ohledem na jeho Roli, Plán a Smlouvu.
+
+Závislost na rolích a plánech
+
+3.2 Některé části či funkcionality jsou přístupné pouze registrovaným Uživatelům, kteří mají Uživatelský účet. Některé části či funkcionality jsou přístupné jen Uživatelům s určitou Rolí či určitým Plánem. Ne všechny Plány musí být dostupné pro všechny Role a naopak. Podrobnosti plynou z Platformy.
+
+4. Uzavření Smlouvy
+
+Obecné
+
+4.1 Obsahem Smlouvy jsou práva a povinnosti definované v Podmínkách, nestanoví-li Smlouva jinak.
+
+Proces uzavření smlouvy
+
+4.2 Smlouvu Uživatel uzavře tím, že vyplní registrační formulář za účelem vytvoření Uživatelského účtu a klikne na tlačítko „Registrovat“, „Předplatit“ či tlačítko nebo obdobný ovládací prvek obdobného znění. Účinnost Smlouvy nastává okamžikem zaplacení prvního Předplatného, aktivuje-li si Uživatel zároveň placený Plán, jinak (i) potvrzením návrhu na uzavření Smlouvy Poskytovatelem, (ii) prvním přihlášením do Platformy nebo (iii) akcí nebo jednáním Uživatele či osoby na jeho straně, které již představují plnění Smlouvy.
+
+Žádný nárok
+
+4.3 Uživatel nemá právní nárok na uzavření Smlouvy. Poskytovatel si vyhrazuje právo nepotvrdit registraci Uživateli, neuzavřít s Uživatelem Smlouvu, popř. zrušit registraci či odstoupit od Smlouvy s Uživatelem nebo omezit jeho přístup k Platformě, a to zejména v případě, kdy se Uživatele nepodaří identifikovat či pokud Uživatel podstatným způsobem či opakovaně poruší Smlouvu, Podmínky či obecně závazné právní předpisy.
+
+5. Uživatelský účet
+
+Obecné
+
+5.1 Uživatel si v rámci Platformy vytvoří Uživatelský účet. Existence Uživatelského účtu může být nutnou podmínkou pro možnost užívání některých funkcionalit Platformy.
+
+5.2 Každý Uživatel může mít jen jeden Uživatelský účet.
+
+Registrace
+
+5.3 V rámci procesu tvorby Uživatelského účtu Uživatel vyplní údaje a Osobní údaje v rozsahu, který požaduje Platforma. Platforma vhodným způsobem označuje údaje, které jsou povinné či nepovinné.
+
+5.4 Uživatel se zavazuje a prohlašuje, že vyplněné údaje Uživatele v rámci registrace jsou pravdivé, přesné a aktuální. Pokud dojde k jakékoli změně údajů Uživatele, je Uživatel povinen o takové změně bez zbytečného odkladu písemně informovat Poskytovatele, a to zejména tak, že aktualizuje svůj Uživatelský účet.
+
+5.5 Poskytovatel si vyhrazuje právo odmítnout fiktivní, podvodné či duplicitní registrace Uživatelů a rovněž registrace, které dle uvážení Poskytovatele porušují (i) obecně závazné právní předpisy České republiky, (ii) obecně závazné právní předpisy jiné země, ve které se nachází Uživatel, (iii) obecně závazné právní předpisy EU, (iv) veřejný pořádek, (v) etická pravidla či dobré mravy, (vi) Podmínky nebo (vii) oprávněné zájmy třetích osob, ostatních Uživatelů či Poskytovatele. Duplicita Uživatelských účtů však nebude v rozporu s Podmínkami, jde-li o Uživatelské účty stejného Uživatele v různých Rolích, povoluje-li je Platforma (např. firemní a osobní Uživatelské účty).
+
+5.6 Po provedení registrace zasílá Poskytovatel Uživateli (všem či minimálně těm, kteří jsou spotřebiteli) rovněž aktuální znění Podmínek ve formátu PDF.
+
+Přístup třetích osob k uživatelskému účtu
+
+5.7 Uživatel je povinen přístupové údaje k Uživatelskému účtu uchovávat v tajnosti a neposkytovat je třetím stranám. Určuje-li Poskytovatel určitou sílu hesla a používá-li Uživatel k přihlášení heslo, je Uživatel povinen vytvořit heslo, které bude tato pravidla splňovat.
+
+5.8 Jestliže Uživatel zjistí, že mohlo dojít ke zpřístupnění Uživatelského účtu třetí straně v důsledku kompromitace přístupových údajů k Uživatelskému účtu (či kompromitace účtu u třetí strany, jehož prostřednictvím se přihlašuje Uživatel k Uživatelskému účtu), je povinen si neprodleně změnit přístupové údaje (či přístupové údaje k takovému účtu třetí strany).
+
+5.9 Údaje uvedené v Uživatelském účtu Poskytovatel považuje za správné, pravdivé a úplné, a není povinen je dále ověřovat.
+
+Role
+
+5.10 Má-li mít Uživatel určitou Roli v rámci Platformy, je Poskytovatel oprávněn přiměřeným způsobem ověřit a Uživatel je povinen Poskytovateli prokázat, že Uživatel skutečně zastává danou Roli (např. že jde o realitního makléře).
+
+Zrušení uživatelského účtu
+
+5.11 Uživatel má právo kdykoliv změnit své údaje v Uživatelském účtu či jej zcela zrušit (prostřednictvím Platformy, umožňuje-li to Platforma, nebo oznámením Poskytovateli).
+
+5.12 Poskytovatel může zablokovat Uživatelský účet, popřípadě jej zcela zrušit či smazat a spolu s tím odstranit veškerá data a Obsah, zejm. Uživatelský obsah, který se vztahuje k Uživateli, v následujících případech:
+
+a) po zániku Smlouvy;
+
+b) Uživatelský účet je více než rok neaktivní; nebo
+
+c) poruší-li Uživatel Podmínky podstatným způsobem (zejm. čl. 7, 9, 13, 14 Podmínek) či porušuje-li Podmínky opakovaně.
+
+5.13 Odstraní-li Poskytovatel Uživatelský účet v souladu se Smlouvou, je toto odstranění bez náhrady a Poskytovatel v žádném případě neodpovídá za jakoukoliv Újmu, která by tím mohla Uživateli vzniknout. Poskytovatel v takovém případě není povinen vyplatit Uživateli jakoukoliv náhradu za Kredity, propadlé Poplatky či již zaplacené Předplatné.
+
+5.14 Zánik Uživatelského účtu má účinky zániku Smlouvy a zánik Smlouvy opravňuje vždy Poskytovatele ke smazání Uživatelského účtu.
+
+Akce uživatele
+
+5.15 Akce Uživatele, které učiní na Platformě či v Uživatelském účtu, se bez dalšího přičítají Uživateli bez ohledu na to, zda za něj jedná jiná osoba (i osoba, která odcizí heslo). Poskytovatel není povinen zkoumat, zda osoba přihlášená k Uživatelskému účtu je skutečně Uživatel či osoba oprávněná jednat za Uživatele.
+
+GDPR
+
+5.16 Založením Uživatelského účtu Uživatel prohlašuje, že se seznámil se Zásadami zpracování osobních údajů na
+ 
+www.realingo.cz/privacy
+.
+
+Další
+
+5.17 Smazání Uživatelského účtu ani jiný zánik Smlouvy nezpůsobuje zánik oprávnění k Uživatelskému obsahu (odst. 6.8 a násl. Podmínek).
+
+6. Prezentace a Uživatelský obsah
+
+Umístění prezentace
+
+6.1 Odpovídá-li to Roli a Plánu Uživatele, je Uživatel oprávněn umístit Prezentaci na Platformu. Umístění Prezentace může být zpoplatněno Poplatkem. Umístění Prezentace může být jinak omezeno (např. množstvím či časově).
+
+Obsah prezentace
+
+6.2 V Prezentacích jsou zveřejněny informace, které jsou založeny na informacích poskytnutých Uživatelem, který Prezentaci na Platformu umístil. Prostor na Platformě pro jednotlivé Prezentace je Poskytovatelem poskytován těmto Uživatelům. To neplatí pro Prezentace, které Poskytovatel přidává na Platformu v rámci vlastní iniciativy.
+
+6.3 Uživatel se zavazuje neduplikovat na Platformě Prezentace stejných nemovitostí (tj. nepřidávat Prezentace týkající se nemovitosti, která již je zveřejněna v rámci Prezentace).
+
+Podoba prezentace
+
+6.4 Konkrétní podoba Prezentace je určena možnostmi Platformy. Zveřejněním Prezentace Uživatel prohlašuje vůči Poskytovateli a ostatním Uživatelům, že Obsah Prezentace je v každém okamžiku úplný, přesný, pravdivý a právně nezávadný.
+
+6.5 Uživatel nesmí zveřejnit Obsah Prezentace (zejména takových prohlášení nebo sdělení), který by mohl poškodit zájmy nebo dobrou pověst Poskytovatele nebo Platformy, nebo který by mohl snížit zájem ostatních Uživatelů o Platformu, zejména takové informace, které by byly ve vztahu k nemovitosti, která je předmětem Prezentace, neúplné, nepřesné, nepravdivé či právně závadné.
+
+Řazení prezentací
+
+6.6 Řazení Prezentací na Platformě je plně v diskreci Poskytovatele. Poskytovatel negarantuje Uživateli žádné umístění Prezentace ani její pořadí. Poskytovatel však může nabízet výhodnější umístění nebo pořadí Prezentace za Poplatek, a to dle informací na Platformě.
+
+Prezentované nemovitosti
+
+6.7 Poskytovatel neposkytuje žádnou záruku (i) aktuálnosti či faktické správnosti Prezentace, (ii) za to, že nemovitosti tvořící předmět Prezentace jsou reálně nabízeny k prodeji, pronájmu či jiné dispozici, (iii) ani za existenci skutečné vůle vlastníka či jiné dotčené osoby takovou transakci realizovat. Poskytovatel rovněž negarantuje, že v souvislosti s jakoukoliv Prezentací dojde k úspěšnému uzavření kupní, nájemní či jakékoliv jiné smlouvy týkající se předmětné nemovitosti.
+
+Poskytnutí oprávnění k uživatelskému obsahu
+
+6.8 Poskytnutím, sdělením nebo nahráním Uživatelského obsahu na Platformu Uživatel poskytuje Poskytovateli k Uživatelskému obsahu celosvětové, nevýhradní, neodvolatelné a neomezené (místně, časově ani věcně) oprávnění a souhlas k užívání, ukládání, kopírování, rozmnožování, přenášení, zpracování, upravování, zpřístupňování veřejnosti a zobrazování Uživatelského obsahu, a to pro účely poskytování služeb prostřednictvím Platformy, tj. zejm. zobrazování Uživatelského obsahu na Platformě v rozsahu, jaký je na Platformě obvyklý s ohledem na povahu Uživatelského obsahu. Je-li Uživatelský obsah autorským dílem, zahrnuje oprávnění dle předešlé věty jakékoliv užití Uživatelského obsahu dle § 12 Autorského zákona a rovněž souhlas Uživatele udělený Poskytovateli k Uživatelskému obsahu ke zveřejnění, úpravám, zpracování včetně překladu, spojení s jiným dílem, zařazení do díla souborného, dokončení či k použití pro vylepšování Platformy. Poskytovatel je oprávněn Uživatelský obsah užít bez uvedení autorství. Oprávnění dle tohoto odstavce uděluje Uživatel Poskytovateli bezúplatně. Poskytovatel je k užití Uživatelského obsahu oprávněn, nikoliv povinen a z jeho nevyužití nevznikají žádná práva Uživateli. Obdobné oprávnění k Uživatelskému obsahu uděluje Uživatel Poskytovateli i v případě, že by Uživatelský obsah nebyl autorským dílem, ale byl by chráněn jinými právy Uživatele.
+
+Prohlášení uživatele při nahrání uživatelského obsahu
+
+6.9 Poskytnutím, sdělením nebo nahráním Uživatelského obsahu na Platformu Uživatel prohlašuje a zavazuje se, že:
+
+a) mu k Uživatelskému obsahu svědčí dostatečná práva;
+
+b) je oprávněn udělit Poskytovateli oprávnění dle odst. 6.8 Podmínek;
+
+c) užitím Uživatelského obsahu způsobem popsaným v odst. 6.8 Podmínek nebude Poskytovatel porušovat práva třetích osob či obecně závazné právní předpisy;
+
+d) Uživatelský obsah neobsahuje softwarový virus nebo jiné soubory či programy, které by mohly zničit, poškozovat nebo limitovat funkcionality Platformy ve vztahu k Poskytovateli nebo ostatním Uživatelům; a že
+
+e) Uživatelský obsah neporušuje Podmínky.
+
+Prohlášení ohledně osobních údajů
+
+6.10 Ve vztahu k Osobním údajům, které jsou součástí Uživatelského obsahu, Uživatel dále prohlašuje a zavazuje se, že:
+
+a) je oprávněn Poskytovateli Osobní údaje poskytnout ke zpracování, tedy že je subjektem Osobních údajů ve smyslu čl. 4 odst. 1 GDPR nebo správcem Osobních údajů ve smyslu čl. 4 odst. 7 GDPR;
+
+b) pokud je správcem, tak že Osobní údaje získává, zpracovává a spravuje v souladu s GDPR a dalšími obecně závaznými právními předpisy, zejména že informuje subjekty údajů o zpracování jejich Osobních údajů dle čl. 12 a 13 GDPR;
+
+c) Osobní údaje jsou přesné a odpovídající stanovenému účelu zpracování a jsou v rozsahu nezbytném pro naplnění stanoveného účelu (pro použití na Platformě); a že
+
+d) Uživatel je v souladu s GDPR a dalšími obecně závaznými právními předpisy oprávněn pověřit Poskytovatele zpracováním Osobních údajů a poskytnout Poskytovateli platný právní titul k jejich zpracování, a to v rozsahu a za účelem potřebným v rámci užívání Platformy.
+
+Třetí osoby v Uživatelském obsahu
+
+6.11 Obsahuje-li Uživatelský obsah podobu třetí osoby, a to zejména tak, že je zobrazuje či je jinak zachycuje, či podílela-li se na tvorbě Uživatelského obsahu třetí osoba, jakkoliv jinak, prohlašuje a zavazuje se Uživatel nahráním Uživatelského obsahu do Platformy, že:
+
+a) vypořádal práva s takovou třetí osobou (zejm. získal veškerá nutná oprávnění či souhlasy); a
+
+b) nahrává Uživatelský obsah s jejím souhlasem.
+
+Indemnifikace
+
+6.12 Pokud by třetí osoba včetně orgánu veřejné moci vůči Poskytovateli uplatňovala jakoukoli pohledávku či jiné právo v důsledku toho, že se prohlášení Uživatele obsažené ve Smlouvě ukáže jako nepravdivé, neúplné či zavádějící, a to zejména prohlášení obsažené v odst. 6.4, 6.5 či 6.8 až 6.11 Podmínek, zavazuje se Uživatel Poskytovatele bránit a nahradit Poskytovateli jakoukoli Újmu, která z toho či z následného jednání Uživatele vznikne. Zejména se Uživatel v takovém případě zavazuje (i) nahradit Poskytovateli náklady na právní zastoupení (vybraného Poskytovatelem), a to ve výši dle vyhl. 177/1996 Sb. ve znění účinném ke dni poskytnutí příslušného úkonu právní služby či ve výši prokázaných skutečně vynaložených nákladů na právní zastoupení, a to dle volby Poskytovatele, a (ii) poskytnout Poskytovateli nezbytnou součinnost (zejm. poskytnout veškeré informace a dokumenty, které si Poskytovatel vyžádá). Povinnost nahradit Poskytovateli veškerou Újmu představuje také (i) zaplacení sankcí uložených Poskytovateli orgánem veřejné moci, (ii) nahrazení částek, které musel Poskytovatel zaplatit na základě rozhodnutí v takovém řízení třetí osobě, která nárok uplatnila, nebo (iii) nahrazení částky, kterou Poskytovatel dobrovolně zaplatil třetí osobě, aby takové řízení ukončil či aby mu předešel.
+
+Kontrola uživatelského obsahu
+
+6.13 Poskytovatel aktivně nemonitoruje legálnost Uživatelského obsahu, a nehraje tedy aktivní roli takové povahy, že by bylo možné konstatovat, že Uživatelský obsah zná anebo kontroluje. Poskytovatel je však oprávněn (avšak nikoliv povinen) provádět namátkovou preventivní kontrolu legálnosti Uživatelského obsahu (a Prezentací obecně). V případě, že by Uživatelský obsah či Prezentace (i) mohly porušit Podmínky, obecně závazné právní předpisy nebo dobré mravy nebo (ii) mohly zasáhnout do práv třetích osob či Poskytovatele, je Poskytovatel oprávněn Uživatelský obsah či Obsah Platformy, který vznikl zpracováním Uživatelského obsahu, vč. Obsahu Prezentace, kdykoliv smazat.
+
+Kvalita uživatelského obsahu
+
+6.14 Poskytovatel nenese odpovědnost za kvalitu, legálnost či jiné vlastnosti Uživatelského obsahu. Poskytovatel pouze zprostředkovává a technicky zabezpečuje jeho zobrazení.
+
+7. Placené Plány, Předplatné a Poplatky
+
+Obecné
+
+7.1 Placené Plány opravňují Uživatele k některým akcím či umožňují Uživateli přístup k funkcionalitám, které by nemohl využívat prostřednictvím Free Plánu. Podrobnosti vyplývají z Platformy.
+
+7.2 Placené Plány jsou zpoplatněny Předplatným a trvají po dobu Zúčtovacího období.
+
+Platba Předplatného
+
+7.3 Uživatel platí Předplatné vždy na Zúčtovací období.
+
+7.4 Předplatné je splatné ihned poté, co Uživatel projeví zájem o placený Plán (např. v rámci registrace), a to za první Zúčtovací období. Každé další Předplatné je splatné vždy před začátkem každého následujícího Zúčtovacího období za toto následující Zúčtovací období, přičemž bude zaplaceno stržením částky z bankovního účtu (či jiného obdobného účtu) Uživatele, a to vybranou Platební bránou a ve výši daného Předplatného.
+
+Trial období
+
+7.5 Bez ohledu na výše uvedené platí, že pokud Platforma nabízí Trial období k danému Plánu, pak Uživatel za Trial období neplatí Předplatné. První Předplatné bude v takovém případě účtováno k prvnímu dni Zúčtovacího období, které bezprostředně naváže na konec Trial období. Délka Trial období vyplývá z Platformy. Poskytovatel si vyhrazuje právo v rámci Trial období omezit jednotlivé funkcionality Platformy (tj. Platforma v rámci Trial období nemusí nabízet všechny své funkcionality). Uživatel se zavazuje nezneužívat Trial období opakovaným zakládáním nových Uživatelských účtů.
+
+Opakovaná platba
+
+7.6 Uživatel opravňuje Poskytovatele a Platební bránu k pravidelnému automatizovanému strhávání Předplatného v souladu se Smlouvou. Uživatel souhlasí s případným nastavením a parametry automatického prodlužování a s uložením platebních údajů.
+
+7.7 Nepodaří-li se strhnout první Předplatné pomocí Platební brány či není-li jinak první Předplatné zaplaceno, je Poskytovatel oprávněn neaktivovat placený Plán Uživateli. Nepodaří-li se strhnout jakékoliv další Předplatné či není-li jinak zaplaceno, deaktivuje Poskytovatel placený Plán Uživateli ke konci daného Zúčtovacího období.
+
+Poplatky
+
+7.8 Některé akce či funkce na Platformě mohou být zpoplatněny Poplatkem, vyplývá-li to z Platformy. Popis případných Poplatků je uveden na Platformě. Není-li Poplatek hrazen pomocí Kreditů, použijí se na Poplatky přiměřeně ustanovení o Předplatném a další platební podmínky se použijí obdobně.
+
+Zpřístupnění funkcionalit a provedení akcí
+
+7.9 Poskytovatel je oprávněn pozdržet zpřístupnění funkcionalit Platformy v rozsahu placeného Plánu do doby, než mu bude ze strany Platební brány potvrzeno, že došlo ke stržení či zaúčtování Předplatného.
+
+7.10 Poskytovatel je dále oprávněn pozdržet provedení akce, která byla předmětem Poplatku, do doby, než mu bude potvrzeno, že došlo ke stržení či zaúčtování Poplatku. Je-li Poplatek placen prostřednictvím Kreditů, odmítne Poskytovatel provedení příslušné akce, nemá-li Uživatel dostatečné množství Kreditů pro její provedení.
+
+Vrácení akce
+
+7.11 V případě, že Poskytovatel (i) aktivuje placený Plán nebo (ii) provede akci, která je předmětem Poplatku, a následně vyjde najevo, že nedošlo k řádnému stržení či zaúčtování Předplatného nebo Poplatku, je Poskytovatel oprávněn s okamžitou platností a bez předchozího upozornění zamezit či omezit přístup Uživatele k těmto funkcionalitám. Poskytovatel je rovněž oprávněn jakoukoliv již provedenou akci zrušit, zneplatnit její výstupy nebo uvést stav Platformy do podoby před jejím provedením, je-li to technicky a fakticky proveditelné. Tím není dotčeno právo Poskytovatele domáhat se úhrady dlužné částky za již poskytnuté plnění Poskytovatelem.
+
+8. Kredity
+
+Nákup a povaha Kreditů
+
+8.1 Uživatel je oprávněn prostřednictvím k tomu určených funkcí Platformy nakupovat Kredity za fiat měnu, a to za Cenu Kreditů. Počet Kreditů, které Uživatel takto obdrží, se určí dle informací uvedených na Platformě.
+
+8.2 Zakoupené Kredity budou připsány Uživateli bez zbytečného odkladu poté, kdy bude Poskytovateli ze strany Platební brány potvrzeno, že došlo ke stržení či zaúčtování Ceny Kreditů.
+
+8.3 Kredity představují výhradně interní platební prostředek v rámci ekosystému Platformy. Kredity nejsou elektronickými penězi ani jakýmkoli investičním nástrojem. Jejich jediným účelem je placení Poplatků v rozsahu, v jakém to Platforma umožňuje, a nemají žádnou nominální ani reálnou hodnotu mimo Platformu. Kredity nejsou úročeny.
+
+Časové omezení Kreditů
+
+8.4 Poskytovatel je oprávněn časově omezit platnost Kreditů. O takových případných omezeních bude informovat na Platformě.
+
+9. Obecné platební podmínky
+
+Úvodní ustanovení o platbě Ceny Kreditů, Poplatků a Předplatného
+
+9.1 Uživatel hradí Cenu Kreditů či Předplatné pouze přes Platební bránu, nedohodly-li se Smluvní strany jinak ve Smlouvě. Poplatky Uživatel hradí:
+
+a) přes Platební bránu; či
+
+b) prostřednictvím Kreditů.
+
+9.2 V návaznosti na potvrzení Uživatele v prostředí Platební brány Platební brána zablokuje na účtu Uživateli částku odpovídající Ceně Kreditů, Poplatku či Předplatnému ve prospěch Poskytovatele.
+
+9.3 Uživatel bere na vědomí, že v závislosti na vybrané Platební bráně se jeho práva a povinnosti řídí i obchodními podmínkami či dokumentem upravujícím zpracování osobních údajů Platební brány.
+
+9.4 Uživatel je povinen držet se platebních pokynů Poskytovatele; to platí i pro pokyny Platební brány, na kterou je z Platformy Uživatel odkázán.
+
+9.5 Je-li Poskytovatel plátce DPH, jsou veškeré částky uvedeny na Platformě s DPH.
+
+Slevy
+
+9.6 Případné slevy z Ceny Kreditů, Poplatků či Předplatného poskytnuté Poskytovatelem Uživateli nelze vzájemně kombinovat, pokud není uvedeno výslovně jinak. Poskytovatel poskytuje případnou slevu vždy s rozvazovací podmínkou porušení Smlouvy Uživatelem. Pokud Uživatel poruší Smlouvu či Podmínky, je povinen do 5 (pěti) dnů od tohoto porušení vydat Poskytovateli částku odpovídající poskytnuté slevě.
+
+Faktura
+
+9.7 Poskytovatel vystaví ohledně plateb prováděných na základě Smlouvy ze strany Uživatele Fakturu. Fakturu vystaví Poskytovatel Uživateli po uhrazení předmětné částky a zašle ji v elektronické podobě na e-mail Uživatele, který je evidován v jeho Uživatelském účtu.
+
+9.8 Smluvní strany souhlasí s použitím Faktur v elektronické podobě.
+
+Platnost cen a kurzů
+
+9.9 Veškeré částky či informace, zejm. výše Poplatků, Cena Kreditů, výše Předplatného zůstávají v platnosti po dobu, kdy jsou zobrazovány na Platformě. V případě zjevné technické chyby při uvedení jejich výše nemá Poskytovatel skutečnou vůli poskytnout služby za takovýchto podmínek. V případě, kdy se jeví, že byla provedena předmětná akce se zjevně chybným Předplatným, Poplatkem nebo Cenou Kreditů, zavazuje se Poskytovatel tuto skutečnost Uživateli oznámit bez zbytečného odkladu poté, co chybu zjistí. V tomto případě taková akce nebyla provedena po právu z důvodu neexistence vůle na straně Poskytovatele. Nedojde-li mezi Smluvními stranami k dohodě o způsobu řešení, je Poskytovatel oprávněn takovou akci stornovat a vrátit zpět do původního stavu. Uživatel se na Poskytovatele může kdykoliv obrátit za účelem řešení takové situace.
+
+Informace o slevě
+
+9.10 Zobrazuje-li Poskytovatel na Platformě jakoukoliv slevu z Předplatného či Ceny Kreditů, z běžného Předplatného či Ceny Kreditů nebo akční nabídku na vybrané služby apod., zobrazuje Poskytovatel i informaci o nejnižším Předplatném či Ceně Kreditů (i) v době 30 dnů před poskytnutím slevy, (ii) od okamžiku, kdy je začal nabízet a poskytovat, do okamžiku poskytnutí slevy, pokud je daná akce na Platformě dostupná po dobu kratší než 30 dnů, nebo (iii) v době 30 dnů před prvním poskytnutím slevy, zvyšuje-li Poskytovatel slevu postupně (společně i jednotlivě body i, ii, a iii dále jen jako „Částka před slevou“). Je-li spolu s údajem o Předplatném či Ceně Kreditů zobrazen přeškrtnutý či jinak znehodnocený údaj o Předplatném či Ceně Kreditů, jedná se o Částku před slevou. Je-li zobrazen údaj o procentuální slevě, je tato procentuální výše slevy vypočtena z Částky před slevou. Tento odstavec se použije obdobně na Poplatky, nejsou-li placeny prostřednictvím Kreditů.
+
+Fallback
+
+9.11 V případě, že úhrada příslušné částky prostřednictvím Platební brány (či jiného podporovaného způsobu platby) nebude z jakéhokoliv důvodu úspěšně dokončena, nebo pokud provedení takové úhrady nebude objektivně či technicky možné, stává se předmětná částka splatnou na základě Faktury vystavené Poskytovatelem. Uživatel je v takovém případě povinen uhradit dlužnou částku nejpozději ke dni splatnosti uvedenému na příslušné Faktuře.
+
+Sankce za prodlení
+
+9.12 V případě porušení povinnosti Uživatele zaplatit Předplatné či jakýkoliv jiný peněžitý dluh vůči Poskytovateli dle Smlouvy řádně a včas si Smluvní strany sjednávají smluvní pokutu pro Uživatele, a to ve výši 0,1 % z dlužné částky za každý den v prodlení. Smluvní pokuta je splatná do 7 dnů od doručení písemné výzvy k zaplacení. Zaplacením smluvní pokuty není dotčeno právo Poskytovatele na Předplatné či Újmu.
+
+10. Nelegální obsah
+
+Informování o nelegálním obsahu
+
+10.1 Zjistí-li Stěžovatel, že se na Platformě nachází Nelegální obsah, může se obrátit na Poskytovatele, a to prostřednictvím odůvodněného oznámení. Poskytovatel v takových případech postupuje v souladu s principem „notice-takedown“, dospěje-li na základě upozornění Stěžovatele k závěru, že se skutečně jedná o Nelegální obsah. Stěžovatel může využít kontaktních údajů v úvodu Podmínek, popř. využít funkcí na Platformě, umožňuje-li to přímo Platforma. Upozornění Stěžovatele bude obsahovat alespoň:
+
+a) fyzický nebo elektronický podpis Stěžovatele či osoby oprávněné jednat jménem Stěžovatele;
+
+b) identifikaci díla chráněného autorskými či jinými právy vč. odkazu na Nelegální obsah, např. screenshot či jiná informace k dohledání Nelegálního obsahu na Platformě;
+
+c) odůvodnění či informace přiměřeně postačující k tomu, aby mohl Poskytovatel bez nepřiměřeného úsilí ověřit, že zobrazením či zveřejněním Nelegálního obsahu na Platformě je Stěžovateli zasahováno do práv či že Nelegální obsah porušuje obecně závazné předpisy;
+
+d) informace přiměřeně postačující k tomu, aby mohl Poskytovatel služeb kontaktovat Stěžovatele, jako jsou adresa, e-mailová adresa či telefonní číslo; a
+
+e) prohlášení potvrzující dobrou víru Stěžovatele v tom, že informace a tvrzení obsažené v oznámení jsou přesné a úplné.
+
+Postup poskytovatele
+
+10.2 Poskytovatel bez zbytečného odkladu potvrdí Stěžovateli elektronickými prostředky přijetí jeho oznámení.
+
+10.3 Poskytovatel všechna oznámení podaná v souladu s tímto článkem Podmínek zpracovává a rozhoduje o nich včas, nestranně, objektivně a s náležitou péčí.
+
+10.4 V případě, že Poskytovatel na základě posouzení dospěje k závěru, že Obsah je Nelegálním obsahem, přistoupí k jeho odstranění nebo znepřístupnění, případně uplatní jiné opatření v souladu s těmito Podmínkami. O tomto rozhodnutí a jeho odůvodnění informuje (i) dotčeného Uživatele, nahrál-li Nelegální obsah Uživatel, a (ii) Stěžovatele.
+
+Předběžné znepřístupnění obsahu
+
+10.5 Poskytovatel si vyhrazuje právo jakýkoliv Obsah, který byl označen za Nelegální obsah, případně u něhož Poskytovatel pojal důvodné podezření, že znaky Nelegálního obsahu naplňuje, preventivně znepřístupnit, skrýt či jinak blokovat. K tomuto opatření je Poskytovatel oprávněn přistoupit s okamžitou účinností, a to i před provedením konečného posouzení a před rozhodnutím o tom, zda dotčený Obsah skutečně představuje Nelegální obsah, primárně za účelem ochrany svých vlastních práv a oprávněných zájmů a za účelem prevence či minimalizace hrozících právních rizik na straně Poskytovatele. Poskytovatel v žádném případě neodpovídá za jakoukoliv Újmu, která by v důsledku takového preventivního znepřístupnění Obsahu mohla vzniknout, a to výslovně ani v situaci, kdy se následně prokáže, že předmětný Obsah povahu Nelegálního obsahu neměl.
+
+11. Výstupy
+
+Povaha výstupů
+
+11.1 Veškeré Výstupy poskytované či zpřístupňované v rámci Platformy mají výlučně informativní, orientační a právně nezávazný charakter. Uživatel bere na vědomí a výslovně souhlasí s tím, že Výstupy jsou generovány v podstatné míře automatizovaně, a to zejména prostřednictvím algoritmů, případně pomocí Modelu strojového učení. Tyto technologické nástroje zpracovávají dostupná data a informace, jejichž úplnost, správnost, přesnost, aktuálnost, reprezentativnost ani právní nezávadnost Poskytovatel nijak nezaručuje a neověřuje.
+
+11.2 Poskytovatel ve vztahu k Výstupům neposkytuje žádná prohlášení, záruky ani ujištění (ať už výslovná či implicitní), a to zejména ohledně:
+
+a) jejich faktické, technické či právní správnosti a celkové bezchybnosti;
+
+b) spolehlivosti a využitelnosti pro jakýkoliv specifický účel Uživatele;
+
+c) tržní relevance, přesnosti případného ocenění nemovitostí či predikce budoucího vývoje na relevantním trhu;
+
+d) vhodnosti jakožto spolehlivého podkladu pro jakékoliv obchodní, finanční, právní nebo osobní rozhodování Uživatele či třetích osob.
+
+Odpovědnost Uživatele
+
+11.3 Uživatel nese plnou a výlučnou odpovědnost za jakékoliv nakládání s Výstupy a za rozhodnutí na jejich základě učiněná. Poskytovatel výslovně doporučuje, aby veškeré informace obsažené ve Výstupech byly před provedením jakéhokoliv rozhodnutí, investice nebo transakce nezávisle ověřeny prostřednictvím kvalifikovaných odborníků (např. advokátů, odhadců majetku, realitních makléřů či finančních poradců). Poskytovatel nenese žádnou odpovědnost za jakoukoliv Újmu (včetně skutečné škody, ušlého zisku či ztráty dat), která Uživateli nebo jakékoliv třetí osobě vznikne v přímé či nepřímé souvislosti se spolehnutím se na Výstupy, s jejich použitím, nebo naopak s nemožností jejich použití.
+
+Užití výstupů
+
+11.4 V rozsahu, v jakém k Výstupům vznikla autorská či obdobná práva Poskytovateli, Poskytovatel Uživateli k Výstupům poskytuje nevýhradní oprávnění Výstupy užít pro účel, který je uveden na Platformě, jinak pro účel obvyklý s ohledem na povahu Výstupu, a to způsobem, který nepoškodí Poskytovatele.
+
+12. Modely strojového učení
+
+Interakce s modely strojového učení
+
+12.1 Uživatel bere na vědomí, že Platforma pro zpracování Uživatelského obsahu či Obsahu obecně používá Modely strojového učení. Uživatel bere na vědomí, že vzhledem k podstatě a fungování technologie Large Language Models (LLM) výsledky generované Modely strojového učení nemusí být vždy přesné, úplné nebo pravdivé, neboť technologie Large Language Models (LLM) pracuje na základě pravděpodobnostních vzorců z tréninkových dat, která mohou být neaktuální či chybná, a Model strojového učení nemá skutečné porozumění světu ani schopnost ověřovat fakta. Model strojového učení tedy může někdy vykazovat chyby (zejm. generování nesprávných nebo nerelevantních informací). Užívání Platformy může představovat nepřímou interakci s Modely strojového učení.
+
+Trénování Modelů strojového učení
+
+12.2 Uživatel souhlasí s tím a bere na vědomí, že Poskytovatel je oprávněn využívat veškerá data a Obsah, a to včetně Uživatelského obsahu, k vývoji, testování, vylepšování a trénování vlastních Modelů strojového učení, algoritmů strojového učení, neuronových sítí či obdobných technologií. Toto oprávnění se v plném rozsahu vztahuje také na trénování Modelů strojového učení či nástrojů třetích stran, které Poskytovatel integruje nebo jinak využívá pro zajištění, rozvoj či optimalizaci Platformy a jejích funkcionalit. Oprávnění k užití Uživatelského obsahu pro účely trénování a vývoj Modelů strojového učení je nedílnou součástí nevýhradního oprávnění poskytnutého Uživatelem dle odst. 6.8 Podmínek. Uživatel uděluje tento souhlas bezúplatně a vzdává se jakéhokoliv nároku na odměnu, podíl na zisku, licenční poplatky či jakoukoliv jinou kompenzaci v souvislosti s vývojem, nasazením, licencováním či komerčním využitím Modelů strojového učení natrénovaných (byť i jen zanedbatelnou částí) na datech či Uživatelském obsahu poskytnutém Uživatelem, a to v maximálním rozsahu dovoleném obecně závaznými právními předpisy. K trénování Modelů strojového učení nejsou používány Osobní údaje.
+
+13. Obsah, autorská práva a Platforma
+
+Zákaz kopírování obsahu
+
+13.1 Uživatel se zavazuje nestahovat, nekopírovat a nevyužívat Obsah jinak než prostřednictvím Platformy a v rozsahu, v jakém to Platforma výslovně povoluje. Zejména se Uživatel zavazuje zdržet se využití jakýchkoliv robotů, crawlerů, aplikací či software na prohledávání a zkoumání Platformy či jiného automatického zařízení, metody či procesu k přístupu, získávání, indexování či reprodukování Obsahu či jeho části.
+
+Zákaz ohrožení práv poskytovatele
+
+13.2 Platforma, její obsah a forma tento obsah zachycující (zejména grafický vzhled a úprava apod.) a jejich příslušné části náleží Poskytovateli a jsou chráněny právy duševního vlastnictví (zejména jako autorská díla, databáze, ochranné známky, průmyslové vzory apod.). Uživatel je povinen zdržet se jakéhokoli jednání, kterým by mohl porušit či ohrozit uvedená práva duševního vlastnictví Poskytovatele.
+
+Licence k dočasným souborům
+
+13.3 Poskytovatel uděluje Uživateli celosvětovou, nevýhradní, odvolatelnou a omezenou licenci k Dočasným souborům po dobu užívání Platformy k tomu, aby je užíval způsobem obvyklým a zamýšleným k zajištění předvídané funkčnosti Platformy.
+
+Vyhrazení práv
+
+13.4 Všechna práva k Platformě a jakémukoliv jinému užití práv duševního vlastnictví Poskytovatele, kromě práv, která Poskytovatel Uživateli výslovně poskytl, si Poskytovatel vyhrazuje pro sebe.
+
+Užívání platformy
+
+13.5 Poskytovatel nenese odpovědnost za chyby vzniklé v důsledku zásahů třetích osob do Platformy nebo v důsledku jejího užití v rozporu s jejím určením. Při využívání Platformy nesmí Uživatel používat postupy, které by mohly narušit funkci Platformy nebo Platformu nepřiměřeně zatěžovat.
+
+13.6 Poskytovatel upozorňuje Uživatele na to, že kliknutím na některé odkazy na Platformě může dojít k opuštění Platformy a k přesměrování na webové stránky třetích subjektů.
+
+13.7 Každý je povinen užívat Platformu pouze ke stanovenému účelu a způsobem obvyklým, tzn. prostřednictvím prohlížeče a uživatelského rozhraní.
+
+13.8 Aby mohl Uživatel využívat Platformu v plném rozsahu, musí Uživatel používat některé technologie či možnosti prohlížeče, např. aktivovat JavaScript či mít povolené nezbytné cookies v prohlížeči.
+
+13.9 Uživatel bere na vědomí, že Platforma nemusí být dostupná nepřetržitě, a to zejména s ohledem na nutnou údržbu hardwarového a softwarového vybavení Poskytovatele, popř. nutnou údržbu hardwarového a softwarového vybavení třetích osob.
+
+13.10 Uživatel nesmí využívat Platformu způsobem, který by mohl způsobit Újmu Poskytovateli nebo třetím osobám nebo jinak poškodit Platformu, hardware či software Poskytovatele nebo třetí strany.
+
+13.11 Poskytovatel může ze závažných důvodů Platformu přestat (úplně či částečně) dočasně poskytovat, a to zejména v souvislosti s kybernetickou událostí nebo incidentem či v případě závažné nefunkčnosti Platformy, kterou je třeba řešit nutnou odstávkou.
+
+13.12 Uživateli nevzniká vůči Poskytovateli žádný nárok na náhradu Újmy, nárok z vadného plnění, nárok na vrácení Předplatného, Ceny Kreditů či Poplatku či jiný obdobný nárok mající základ v nedostupnosti nebo odstávce Platformy.
+
+13.13 Uživatel zejména nesmí:
+
+a) využívat Platformu v rozporu s povinnostmi, které má vůči Poskytovateli, nebo v rozporu s Podmínkami či obecně závaznými právními předpisy;
+
+b) využívat Platformu k nezákonným činnostem, jako je zejména trestná činnost, porušování autorských práv, porušování práv k ochranným známkám nebo porušování jiných právních předpisů o ochraně duševního vlastnictví, k nabízení či prodeji nelegálního zboží;
+
+c) zasahovat do soukromí jakékoliv osoby nezákonným způsobem, např. neoprávněným zpracováním Osobních údajů;
+
+d) využívat Platformu takovým způsobem, který by vedl k porušení GDPR či jiné regulace v oblasti Osobních údajů Uživatelem či Poskytovatelem;
+
+e) pokoušet se o získání neoprávněného přístupu do Platformy, k Uživatelským účtům jiných Uživatelů nebo k serverům Poskytovatele;
+
+f) bránit přístupu oprávněných osob do Platformy nebo umožnit třetím osobám, které k tomu nejsou oprávněny, přístup do Platformy nebo její užívání takovými třetími osobami jménem Uživatele;
+
+g) Platformu, její zdrojový nebo strojový kód, překládat, reprodukovat, anebo převádět či postupovat práva na užívání Platformy;
+
+h) Platformu poskytnout třetím osobám, zejména prodat, sublicencovat, pronajmout, podnajmout nebo vypůjčit ji;
+
+i) dekompilovat, upravovat, zpracovávat, provádět reverzní inženýrství či jinak měnit Platformu nebo její část či databázi zahrnutou nebo použitou v rámci Platformy;
+
+j) jednat či nejednat v rozporu s dobrými mravy, veřejným pořádkem či omezovat výkon práv třetích osob.
+
+Aktualizace a změny platformy
+
+13.14 Poskytovatel je oprávněn provádět aktualizace Platformy. Poskytovatel je z důvodu zachování kvality služeb a Platformy či změny obecně závazných právních předpisů oprávněn Platformu a jednotlivé funkcionality vyvíjet, měnit či přestat nabízet, a to bez předchozího oznámení.
+
+13.15 Bez ohledu na výše uvedené však Poskytovatel negarantuje jakékoliv aktualizace, vylepšování Platformy, ani to, že všechny funkcionality Platformy budou zachovány či že budou zachovány za stávajících podmínek.
+
+Ochrana platformy
+
+13.16 Poruší-li Uživatel (či obecně kdokoliv) zákaz využívání automatizovaných nástrojů k přístupu, prohledávání, indexování či získávání Obsahu dle odst. 13.1 Podmínek (tzv. scraping), nebo způsobí-li umělé přetěžování infrastruktury Platformy prostřednictvím automatizovaných dotazů či jiného nestandardního užívání, považuje se takové jednání za podstatné porušení Podmínek. Při podezření na porušení povinností dle čl. 13 Podmínek, jakož i při jakékoliv detekci projevů strojového vytěžování dat, kybernetického útoku nebo skokového a nepřiměřeného zatížení infrastruktury Platformy, je Poskytovatel oprávněn přistoupit k okamžité technické blokaci přístupu k Platformě (což zahrnuje zejména technickou blokaci dotčené IP adresy, zamezení přístupu k API rozhraní či plnou blokaci Uživatelského účtu). Tuto blokaci je Poskytovatel oprávněn provést okamžitě a bez předchozího upozornění či výzvy k nápravě.
+
+13.17 Ochranné mechanismy infrastruktury Poskytovatele mohou síťový provoz vyhodnocovat zcela automatizovaně. Uživatel bere na vědomí a výslovně souhlasí s tím, že k technické blokaci dle předchozího odstavce může dojít i z důvodu chybného nastavení softwaru, interních systémů či koncových zařízení na straně jinak legitimního Uživatele (včetně platících Uživatelů v Roli makléře), pokud tyto systémy generují provoz vykazující znaky automatizovaného vytěžování či přetěžování Platformy. Poskytovatel nenese žádnou odpovědnost za Újmu, která by Uživateli vznikla v důsledku oprávněné i neoprávněné technické blokace přístupu k Platformě, odstavení od služeb či dočasného znepřístupnění Uživatelského účtu.
+
+Vytváření dat a statistik
+
+13.18 Uživatel bere na vědomí a výslovně souhlasí s tím, že Poskytovatel je oprávněn systematicky shromažďovat, analyzovat a dále zpracovávat veškerá provozní data, telemetrii a informace o aktivitě a interakcích Uživatele v rámci Platformy, a to za účelem vytvoření plně anonymizovaných, statistických a agregovaných datových sad (dále jen „Agregovaná data“). Agregovaná data jsou výlučně taková data, která neobsahují žádné Osobní údaje ve smyslu příslušných ustanovení GDPR, neumožňují přímou ani nepřímou identifikaci konkrétní fyzické osoby, a nepodléhají tak režimu právní ochrany soukromí ani předpisům na ochranu osobních údajů. Poskytovatel je výlučným a neomezeným nositelem veškerých majetkových práv k Agregovaným datům, a to včetně zvláštních práv pořizovatele databáze ve smyslu ustanovení § 88 a násl. Autorského zákona. Uživatel výslovně uznává, že Agregovaná data představují samostatné a nezávislé majetkové aktivum Poskytovatele, jež vzniklo vynaložením podstatného vkladu (zejména technického, finančního a organizačního) ze strany Poskytovatele. Poskytovatel je oprávněn s Agregovanými daty zcela volně a bez jakýchkoliv omezení (věcných, místních či časových) nakládat. Toto oprávnění zahrnuje zejména, nikoliv však výlučně, právo Agregovaná data komerčně využívat, zpeněžovat, licencovat, publikovat, prodávat či jinak zpřístupňovat třetím osobám za účelem dosažení zisku. Uživatel se v souvislosti se vznikem a následným užitím Agregovaných dat výslovně vzdává jakýchkoliv nároků vůči Poskytovateli. Uživatel dále závazně prohlašuje, že vůči Agregovaným datům ani vůči výnosům z jejich monetizace nevznese žádné nároky z titulu ochrany osobnosti, ochrany soukromí, autorských práv či z titulu tvrzeného spoluautorství. Uživatel bere na vědomí, že mu za jakékoliv komerční či nekomerční využití Agregovaných dat ze strany Poskytovatele nenáleží žádná odměna, podíl na zisku, ani jiná kompenzace z titulu bezdůvodného obohacení či z jakéhokoliv jiného právního důvodu.
+
+14. Pravidla chování a pravidla komunity
+
+Základní zásady
+
+14.1 Uživatel se zavazuje při užívání Platformy a při veškeré interakci s ostatními Uživateli dodržovat obecně závazné právní předpisy, tyto Podmínky a jednat v souladu s dobrými mravy.
+
+14.2 Cílem následujících pravidel je zajistit bezpečné a respektující prostředí pro všechny Uživatele.
+
+Zakázaný Uživatelský obsah a jednání
+
+14.3 Uživatel se zavazuje, že nebude prostřednictvím Platformy vytvářet, nahrávat, sdílet, odkazovat ani jinak šířit Uživatelský obsah nebo se dopouštět jednání, které:
+
+a) propaguje či podporuje terorismus, organizovaný zločin, extremistické ideologie, nebezpečné konspirace či jiné nezákonné nebo společensky nebezpečné aktivity;
+
+b) obsahuje projevy nenávisti, šikanu, zastrašování, obtěžování, urážky, výhrůžky či ponižování jiných osob na základě jejich rasy, etnického původu, národnosti, pohlaví, sexuální orientace, věku, zdravotního postižení, náboženského vyznání či jiné obdobné charakteristiky;
+
+c) propaguje, zprostředkovává či jakkoli podporuje jakoukoliv formu vykořisťování osob, včetně obchodování s lidmi, nucené práce, sexuálního vykořisťování nebo nucených sňatků;
+
+d) propaguje či zobrazuje sebepoškozování, sebevraždu či jiné zdraví ohrožující chování;
+
+e) obsahuje úmyslně zkreslené či nepravdivé informace (dezinformace), jejichž cílem je klamat, podvádět či poškodit jiné osoby nebo vyvolat společenskou paniku;
+
+f) neoprávněně zasahuje do soukromí jiných osob, zejména sdílením citlivých či soukromých údajů jiných osob bez jejich prokazatelného souhlasu, včetně soukromé komunikace.
+
+Integrita Platformy a ochrana komunity
+
+14.4 Uživatel se dále zavazuje, že nebude:
+
+a) vydávat se za jinou osobu, vytvářet falešné Uživatelské účty nebo uvádět nepravdivé či zavádějící údaje o své totožnosti;
+
+b) šířit nevyžádaná obchodní sdělení (spam), nadměrné množství zpráv, komentářů či jiného obsahu, který narušuje běžné užívání Platformy ostatními Uživateli;
+
+c) využívat Platformu k propagaci produktů, služeb či k jiným komerčním účelům mimo zpeněžení Uživatelského obsahu na Platformě;
+
+d) odkazovat na jiné platformy, webové stránky či služby, jejichž primárním účelem je prezentace totožných nemovitostí, zejména s cílem obejít platební mechanismy Platformy či odlákat Uživatele na konkurenční služby.
+
+15. Trvání Smlouvy
+
+Trvání smlouvy
+
+15.1 Smlouva je uzavřena:
+
+a) na dobu neurčitou, zvolil-li Uživatel Free Plán, přičemž kterákoliv Smluvní strana je oprávněna Smlouvu vypovědět bez výpovědní doby;
+
+b) na dobu Zúčtovacího období, zvolil-li Uživatel placený Plán, přičemž Smluvní strany sjednávají, že uplynutím sjednané doby trvání se Smlouva automaticky prodlužuje (tzv. automatická prolongace), a to i opakovaně, vždy o dobu odpovídající délce Zúčtovacího období, a to bez nutnosti uzavírat písemný dodatek ke Smlouvě. K automatické prolongaci závazku nedojde výlučně v případě, že:
+
+i) kterákoli ze Smluvních stran v průběhu probíhajícího Zúčtovacího období písemně oznámí druhé Smluvní straně, že na dalším trvání Smlouvy nemá zájem; nebo
+
+ii) Uživatel aktivně zruší Předplatné, případně z jeho strany nedojde k úspěšné úhradě Předplatného na následující Zúčtovací období;
+
+c) na dobu trvání Trial období, v případě placeného Plánu, pokud je umožněno čerpat Trial období a Uživatel tuto možnost využije. Neukončí-li Uživatel Smlouvu před uplynutím Trial období nebo neznemožní-li provedení úhrady Předplatného, Smlouva se uplynutím Trial období automaticky prodlužuje na dobu trvání prvního Zúčtovacího období a nadále pokračuje v režimu písm. b) výše.
+
+Ukončení Smlouvy
+
+15.2 Kterákoli ze Smluvních stran je oprávněna Smlouvu vypovědět (i bez udání důvodu), přičemž závazek ze Smlouvy v takovém případě zaniká uplynutím posledního dne probíhajícího Zúčtovacího období, a jde-li o Free Plán, pak okamžitě. Za výpověď se rovněž považuje:
+
+a) faktické jednání Poskytovatele v případě, kdy Poskytovatel v souladu s těmito Podmínkami zruší Uživatelský účet nebo Uživateli technickými prostředky trvale znemožní užívání Platformy; nebo
+
+b) faktické jednání Uživatele, zruší-li Uživatel svůj Uživatelský účet nebo znemožní-li zaplacení dalšího Předplatného.
+
+15.3 Bez ohledu na způsob zániku Smlouvy, a aniž jsou dotčena případná kogentní ustanovení obecně závazných právních předpisů, platí, že Poskytovatel není povinen vracet jakékoliv již zaplacené Předplatné, Ceny Kreditů či Poplatky, a to bez ohledu na to, zda Uživatel Platformu využíval a jakých výsledků pomocí Platformy dosahoval.
+
+15.4 Zánik Smlouvy nemá vliv na práva a povinnosti, které mají podle své povahy trvat i po zániku Smlouvy (např. odst. 6.8 či 6.12 Podmínek).
+
+15.5 Smluvní strany mají právo odstoupit od Smlouvy v případě, že tak stanoví Smlouva, Podmínky či obecně závazné právní předpisy.
+
+Změna Plánu v průběhu Zúčtovacího období
+
+15.6 Umožňuje-li to Platforma a změní-li si Uživatel Plán v průběhu Zúčtovacího období, pak:
+
+a) jde-li o zvýšení Plánu (přechází-li Uživatel na dražší Plán), pak Poskytovatel má právo na zaplacení poměrné části Předplatného za takto zvýšený Plán, a to až do konce aktuálního Zúčtovacího období; v takovém případě je tato částka zpravidla splatná okamžitě po zvýšení Plánu;
+
+b) jde-li o snížení Plánu (přechází-li Uživatel na levnější Plán či na Free Plán), pak Poskytovatel dle informací na Platformě může:
+
+i) ponechat aktuální Plán aktivní až do konce Zúčtovacího období;
+
+Pravidla pro Bezdůvodné odstoupení od smlouvy
+
+15.7 Je-li Uživatel spotřebitelem, vztahuje se na něj právo odstoupit od Smlouvy dle § 1829 OZ bezdůvodně, a to do 14 (čtrnácti) dnů od zpřístupnění Platformy. Odstoupení od Smlouvy musí být Poskytovateli ve lhůtě uvedené v předchozí větě alespoň odesláno.
+
+15.8 Uživatel, který je spotřebitelem, však bere na vědomí, že:
+
+a) uzavírá-li Smlouvu a nejedná-li se o placený Plán, nemá právo odstoupit od Smlouvy, neboť se jedná o digitální obsah (nedodávaný na hmotném nosiči), který byl zpřístupněn bezúplatně (tj. pouze založen Uživatelský účet), to vše v souladu s § 1837 odst. 1 písm. l) OZ; nebo
+
+b) uzavírá-li Smlouvu a zvolil-li si placený Plán, nemá právo odstoupit od Smlouvy (§ 1837 odst. 1 písm. l) OZ), pokud Poskytovatel započal s plněním svého závazku na výslovnou žádost Uživatele před uplynutím lhůty pro odstoupení od Smlouvy. Uživatel tímto výslovně žádá, aby Poskytovatel započal s plněním svého závazku před uplynutím lhůty pro odstoupení od Smlouvy a bere výslovně na vědomí, že v takovém případě nebude mít právo na odstoupení od Smlouvy.
+
+Postup odstoupení od smlouvy
+
+15.9 Pro odstoupení od Smlouvy může Uživatel využít vzorový formulář poskytovaný Poskytovatelem. Vzorový formulář je k nalezení na 
+www.realingo.cz/pravidla-pouzivani
+.
+
+15.10 Odstoupení od Smlouvy může Uživatel zaslat zejména na kontaktní adresu, do jakékoliv provozovny Poskytovatele, do sídla Poskytovatele nebo na kontaktní e-mail Poskytovatele.
+
+15.11 V případě oprávněného odstoupení od Smlouvy se Smlouva ruší. Smluvní strany si však nebudou zpět vydávat plnění v rozsahu, v jakém již plnily s ohledem na skutečnost, že se jedná o dlouhotrvající Smlouvu týkající se opakujícího plnění.
+
+16. Vadné plnění a reklamace
+
+Právní úprava
+
+16.1 Práva a povinnosti Poskytovatele a Uživatele ohledně práv z vadného plnění se řídí příslušnými obecně závaznými právními předpisy (zejména ustanoveními § 1914 až 1925, je-li Uživatel spotřebitelem, pak i § 2389a až § 2389u OZ).
+
+16.2 V rozsahu, v jakém je Platforma Uživateli zpřístupněna bezúplatně, nemá Uživatel práva z vadného plnění. To neplatí v případě, zpracovává-li Poskytovatel Osobní údaje nikoliv pouze pro účely poskytnutí Platformy nebo ke splnění svých zákonných povinností, tj. zejm. využívá-li Poskytovatel Osobní údaje Uživatele pro cílení reklamy (k tomu více v Zásadách zpracování osobních údajů na
+ 
+www.realingo.cz/privacy
+).
+
+16.3 Uživatel nemá právo na slevu z jakékoliv částky ani právo na vrácení jakékoliv částky, má-li práva z vadného plnění jen z důvodu zpracování Osobních údajů dle předchozího odstavce. Každá sleva z Ceny Kreditů, Poplatku či Předplatného bude přiměřená s ohledem (i) na rozsah nefunkčnosti či vady funkcionality Platformy a (ii) dobu trvání Smlouvy, kdy Platforma vady nevykazuje. Sleva z ceny či poplatku se počítá vždy z (k tomu relevantní) ceny či poplatku (např. z Ceny Kreditů, Poplatku či Předplatného). Sleva z ceny či částky nikdy není vyšší než samotná částka, kterou Uživatel v souladu s Podmínkami za plnění, které je vadné, zaplatil.
+
+Vady
+
+16.4 Má-li Uživatel práva z vadného plnění, pak platí, že:
+
+a) Poskytovatel plní vadně zejména v následujících případech:
+
+i) neodpovídá-li Platforma Smlouvě, jakož i funkčnosti, kompatibilitě, interoperabilitě a jiným ujednaným vlastnostem;
+
+ii) není-li Platforma vhodná k účelu sjednanému ve Smlouvě nebo k účelu, který Uživatel požaduje a s nímž Poskytovatel souhlasil;
+
+iii) není-li Platforma poskytnuta se sjednaným příslušenstvím a pokyny k použití, které může Uživatel rozumně očekávat, především pokyny k použití a s možností uživatelské podpory;
+
+iv) není-li Platforma vhodná k účelu, k němuž se digitální obsah tohoto druhu obvykle používá, i s ohledem na práva třetích osob, právní předpisy a technické normy nebo kodexy chování daného odvětví, není-li technických norem;
+
+v) Platforma rozsahem, jakostí a dalšími výkonnostními parametry, včetně funkčnosti, kompatibility, přístupnosti, kontinuity a bezpečnosti, neodpovídá obvyklým vlastnostem digitálního obsahu téhož druhu, které může Uživatel rozumně očekávat, i s ohledem na veřejná prohlášení učiněná Poskytovatelem nebo jinou osobou v témže smluvním řetězci, zejména reklamou nebo označením; to neplatí, prokáže-li Poskytovatel, že si nebyl veřejného prohlášení vědom nebo že bylo v době uzavření Smlouvy upraveno alespoň srovnatelným způsobem, jakým bylo učiněno, anebo že na rozhodnutí o uzavření Smlouvy nemohlo mít vliv;
+
+vi) není-li Platforma poskytována s příslušenstvím a pokyny k použití, které může Uživatel rozumně očekávat; nebo
+
+vii) Platforma neodpovídá zkušební verzi nebo náhledu, které Poskytovatel zpřístupnil před uzavřením Smlouvy.
+
+Uplatnění práva z vad
+
+16.5 Uživatel může právo z vadného plnění uplatnit u soudu, vytkl-li vadu Poskytovateli v době trvání Smlouvy bez zbytečného odkladu poté, kdy měl možnost si Platformu prohlédnout a vadu při dostatečné péči zjistit, a to buď označením vady nebo oznámením, jak se projevuje.
+
+16.6 Plní-li Poskytovatel vadně, může se Uživatel domáhat:
+
+a) opravy, ledaže by oprava zahrnovala nepřiměřené náklady s ohledem na Platformu a její funkcionality; nepřiměřenými náklady se rozumí například náklady na opravu, která by v sobě zahrnovala jakýkoliv zásah do zdrojového kódu; Poskytovatel odstraní vadu v přiměřené době po jejím vytknutí tak, aby nezpůsobil Uživateli značné obtíže, přičemž se zohlední povaha Platformy; nebo
+
+b) doplnění toho, co chybí, připadá-li to do úvahy vzhledem k povaze Platformy a vady (např. doplnění Kreditů, byla-li by připsána nesprávná výše na Peněženku Uživatele).
+
+16.7 Namísto práv dle předchozího odstavce může Uživatel odstoupit od Smlouvy nebo požadovat i slevu z částky, kterou zaplatil, v případě, že:
+
+a) Poskytovatel vadu neodstranil v souladu s Podmínkami nebo je z prohlášení Poskytovatele nebo z okolností zjevné, že vada nebude odstraněna v přiměřené době nebo bez značných obtíží pro Uživatele;
+
+b) se vada projeví i po odstranění; nebo
+
+c) je vada podstatným porušením Smlouvy.
+
+16.8 Práva z vadného plnění Uživateli nenáleží, pokud o vadě věděl nebo musel vědět, dále pokud Uživatel vadu sám způsobil, zejména tím, že jednal v rozporu se Smlouvou, Podmínkami nebo pokyny Poskytovatele.
+
+16.9 Při vytýkání vad (reklamaci) Poskytovatel Uživateli doporučuje, aby Uživatel specifikoval vadu, přesný popis charakteru vad a aby uvedl, jaký způsob vyřízení reklamace požaduje. Uplatnění práv z vadného plnění může Uživatel zasílat mimo jiné na adresu sídla Poskytovatele či na adresu elektronické pošty Poskytovatele uvedené v úvodu Podmínek.
+
+16.10 Poskytovatel je povinen přijmout vytknutí vady (reklamaci) v kterékoli provozovně, případně i v sídle nebo místě podnikání. Poskytovatel je povinen Uživateli vydat písemné potvrzení o tom, (i) kdy Uživatel právo uplatnil, (ii) co je obsahem reklamace a (iii) jaký způsob vyřízení reklamace Uživatel požaduje. Potvrzení obsahuje i (iv) kontaktní údaje na spotřebitele.
+
+16.11 Poskytovatel reklamace vyřizuje nejpozději do 30 dnů ode dne jejich uplatnění, pokud se s Uživatelem nedohodl jinak. V této lhůtě je Poskytovatel povinen Uživatele o výsledku reklamace i informovat. O datu a způsobu vyřízení reklamace, včetně potvrzení o provedení opravy a době jejího trvání, případně s písemným odůvodněním zamítnutí reklamace, vystaví Poskytovatel Uživateli písemné potvrzení. Dostane-li se Poskytovatel do prodlení s vyřízením reklamace, má Uživatel právo na odstoupení od Smlouvy nebo i právo na slevu z příslušné částky.
+
+16.12 V souladu s OZ má Uživatel právo na úhradu účelně vynaložených nákladů při uplatnění reklamace. Právo na úhradu těchto nákladů musí Uživatel uplatnit do jednoho měsíce po uplynutí lhůty, ve které je třeba vytknout vadu.
+
+Výjimky pro podnikatele
+
+16.13 Není-li Uživatel spotřebitelem, pak:
+
+a) se neuplatní odst. 16.4 Podmínek a pojem vady se pro účely vadného plnění bude vykládat pouze s ohledem na § 1914 a násl. OZ; a
+
+b) Uživatel nemá práva dle odst. 16.10 až 16.12 Podmínek; a
+
+c) Uživatel nemá právo odstoupit od Smlouvy dle odst. 16.7 Podmínek.
+
+17. Zvláštní ustanovení pro Uživatele – spotřebitele
+
+Použitelné ustanovení
+
+17.1 Je-li Uživatel spotřebitelem, uplatní se na Smlouvu zákonné ustanovení týkající se spotřebitele (zejména § 1810 až § 1840 OZ, a případně také § 2389g a násl. OZ či další ustanovení, které se v případě Smlouvy týkají spotřebitele, jakož i ustanovení zákona č. 634/1992 Sb., o ochraně spotřebitele).
+
+Výklad tohoto článku
+
+17.2 Je-li dále v tomto článku Podmínek užíván pojem „Uživatel“, je tím myšlen Uživatel, který je spotřebitel.
+
+Obecné informace pro spotřebitele
+
+17.3 K podnikání je Poskytovatel oprávněn na základě živnostenského oprávnění. Činnost Poskytovatele nepodléhá jinému povolování. Živnostenskou kontrolu provádí v rámci své působnosti příslušný živnostenský úřad (
+https://www.rzp.cz/
+).
+
+17.4 Poskytovatel není ve vztahu k Uživateli vázán žádnými kodexy chování.
+
+17.5 Kontrolu dodržování právních předpisů na ochranu spotřebitele provádí Česká obchodní inspekce (
+http://www.coi.cz/
+). Česká obchodní inspekce je subjektem mimosoudního řešení spotřebitelských sporů plynoucích ze Smlouvy či z těchto Podmínek.
+
+17.6 V případě, že dojde mezi Smluvními stranami ke vzniku spotřebitelského sporu ze Smlouvy, který se nepodaří vyřešit vzájemnou dohodou, může Uživatel podat návrh na mimosoudní řešení takového sporu určenému subjektu mimosoudního řešení spotřebitelských sporů, kterým je Česká obchodní inspekce, Ústřední inspektorát oddělení ADR, Gorazdova 1969/24, 120 00 Praha 2, email: 
+
+[email&#160;protected]
+
+, web: 
+https://www.coi.cz/informace-o-adr/
+.
+
+17.7 Případné stížnosti vyřizuje Poskytovatel prostřednictvím svého kontaktního e-mailu uvedeného v úvodu těchto Podmínek. Uživatel se dále může obrátit na subjekty uvedené výše v tomto článku. Práva spotřebitelů hájí i jejich zájmová sdružení a jiné subjekty na jejich ochranu, např. Sdružení českých spotřebitelů, z. ú. (adresa: Tř. Karla IV. 430, 500 02 Hradec Králové, web:
+ 
+www.konzument.cz
+, email:
+ 
+
+[email&#160;protected]
+
+, telefon: +420 495 215 266).
+
+17.8 Pro podání stížnosti týkající se Smlouvy a pro vyhledání subjektu alternativního řešení sporů lze rovněž využít on-line platformu, která je zřízena Evropskou komisí na adrese:
+ 
+http://ec.europa.eu/consumers/odr/
+.
+
+Zákaznické recenze
+
+17.9 Zveřejňuje-li Poskytovatel na Platformě recenze třetích osob, které využily Platformu, mají s Poskytovatelem zkušenost nebo si objednaly od Poskytovatele jiný produkt či službu (dále jen jako „Zákaznická recenze“) informuje Poskytovatel vhodným způsobem o tom, (i) zda a jak je ta která Zákaznická recenze ověřena či (ii) zda se jedná o placenou Zákaznickou recenzi. Není-li tato informace uvedena vhodným způsobem u Zákaznické recenze, informuje tímto Poskytovatel Uživatele, že Zákaznická recenze není ověřena a že se nejedná o placenou Zákaznickou recenzi.
+
+18. Omezení odpovědnosti Poskytovatele
+
+Pouze výslovná odpovědnost
+
+18.1 Odpovědnost Poskytovatele se řídí výlučně ustanoveními těchto Podmínek. Všechna práva, která v nich nejsou výslovně přiznána, jsou bez ohledu na jejich právní důvod vyloučena. Poskytovatel výslovně vylučuje veškeré implicitní záruky, včetně, ale nikoli výhradně, záruk obchodovatelnosti, vhodnosti pro konkrétní účel a neporušení práv. Uživatel se tímto v maximálně možné míře určené obecně závaznými právními předpisy vzdává práv z vadného plnění Poskytovatele dle Smlouvy, práv z prodlení Poskytovatele a práv na náhradu Újmy vůči Poskytovateli, která by mu v příčinné souvislosti s užíváním Platformy mohla vzniknout.
+
+As-is
+
+18.2 Poskytovatel Uživateli poskytuje Platformu a všechny služby v režimu „AS-IS“. Poskytovatel ve vztahu k Platformě ani ke službám neposkytuje žádné záruky jakéhokoli druhu (např. správnosti, úplnosti či funkčnosti). Není-li výslovně sjednáno jinak, Poskytovatel negarantuje stálou dostupnost Platformy. Poskytovatel neodpovídá za to, že Platforma bude bez vad spolupracovat s jiným hardware nebo software či že bude plnit zamýšlený účel. Poskytovatel dále nezaručuje a nemůže zaručit výkon nebo výsledky, kterých by Uživatel mohl užíváním Platformy dosáhnout. Poskytovatel nenese odpovědnost za žádnou přímou, nepřímou, náhodnou, zvláštní, následnou nebo exemplární Újmu, včetně Újmy na dobré pověsti, Újmy způsobené na ztrátou dat, Uživatelského obsahu či jiných informací nebo Újmy z jiných nehmotných či hmotných ztrát (a to ani když by byl Poskytovatel upozorněn na možnost vzniku takové Újmy u Uživatele), to vše vyplývající z používání nebo nemožnosti používání Platformy.
+
+18.3 Poskytovatel neposkytuje žádná prohlášení ani záruky, že používání Platformy bude nepřerušované, bezchybné nebo bezpečné. Poskytovatel dále nezaručuje, že všechny vady budou opraveny, ani že Obsah bude přesný nebo spolehlivý.
+
+Výjimky
+
+18.4 Vyloučení odpovědnosti za Újmu dle Podmínek se neuplatní v případě úmyslu nebo hrubé nedbalosti Poskytovatele či v případě újmy na přirozených právech člověka.
+
+18.5 Omezení odpovědnosti Poskytovatele se nepoužije v případě, že je ve smluvním vztahu s Uživatelem, který je slabší stranou, a nelze-li podobné omezení odpovědnosti z tohoto důvodu s ním sjednat. I v takovém případě by měla být odpovědnost Poskytovatele ve výše uvedeném rozsahu omezena v maximální možné míře, která je dovolena obecně závaznými právními předpisy s ohledem na vzájemné postavení Uživatele a Poskytovatele.
+
+19. Vyšší moc a změna okolností
+
+Důsledky vyšší moci
+
+19.1 Poskytovatel se nedostane do prodlení, není odpovědný v důsledku vadného plnění ani nemá povinnost nahradit Újmu způsobenou Uživateli porušením svých povinností vyplývajících z těchto Podmínek, Smlouvy či obecně závazného právního předpisu, bránila-li Poskytovateli ve splnění této povinnosti některá z překážek vylučujících povinnost k náhradě Újmy. Za takovou překážku se považuje překážka, která je mimořádná, nepředvídatelná, nepřekonatelná a která vznikla nezávisle na vůli Poskytovatele.
+
+19.2 Smluvní strany si nad rámec zákona výslovně sjednávají, že za překážku vylučující povinnost k náhradě Újmy se považuje i výpadek internetového připojení či elektrické energie, živelní pohromy, útoky na technická zařízení Poskytovatele a nedostupnost služeb třetích stran (typicky API či jiné služby třetích stran, které Platforma využívá) a porušení povinností Uživatelem v oblasti zabezpečení, a to i přesto, že nemusí jít o překážku, která je ke dni uzavření Smlouvy zcela nepředvídatelná.
+
+20. Ochrana osobních údajů
+
+20.1 O zpracování osobních údajů fyzických osob Poskytovatel informuje v samostatném dokumentu Zásady zpracování osobních údajů na 
+www.realingo.cz/privacy
+.
+
+20.2 O zpracování cookies informuje Poskytovatel v samostatném dokumentu Zásady zpracování cookies na
+ 
+www.realingo.cz/cookies
+.
+
+20.3 Dozor nad oblastí ochrany osobních údajů vykonává Úřad pro ochranu osobních údajů (
+https://www.uoou.cz/
+).
+
+21. Rozhodné právo a řešení sporů
+
+Rozhodné právo
+
+21.1 Na tyto Podmínky, stejně jako na právní vztahy založené Smlouvou se použije české právo s vyloučením kolizních ustanovení. Kromě ustanovení vyloučených na jiných místech těchto Podmínek se vylučuje aplikace § 557, § 558 odst. 2, § 1732 odst. 2, § 1740 odst. 3 a § 1748 OZ. Je-li Uživatel podnikatelem, vylučují tímto Smluvní strany výslovně aplikaci § 1799 a 1800 OZ a dále pak § 2389a až § 2389u OZ.
+
+Řešení sporů
+
+21.2 Smluvní strany se výslovně dohodly, že veškeré spory, které by v budoucnu vznikly ze Smlouvy nebo které vzniknou v souvislosti se Smlouvou, včetně sporů ohledně její platnosti, výkladu, realizace či ukončení, práv z tohoto právního vztahu přímo či nepřímo vznikajících, otázek právní platnosti tohoto právního vztahu, otázky práv s výše uvedenými právy souvisejícími, a to i v případě, že Smlouva bude neplatná, zrušena nebo od ní bude odstoupeno, budou nejprve řešeny pokusem o smírnou cestu (dohodou). Nic v tomto odstavci se však nebude vykládat jako smlouva o smlouvě budoucí.
+
+21.3 Je-li Uživatel z jiného státu (mimo sídlo Poskytovatele), budou spory vzniklé ze Smlouvy či s ní související řešeny v rámci soudního řízení před soudy České republiky. Je-li Uživatel podnikatelem, dohodly se Smluvní strany, že veškeré spory vzniklé ze Smlouvy nebo v souvislosti s ní, včetně sporů ohledně její platnosti, výkladu, realizace či ukončení, budou řešeny u soudů České republiky, a to u Městského soudu v Brně či Krajského soudu v Brně v závislosti na věcné příslušnosti.
+
+Ochrana spotřebitele
+
+21.4 Ničím v odst. 21.1 Podmínek (vč. volby práva) není vyloučena ochrana Uživatele, který je spotřebitel, poskytnutá mu právem státu, kde má své obvyklé bydliště, avšak pouze za předpokladu, že má právo se takové ochrany dovolávat s ohledem na nařízení Evropského parlamentu a Rady (EU) č. 593/2008 ze dne 17. června 2008 o právu rozhodném pro smluvní závazkové vztahy (ŘÍM I).
+
+21.5 Ničím v odst. 21.2 a 21.3 Podmínek není dotčeno právo Uživatele, který je spotřebitel, využít jiného soudu, avšak pouze za předpokladu a za podmínek nařízení Evropského parlamentu a Rady (EU) č. 1215/2012 ze dne 12. prosince 2012 o příslušnosti a uznávání a výkonu soudních rozhodnutí v občanských a obchodních věcech (BRUSEL I).
+
+22. Změna Podmínek
+
+Oprávnění měnit podmínky a důvody změny
+
+22.1 Podmínky je Poskytovatel oprávněn v přiměřeném rozsahu jednostranně měnit. Změny Podmínek Poskytovatel písemně oznámí Uživateli (na Platformě či e-mailem). Poskytovatel je takto oprávněn měnit Podmínky zejména s ohledem na:
+
+a) Právní důvody: Pokud dojde k změně právních předpisů, regulací nebo jiných legislativních požadavků, které mají vliv na Platformu či práva a povinnosti Smluvních stran.
+
+b) Bezpečnostní důvody: Pokud je nutné přijmout opatření k zajištění vyšší úrovně bezpečnosti Platformy nebo k ochraně Obsahu.
+
+c) Technologické změny: Pokud dojde k zavedení nových technologií, změně existujících technologií nebo aktualizaci Platformy.
+
+d) Provozní důvody: Pokud je nutné provést změny v provozu Platformy, například kvůli zlepšení komfortu Uživatele, zvýšení efektivity nebo změnám v nabídce.
+
+e) Obchodní důvody: Pokud dojde ke změně obchodní politiky Poskytovatele, například v důsledku změn tržních podmínek, změny strategie nebo reorganizace.
+
+Jednostranná změna
+
+22.2 Pokud nejsou změny Podmínek vyžadované náhlou změnou legislativy, bude Poskytovatel alespoň třicet (30) dní před změnou Podmínek, resp. před účinností nového znění, informovat Uživatele. Nesouhlasí-li Uživatel s novým zněním Podmínek, má právo změnu Podmínek odmítnout, kdy toto se považuje za výpověď Smlouvy ke dni účinnosti nových Podmínek. Nedoručení včasné výpovědi Uživatele dle předchozí věty či nedoručení včasného souhlasu Uživatele se změnou Podmínek je vyjádřením souhlasu Uživatele se změnou Podmínek. Smluvní strany mají v úmyslu mezi sebou založit tuto praxi spočívající v přijetí změny Podmínek i mlčením.
+
+22.3 Bez ohledu na odst. 22.2 Podmínek, mění-li Poskytovatel (i) výši Předplatného či (ii) délku Zúčtovacího období, mají tyto změny účinek se začátkem následujícího (nebo některého dalšího, a to dle rozhodnutí Poskytovatele) Zúčtovacího období, přičemž i zde Poskytovatel vyvine přiměřené úsilí k tomu, aby zachoval dostatečnou lhůtu před účinností změny. Odmítne-li Uživatel takovou změnu tohoto odstavce, zaniká Smlouva koncem jeho aktuálního Zúčtovacího období.
+
+Změna v důsledku souhlasu
+
+22.4 Namísto postupu dle odst. 22.2 a/nebo 22.3 Podmínek si Poskytovatel může vyžádat potvrzení nového znění Podmínek či Smlouvy na Platformě. Odsouhlasí-li Uživatel nové znění Podmínek na Platformě, pak jsou vůči němu nové Podmínky účinné udělením takového souhlasu.
+
+22.5 Souhlasí-li Uživatel s Podmínkami či novým zněním Podmínek při přihlášení do Platformy, má toto rovněž účinky souhlasu s aktuálním zněním Podmínek dle předchozího odstavce. Odsouhlasil-li předtím Uživatel jinou (starší) verzi Podmínek a/nebo má-li již uzavřenou smlouvu (s víceméně stejným předmětem jako Smlouva), jejíž obsah je odlišný od Podmínek, má toto odsouhlasení Podmínek při přihlášení účinky dodatku k takové smlouvě, přičemž okamžikem souhlasu se jeho vztah s Poskytovatelem začíná řídit výlučně Smlouvou (dle těchto Podmínek) a schváleným zněním Podmínek.
+
+23. Závěrečná ustanovení
+
+23.1 Je-li některé ustanovení Podmínek neplatné nebo neúčinné, nebo se takovým stane, namísto neplatných ustanovení nastoupí ustanovení, jehož smysl se neplatnému ustanovení co nejvíce přibližuje. Neplatností nebo neúčinností jednoho ustanovení není dotčena platnost ostatních ustanovení. Změny a doplňky Smlouvy či Podmínek vyžadují písemnou formu.
+
+23.2 Uživatel souhlasí s použitím komunikačních prostředků na dálku při uzavírání Smlouvy. Náklady vzniklé Uživateli při použití komunikačních prostředků na dálku v souvislosti s uzavřením Smlouvy (náklady na internetové připojení, náklady na telefonní hovory) si hradí Uživatel sám, přičemž tyto náklady se neliší od základní sazby.
+
+23.3 Uživatel není bez předchozího písemného souhlasu Poskytovatele oprávněn práva a povinnosti ze Smlouvy postoupit na třetí osobu.
+
+23.4 Uživatel na sebe přebírá nebezpečí změny okolností ve smyslu § 1765 odst. 2 OZ.
+
+23.5 Veškerá práva a pohledávky Poskytovatele za Uživatele vyplývající ze Smlouvy, z jejího porušení či z bezdůvodného obohacení Uživatele v případě neplatnosti, nicotnosti či zrušení Smlouvy, se promlčují ve lhůtě 10 let ode dne, kdy právo mohlo být Poskytovatelem uplatněno poprvé.
+
+23.6 Veškerá ujednání Smluvních stran, emaily, komunikace a další projevy vůle Smluvních stran obsažené mimo text Podmínek či Smlouvy jsou ve vztahu k těmto Podmínkám či Smlouvě irelevantní. Smluvní strany tímto projevují vůli k uvedeným zdrojům při výkladu svého úmyslu nepřihlížet. Smluvní strany tímto deklarují, že ke dni uzavření Smlouvy mezi nimi nevznikla žádná praxe, která by mohla být považována za relevantní. Pro vztahy vyplývající ze Smlouvy či se Smlouvou související vylučují Smluvní strany aplikaci obchodních zvyklostí.
+
+Účinnost
+
+Tyto Podmínky jsou účinné od 28. 6. 2026.
+
+Zpět na úvodní stranu
+
+Realingo
+
+.cz
+
+Realingo je největší český realitní vyhledávač, který automaticky agreguje aktuální nabídky nemovitostí z celého internetu. Každý den pro vás monitorujeme rozsáhlou databázi inzerátů zahrnující prodeje a pronájmy bytů, domů, pozemků i komerčních prostor.
+
+Ještě nemáte naši Realingo mobilní aplikaci?
+
+Pokračujte v hledání z mobilu, přihlaste se k upozorněním na nové nabídky a najděte své vysněné bydlení díky Realingu. :-)
+
+Pro inzerenty
+
+Přidat inzerát
+
+Registrace / Přihlášení
+
+Importní můstek
+
+Podmínky užití
+
+Zpracování osobních údajů
+
+Informace o cookies
+
+Kdo jsme
+
+Může se hodit
+
+Realingo Premium
+
+Mobilní aplikace Android
+ 
+
+Mobilní aplikace iOS
+ 
+
+Cenová mapa
+
+Časté dotazy
+
+R
+
+Domů
+
+Hledání
+
+Oblíbené
+
+Moje nemovitosti
+
+   
+

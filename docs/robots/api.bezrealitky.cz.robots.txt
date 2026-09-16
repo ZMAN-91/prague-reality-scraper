@@ -1,0 +1,5 @@
+# Fetched 2026-09-15T15:42:41+00:00 from https://api.bezrealitky.cz/robots.txt by tools/probe_sources.py
+# Verbatim copy, unedited. 2 lines, 26 bytes.
+# ---------------------------------------------------------------
+User-agent: *
+Disallow: /

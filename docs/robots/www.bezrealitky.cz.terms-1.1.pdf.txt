@@ -1,0 +1,306 @@
+# Text extracted from https://api.bezrealitky.cz/page-file/obchodni-podminky-serveru-bezrealitky-1783417597.pdf
+# Link label: 'obchodní podmínky serveru bezrealitky'
+# 2296 readable words; extraction is best-effort - the PDF next to this
+# file is the authoritative copy.
+# ---------------------------------------------------------------
+Obchodní podmínky serveru Bezrealitky 
+Aktuální obchodní podmínky serveru Bezrealitky 
+1. Úvodní ustanovení 
+1. Tyto obecné obchodní podmínky (dále jen „Obchodní podmínky“) upravují v souladu s 
+ustanovením § 1751 odst. 1 zákona č. 89/2012 Sb., občanský zákoník (dále jen „občanský 
+zákoník“) vzájemná práva a povinnosti mezi společností Bezrealitky s.r.o., se sídlem Praha 8 - 
+Karlín, Karolinská 661/4, PSČ 186 00, IČO: 08 063 168, zapsané v obchodním rejstříku vedeném 
+Městským soudem v Praze pod sp. zn. C 312155 Bezrealitky a Uživatelem. 
+2. Bezrealitky je oprávněným provozovatelem a správcem internetového serveru Bezrealitky, 
+dostupného na internetové adrese https://www.bezrealitky.cz. 
+3. Pro účely těchto Obchodních podmínek mají níže uvedené termíny uváděné s velkým počátečním 
+písmenem následující význam: 
+• Bezrealitky – společnost Bezrealitky s.r.o., IČO: 08 063 168, se sídlem na adrese Praha 8 - 
+Karlín, Karolinská 661/4, PSČ 186 00, zapsaná v obchodním rejstříku vedeném Městským 
+soudem v Praze, oddíl C, vložka 312155, Ceník – ceník stanovující výši plnění, které je 
+spojené s uzavřenou Smlouvou 
+• Osobní údaje – mají význam podle Zásad zpracování osobních údajů 
+• Přístupové údaje – uživatelské jméno a heslo Uživatele 
+• Premium uživatel – Uživatel, který si zaregistruje Premium profil postupem dle čl. 4 těchto 
+Obchodních podmínek 
+• Plnění – znamená plnění spojené s vedením Účtu, které je uvedeno na Serveru 
+• Kontrola osoby – znamená právo Uživatele zajistit kontrolu svých údajů prostřednictvím 
+služby online portálu dostupného na webové adrese https://www.nemoreport.cz/, a to za 
+podmínek poskytovatele této služby 
+• Realitní makléř – má význam podle ustanovení čl. 5. odst. 1. těchto Obchodních podmínek 
+• Registrace – je postup založení Účtu stanovený v těchto Obchodních podmínkách 
+• Server – internetový server Bezrealitky dostupný na internetové adrese 
+https://www.bezrealitky.cz  
+• Skupina Bezrealitky – všechny společnosti, v nichž má přímou či nepřímou majetkovou 
+účast mateřská společnost Bezrealitky, společnost European Housing Services s.r.o., IČO: 
+078 14 496; tyto osoby se mohou v průběhu doby měnit 
+• Služby – služby poskytované Bezrealitky uvedené v ustanovení čl. 2. odst. 1. těchto 
+Obchodních podmínek 
+• Smlouva – smlouva uzavřená mezi Uživatelem a Bezrealitky podle ustanovení čl. 2. odst. 2. 
+těchto Obchodních podmínek 
+• Spotřebitel – každý člověk, který mimo rámec své podnikatelské činnosti nebo mimo rámec 
+samostatného výkonu svého povolání uzavírá smlouvu s Bezrealitky, Skupinou Bezrealitky 
+nebo s ní jinak jedná 
+• Účet – Bezplatný uživatelský účet, a/nebo Premium profil 
+• Uživatel – osoba, která jakkoli využívá služeb Serveru, např. má zaregistrovaný Účet nebo 
+využívá službu KOMFORT 
+• Bezplatný uživatelský účet – součást Serveru s názvem „moje bezrealitky“, která je 
+zpřístupněna bezplatně právě jednomu Uživateli a je zřízena Registrací a zpřístupněna po 
+zadání Přístupových údajů, a se kterou jsou splněna zejména práva Uživatele uvedená na 
+Serveru 
+• Premium profil – součást Serveru s názvem „Moje bezrealitky“, která je zpřístupněna za 
+podmínek stanovených v těchto Obchodních podmínkách právě jednomu Uživateli a je 
+zřízena registrací a zpřístupněna po zadání Přístupových údajů, obsahující možnost ověření 
+Uživatele za účelem zajištění vyšší důvěryhodnost Uživatele, a se kterým jsou spojena 
+zvláštní práva a povinnosti uvedené na Serveru 
+• Zvláštní obchodní podmínky: 
+o Obchodní podmínky služby Inzerce 
+o Obchodní podmínky o zajištění služby KOMFORT, NEMO REPORT, právních a dalších 
+služeb 
+o Zásady zpracování osobních údajů 
+o Zásady zpracování osobních údajů za účelem zasílání obchodních a marketingových 
+sdělení 
+2. Poskytované Služby 
+1. Bezrealitky nabízí na Serveru zejména následující Služby, které si může Uživatel objednat a/nebo 
+zajistit (dále jen „Služby“) 
+a. Inzerce nemovitostí (blíže viz Obchodní podmínky služby Inzerce a Ceník dostupný na 
+Serveru); 
+b. Komunikace s dalšími Uživateli Serveru, a to zejména ve věci: 
+1. pronájmu nemovitostí; 
+2. prodeje nemovitostí; 
+c. Registrace a vedení Účtu a s tím spojenou Kontrolu osoby; 
+d. Zajištění dalších služeb formou realitního zprostředkování ve smyslu zákona č. 39/2020 Sb., 
+o realitním zprostředkování (dále jen „služba KOMFORT“), právní a další služby (blíže viz 
+Obchodní podmínky o zajištění služby KOMFORT, NEMO REPORT a právních a dalších 
+služeb). 
+2. Pokud mezi Uživatelem a Bezrealitky nebo osobou ze Skupiny Bezrealitky vznikne na základě 
+objednávky Služby dle Zvláštních obchodních podmínek smlouva anebo jiný právní vztah 
+předvídaný těmito Obchodními podmínkami (dále jen „Smlouva“), řídí se tato Smlouva také těmito 
+Obchodními podmínkami, Ceníkem dostupným na Serveru a příslušnými Zvláštními obchodními 
+podmínkami. 
+3. Bezplatný uživatelský účet 
+1. Uživatel má právo si pomocí Registrace založit na Serveru Bezplatný uživatelský účet za účelem 
+objednávání Služeb a dále realizace činností uvedených v čl. 2. odst. 1 písm. a. a písm. b. těchto 
+Obchodních podmínek. 
+2. Uživatel si registruje Bezplatný uživatelský účet tak, že na Serveru vyplní alespoň označené 
+povinné registrační údaje (u fyzických osob zejména typ uživatele, jméno, příjmení, telefonní číslo; 
+u právnických osob zejména typ uživatele, IČO, název, typ právnické osoby, adresu pro 
+doručování, jméno zástupce, příjmení, telefonní číslo), Přístupové údaje a následně je uloží. 
+Zároveň musí Uživatel vyjádřit souhlas s těmito Obchodními podmínkami, seznámit se s 
+informacemi o zpracování Osobních údajů. Po uložení údajů podle tohoto odstavce zašle 
+Bezrealitky Uživateli potvrzení o dokončení Registrace na adresu elektronické pošty. Umožňuje-li 
+to Server, je Uživatel oprávněn provést registraci Uživatelského účtu také skrze sociální síť 
+Facebook. 
+3. Kontaktní údaje vyplněné Uživatelem při Registraci budou zveřejněny na Serveru jen se 
+souhlasem Uživatele. 
+4. Přístup k Bezplatnému uživatelskému účtu je zabezpečen Přístupovými údaji. Uživatel i 
+Bezrealitky jsou povinni zachovávat mlčenlivost ohledně Přístupových údajů. 
+5. Uživatel není oprávněn zpřístupnit své Přístupové údaje třetím osobám. V případě, že Uživatel 
+třetí straně takový přístup umožní, a to i z nedbalosti, nese odpovědnost za případné zneužití 
+Bezplatného uživatelského účtu nebo za zneužití svých Přístupových údajů tak, jako kdyby se 
+jednalo o jeho vlastní jednání, a rovněž nese veškeré riziko smluvních sankcí uplatňovaných ze 
+strany Bezrealitky. 
+6. Uživatel bere na vědomí, že Bezplatný uživatelský účet nemusí být dostupný nepřetržitě, a to 
+zejména s ohledem na nutnou údržbu hardwarového a softwarového vybavení Bezrealitky 
+Serveru, popř. nutnou údržbu hardwarového a softwarového vybavení třetích osob. 
+7. Uživatel se zavazuje nezveřejňovat žádné údaje, jejichž obsah je v rozporu s právním řádem 
+České republiky. Dále se zavazuje, že nebude Bezrealitky činit odpovědnou za jakékoliv právní 
+nároky třetích osob, které vzniknou na základě zveřejnění údajů zadaných Uživatelem 
+prostřednictvím Bezplatného uživatelského účtu. 
+8. V případě, že dojde ke změně údajů, které byly použity při Registraci, je Uživatel povinen je 
+neprodleně v sekci Serveru „Moje bezrealitky“ aktualizovat. 
+9. Má se za to, že údaje uvedené Uživatelem v Bezplatném uživatelském účtu jsou pravdivé a 
+správné. Odpovědnost vyplývající z nesprávného či nepravdivého uvedení údajů nese Uživatel. 
+10. Bezrealitky si vyhrazuje právo odmítnout zveřejnění údajů zadávaných Uživateli na Serveru nebo 
+tyto údaje odstranit, pokud splňují jednu nebo více z následujících podmínek: 
+1. jsou v rozporu s právním řádem České republiky; 
+2. jsou v rozporu s dobrými mravy, případně ohrožují veřejný pořádek; 
+3. jedná se o nabídku Realitního makléře v rámci realitní činnosti, nebo má Bezrealitky důvodné 
+podezření, že se o nabídku Realitního makléře v rámci realitní činnosti jedná; 
+4. svým obsahem odporují oprávněným zájmům Bezrealitky. 
+11. Uživatel je oprávněn kdykoli požádat o zrušení svého Bezplatného uživatelského účtu, a to 
+písemně na adrese elektronické pošty info@bezrealitky.cz.  
+12. Bezrealitky je oprávněna zrušit Bezplatný uživatelský účet, a to zejména v případě, kdy Uživatel 
+svůj Bezplatný uživatelský účet nevyužívá po dobu delší než jeden rok, či v případě, že Uživatel 
+poruší své povinnosti vyplývající z těchto Obchodních podmínek nebo Zvláštních obchodních 
+podmínek. 
+13. Uživatel bere na vědomí, že zpřístupněné Osobní údaje je možné užít pouze jen pro účely jednání 
+spojeného se Službami a směřujícího k uzavření příslušné smlouvy spojené se Službami (resp. 
+inzerovanými nemovitostmi), a dále pro naplnění účelu, který je obsahem dané Služby. 
+4. Premium profil 
+1. Uživatel Serveru Bezrealitky má právo zajistit si nadstavbu svého účtu prostřednictvím registrace 
+Premium profilu, díky kterému zvýší svou důvěryhodnost a stane se Premium uživatelem. 
+2. Uživatel si registruje Premium profil tak, že na Serveru Bezrealitky zvolí Získat Premium profil a 
+uhradí požadované Plnění. Premium uživatel má možnost v záložce Nastavení profilu vložit svou 
+vlastní profilovou fotografii, vyplnit doplňující údaje, kterými jsou zejména rok narození, počet 
+členů domácnosti, národnost, zaměstnání, vzdělání, domácí zvířata; dále ověřit svůj mobilní 
+telefon anebo provést Kontrolu osoby. 
+3. Plnění může Uživatel uhradit Bezrealitky následujícími způsoby: 
+1. prostřednictvím internetového bankovnictví; 
+2. platební kartou prostřednictvím internetové platební brány; 
+3. bankovním převodem; 
+4. prostřednictvím elektronického platebního systému Google Pay; 
+5. prostřednictvím elektronického platebního systému Apple Pay. 
+4. Zvolený způsob úhrady uvede Uživatel při objednávce služby Premium profil. 
+5. Bezrealitky si vyhrazuje právo rozhodnout o tom, že některé ze způsobů platby uvedené v odstavci 
+3. tohoto článku nelze pro konkrétní případ použít. 
+6. Pokud je Uživateli po odeslání objednávky služby Premium profil přidělen variabilní symbol a 
+specifický symbol platby, je Uživatel při úhradě Plnění povinen tyto údaje uvést pro ztotožnění 
+platby. 
+7. Závazek Uživatele uhradit Plnění je splněn okamžikem připsání Plnění na Bezrealitky uvedený 
+účet, nebo na účet, na který je platba automaticky odesílána. 
+8. Bezrealitky následně po Registraci Premium profilu a zároveň po úhradě stanoveného Plnění 
+zašle Premium uživateli do jeho Účtu daňový doklad o zaplacení Plnění a na jeho kontaktní e-mail 
+potvrzení o Registraci. 
+9. Premium uživatel bere na vědomí a souhlasí s tím, že: 
+a) Premium profil se sjednává na 3 kalendářní měsíce, nebude-li ze strany Bezrealitky na 
+Serveru uvedeno jinak; 
+b) Osobní údaje k Premium profilu nebudou veřejně dostupné a budou zpřístupněny pouze 
+osobě, se kterou bude Premium uživatel na Serveru komunikovat; 
+c) může docílit maximálního ohodnocení poskytnutých Osobních údajů k Premium profilu ve 
+výši 100 % a minimálního ve výši 0 % s tím, že každý z Osobních údajů k Uživatelskému 
+účtu Premium má předem pevně stanovenou procentuální hodnotu, která je uvedena v 
+Uživatelském účtu Premium; 
+d) ustanovení čl. 3 odst. 5. až 13. těchto Obchodních podmínek se obdobně uplatní i pro 
+Premium profil; 
+e) Bezrealitky nenese žádnou odpovědnost za skutečnost, že procentuální výsledek vzniklý po 
+vyplnění Osobních údajů k Premium profilu, může být pro ostatní Uživatele subjektivním 
+kvantifikátorem důvěryhodnosti Premium uživatele; 
+f) v případě, kdy Premium uživatel vyplní všechny údaje potřebné pro Kontrolu osoby, obdrží 
+bez ohledu na výsledek Kontroly plný počet Hodnocení pro daný segment osobních údajů k 
+Premium profilu; 
+g) v případě, kdy bude jakákoliv část Kontroly osoby negativní, tj. bude nalezen jakýkoliv údaj, 
+bude tento údaj dostupný druhému Uživateli pouze v obecné rovině, tzn., že Uživatel nebude 
+mít konkrétní informace k případné exekuci, insolvenci atp. druhého Uživatele, jehož se 
+Kontrola osoby týkala. 
+10. Premium uživatel zároveň uzavřením smlouvy o Premium profilu souhlasí s tím, aby mu bylo 
+poskytováno jím požadované plnění před uplynutím čtrnáctidenní lhůty k odstoupení od smlouvy 
+dle § 1824a odst. 3 občanského zákoníku. Uživatel z tohoto důvodu (i) nemůže v souladu s ust. § 
+1837 písm. a), resp. l) občanského zákoníku od smlouvy o Premium profilu odstoupit podle § 1829 
+občanského zákoníku; nebo (ii) v případě odstoupení mu bude vrácena pouze poměrná část 
+uhrazeného Plnění. 
+5. Ustanovení o Realitních makléřích 
+1. Realitním makléřem se pro účely těchto Obchodních podmínek rozumí osoba, která vykonává 
+výdělečnou činnost realitního zprostředkování, tj. výdělečnou realitní činnost. Za výdělečnou 
+realitní činnost se pro účely těchto Obchodních podmínek považuje jakákoliv činnost prováděná za 
+účelem dosažení přímého či nepřímého výdělku či zisku, zejména podnikání, účast v podnikající 
+právnické osobě, výkon funkce statutárního orgánu či jiného orgánu v podnikající právnické osobě 
+či člena takového orgánu, výkon práce v pracovním poměru nebo na základě dohod o pracích 
+konaných mimo pracovní poměr, činnost na základě jiného smluvního vztahu, včetně smluvního 
+vztahu neformálního, účast na podnikání jiné osoby či jednání ve shodě s jinou osobou, spočívající 
+zejména v nákupu nemovitostí za účelem jejich dalšího prodeje, prodeji nemovitostí, 
+zprostředkování nákupu, prodeje a pronájmu nemovitostí, bytů a nebytových prostor, pronájmu 
+nemovitostí, bytů a nebytových prostor, pokud jsou pronajímatelem poskytovány jiné než základní 
+služby zajišťující řádný provoz těchto prostor, ledaže se jedná o činnost provozovanou pro 
+Bezrealitky nebo pro Skupinu Bezrealitky. Za Realitního makléře se dále též považují všechny 
+osoby, které vystupují jako osoby (spolu)pracující (bez ohledu na povahu právního vztahu) s 
+Realitním makléřem a osoby uvedené na webových stránkách příslušných Realitních makléřů s 
+tím, že je na Uživateli, aby prokázal, že Realitním makléřem není. Za Realitního makléře se též 
+považují všechny osoby, které provedou nebo hodlají nebo přislíbí provést objednávku jakékoliv 
+Služby za subjekty, které splňují kteroukoliv definici Realitního makléře dle předchozích vět. V 
+případě pochybností je určení Realitního makléře dle Obchodních podmínek na úvaze Bezrealitky. 
+2. Realitní makléř není oprávněn v rámci své výdělečné realitní činnosti provést Registraci Účtu za 
+účelem využívání Služby dle čl. 2 odst. 1 písm. b) výše, provést objednávku Služby ani zasílat 
+Uživatelům prostřednictvím Serveru reklamní sdělení či jakékoliv nabídky obchodní a/nebo 
+podnikatelské povahy. Realitní makléř není oprávněn využívat Služby dle čl. 2 odst. 1 písm. b) 
+výše. Toto ustanovení se nevztahuje na Realitní makléře jednající mimo rámec své výdělečné 
+realitní činnosti. 
+3. V případě, že Realitní makléř poruší jakékoli ustanovení těchto Obchodních podmínek, vznikne 
+Bezrealitky vůči němu právo na smluvní pokutu ve výši 35.000 Kč (slovy: třicet pět tisíc korun 
+českých) za každý jednotlivý případ porušení. Smluvní pokuta je splatná do 15 dnů ode dne 
+porušení uvedené povinnosti. Tímto ustanovením není dotčen nárok na náhradu újmy Bezrealitky. 
+4. Bezrealitky je oprávněna blokovat jakoukoli činnost Realitního makléře na Serveru, zejména zrušit 
+Účet Realitního makléře, jeho objednávky Služeb odmítnout, a jeho zprávy nedoručovat 
+Uživatelům, a to bez jakékoli náhrady. 
+5. Ustanovení o Realitních makléřích se nevztahují na obce a bytová družstva. Právnické osoby 
+provádějící správu nemovitých věcí si mohou s Bezrealitky výjimku podle tohoto odstavce 
+individuálně sjednat. 
+6. Zprávy zasílané skrze Server 
+1. Bezrealitky si v rámci zkvalitňování služeb a boje proti nevyžádané reklamě vyhrazuje právo 
+nedoručovat nevyžádané či jinak obtěžující zprávy zasílané skrze Server Uživatelům. 
+2. Uživatel souhlasí s tím, že v rámci zkvalitňování služeb a boje proti nevyžádané reklamě jsou ze 
+strany Bezrealitky zaznamenávány veškeré zprávy zasílané mezi jednotlivými Uživateli a Uživateli 
+a jinými návštěvníky Serveru prostřednictvím Serveru a tyto jsou archivovány po dobu 1 roku, 
+nebo do skončení soudního či obdobného sporu nebo do skončení řízení před orgánem veřejné 
+moci, je-li ohledně obsahu těchto zpráv spor nebo řízení vedeno. 
+7. Zasílání obchodních sdělení 
+1. Uživateli mohou být prostřednictvím elektronické pošty zasílána obchodní sdělení související se 
+službami, zbožím nebo společností Bezrealitky v souladu s ustanovením § 7 odst. 3 zákona č. 
+480/2004 Sb., o některých službách informační společnosti. Uživatel je oprávněn se z odběru 
+obchodních sdělení kdykoliv odhlásit, a to písemně na adrese sídla Bezrealitky nebo 
+prostřednictvím odkazu uvedeného na konci každého takového obchodního sdělení. 
+2. Vyjádří-li s tím Uživatel při Registraci a/nebo Premium uživatel při Registraci Uživatelského účtu 
+Premium výslovný souhlas, Uživateli a/nebo Premium uživateli mohou být zasílána obchodní 
+sdělení obchodních partnerů Bezrealitky Tento souhlas je Uživatel a/nebo Premium uživatel je 
+oprávněn kdykoli odvolat, a to písemně na adrese sídla Bezrealitky nebo prostřednictvím odkazu 
+uvedeného na konci každého takového obchodního sdělení. 
+3. Návštěvou Serveru a/nebo užíváním jakékoli Služby Uživatel souhlasí s ukládáním tzv. souborů 
+cookies do paměti jeho počítače či obdobného zařízení. Uživatel je oprávněn tento souhlas kdykoli 
+odvolat a ukládání cookies zakázat prostřednictvím nastavení svého webového prohlížeče. 
+8. Reklamace Služeb 
+1. Práva a povinnosti smluvních stran ohledně práv z vadného plnění se řídí příslušnými obecně 
+závaznými předpisy, zejména příslušnými ustanoveními občanského zákoníku. 
+2. V případě, že Bezrealitky poskytne vadné plnění (tj. plnění nemá sjednané nebo obvyklé vlastnosti 
+nebo není způsobilé sloužit svému účelu), má Uživatel práva z vadného plnění. 
+3. Uživatel je povinen oznámit vadu plnění Bezrealitky bez zbytečného odkladu poté, kdy měl 
+možnost plnění zkontrolovat a vadu zjistit, a to buď označením vady, nebo oznámením, jak se 
+projevuje. Vadu lze vytknout do šesti měsíců od okamžiku poskytnutí Služeb. Vadu lze oznámit 
+emailem na info@bezrealitky.cz,  telefonicky na + 420 226 227 522 nebo jakýmkoli jiným 
+způsobem tak, aby se o jejím oznámení Bezrealitky dozvěděla. 
+4. Vytkl-li Uživatel vůči Bezrealitky vadu oprávněně, neběží lhůta pro uplatnění práv z vadného plnění 
+po dobu, po kterou Uživatel nemůže vadně poskytnutou Službu užívat. 
+5. Je-li vada odstranitelná, může se Uživatel domáhat buď opravy, nebo doplnění toho, co chybí, 
+anebo přiměřené slevy z uhrazeného Plnění. Nelze-li vadu odstranit a z důvodu vady Službu 
+řádně užívat, může Uživatel dle těchto Obchodních podmínek odstoupit od uzavřené smlouvy 
+nebo se domáhat přiměřené slevy z uhrazeného Plnění. 
+6. Právo z vadného plnění nevylučuje právo na náhradu škody; čeho však lze dosáhnout uplatněním 
+práva z vadného plnění, toho se nelze domáhat z jiného právního důvodu. 
+9. Odstoupení od smlouvy o Službách 
+1. Uživatel je oprávněn od smlouvy o Službách odstoupit v případech uvedených v těchto 
+Obchodních podmínkách. 
+2. Vzhledem k tomu, že Premium uživatel souhlasí s plněním Služeb před uplynutím lhůty k 
+odstoupení od smlouvy dle § 1828 odst. 5 občanského zákoníku, nemá právo odstoupit od 
+Smlouvy o Premium profilu, resp. odstoupení od této smlouvy se řídí čl. 4 odst. 10 těchto 
+Obchodních podmínek. 
+3. Pro odstoupení od Smlouvy může Spotřebitel využít vzorový formulář Bezrealitky. Odstoupení lze 
+provést také odesláním formuláře na elektronickou adresu Bezrealitky, přičemž přijetí tohoto 
+formuláře bude Spotřebiteli bezprostředně v textové podobě potvrzeno. 
+4. Je-li s odstoupením od Smlouvy spojena povinnost vrátit Premium uživateli peněžní prostředky, 
+vrátí je Bezrealitky stejným způsobem, jakým jí byly poskytnuty, s čímž Premium Uživatel souhlasí. 
+10. Závěrečná ustanovení 
+1. Tyto Obchodní podmínky jsou nedílnou součástí smluvního vztahu mezi jakoukoli osobou 
+využívající Služby, zejména Uživatelem a Bezrealitky a nedílnou součástí všech smluv. 
+2. Právní vztahy mezi Bezrealitky a jakoukoli osobou využívající Služby, zejména Uživatelem včetně 
+právních vztahů ze smluv se řídí právním řádem České republiky. 
+3. Bezrealitky není vázána žádným kodexem chování ve smyslu § 1826 odst. 1 písm. e) občanského 
+zákoníku. 
+4. Dojde-li ohledně právního vztahu mezi jakoukoli osobou využívající Služby, zejména Uživatelem a 
+Bezrealitky ke sporu, má Spotřebitel právo na jeho mimosoudní řešení. Návrh na mimosoudní 
+řešení sporu podle zákona č. 634/1992 Sb., o ochraně spotřebitele, je Spotřebitel oprávněn podat 
+k České obchodní inspekci. Veškeré podrobnosti k mimosoudnímu řešení jsou uvedeny na 
+webových stránkách www.coi.cz. 
+5. Všechny spory vznikající ze Smluv a v souvislosti s nimi budou rozhodovány s konečnou platností 
+u věcně a místně příslušného soudu. 
+6. Vzhledem k tomu, že se trh služeb poskytovaných Bezrealitky neustále vyvíjí, bere jakákoli osoba 
+využívající Služby, zejména Uživatel, Premium Uživatel, ale i Realitní makléř na vědomí, že tyto 
+Obchodní podmínky, Zvláštní obchodní podmínky, a/nebo ceník Služeb, mohou být v přiměřeném 
+rozsahu jednostranně změněny, doplňovány anebo zrušeny (dále jen „Jednostranná změna“). 
+Bezrealitky je povinna informovat Uživatele, Premium Uživatele, ale i Realitní makléře o 
+Jednostranné změně dotčených dokumentů a/nebo poskytovaných Služeb nejméně 14 dní před 
+nabytím účinnosti změny, a to buď prostřednictvím Serveru, zprávy zaslané do Účtu a/nebo jinou 
+vhodnou a dostupnou formou. V případě, že Uživatel, Premium Uživatel, anebo Realitní makléř 
+nesouhlasí s Jednostrannou změnou dotčených dokumentů a/nebo poskytovaných Služeb, může 
+vypovědět Smlouvu Bezrealitky, a to ve lhůtě do dne nabytí účinnosti Jednostranné změny. 
+Účinnost předmětné Smlouvy v takovém případě končí dnem doručení výpovědi Bezrealitky. Takto 
+provedenou výpověď je možné adresovat Bezrealitky buď na adresu Bezrealitky určenou v těchto 
+Obchodních podmínkách pro doručování, anebo na e-mail: info@bezrealitky.cz. Pokud nebude ve 
+stanovené lhůtě doručena Bezrealitky výpověď Smlouvy, má se za to, že dotčená osoba s 
+Jednostrannou změnou bez výhrad souhlasí. Právo výpovědi Smlouvy za stanovených podmínek 
+při Jednostranné výpovědi však nevznikne v případě, kdy došlo k Jednostranné změně v důsledku 
+změny závazných právních předpisů, a/nebo rozhodnutí orgánu veřejné správy. 
+7. Kontaktní údaje Bezrealitky: 
+Adresa pro doručování a sídlo společnosti: Bezrealitky s.r.o., Praha 8 - Karlín, Karolinská 661/4, 
+PSČ 186 00 
+Datová schránka: ebm2xx8 
+Adresa elektronické pošty: info@bezrealitky.cz  
+Telefon: +420 226 227 522 

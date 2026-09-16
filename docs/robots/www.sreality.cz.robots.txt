@@ -1,0 +1,982 @@
+# Fetched 2026-09-15T15:42:39+00:00 from https://www.sreality.cz/robots.txt by tools/probe_sources.py
+# Verbatim copy, unedited. 979 lines, 25838 bytes.
+# ---------------------------------------------------------------
+User-agent: *
+Disallow: /
+
+############################
+#    neplecha ukončena     #
+############################
+
+
+User-agent: Googlebot
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# recommended
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: SeznamBot
+Allow: /
+Disallow: /advertpdf/
+Disallow: /en/
+Disallow: /ru/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /api/
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: Bingbot
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: Slurp
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: Baiduspider
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: YandexBot
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: Applebot
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: ia_archiver
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: msnbot
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+User-agent: Naverbot
+Allow: /
+Disallow: /advertpdf/
+Disallow: /favourites-info
+Disallow: *_buri=
+Disallow: /adresar/*page=
+Disallow: /adresar/*perPage=
+Disallow: /adresar/*search=
+Disallow: /adresar/*letter=
+Disallow: /adresar/*id=
+Disallow: /firma/*page=
+Disallow: /firma/*perPage=
+Disallow: /firma/*search=
+Disallow: /firma/*letter=
+Disallow: /firma/*id=
+# multi values
+Disallow: /hledani/*,
+Disallow: /hledani/*%2c
+Disallow: /hledani/*%2C
+Allow: /hledani/*region=*,
+Allow: /hledani/*region=*%2c
+Allow: /hledani/*region=*%2C
+Disallow: /*/search/*,
+Disallow: /*/search/*%2c
+Disallow: /*/search/*%2C
+Allow: /*/search/*region=*,
+Allow: /*/search/*region=*%2c
+Allow: /*/search/*region=*%2C
+Disallow: /rk-detail
+Disallow: *bez-aukce=
+Disallow: *without-auction=
+Disallow: *pois_in_place=
+Disallow: *pois_in_place_distance=
+# extensive crawling of language versions
+Disallow: /en/*/*/*/*/*/
+Disallow: /en/*?*&*&*&*&
+Disallow: /ru/*/*/*/*/*/
+Disallow: /ru/*?*&*&*&*&
+# extensive crawling of rea directory
+Disallow: /adresar/*/*/inzeraty/*?*
+Disallow: /en/directory/*/*/estates/*?*
+Disallow: /ru/directory/*/*/estates/*?*
+# extensive crawling of rea directory locations
+Disallow: /adresar/*/*/inzeraty/*,*
+Disallow: /en/directory/*/*/estates/*,*
+Disallow: /ru/directory/*/*/estates/*,*
+# extensive crawling
+Disallow: /*252525*
+Disallow: /*undefined*
+Allow: /api/undefined/v*/userinfo*
+Disallow: /*watchdog_timestamp*
+Disallow: /*=true*
+# doporucene
+Disallow: /doporucene?strana=
+Disallow: /en/recommended?page=
+Disallow: /ru/recommended?page=
+# Ulozene nabidky a hledani
+Disallow: /ulozene-nabidky
+Allow: /ulozene-nabidky$
+Disallow: /ulozene-hledani
+Allow: /ulozene-hledani$
+# map boundaries
+Disallow: /*lat-max=
+Disallow: /*lat-min=
+Disallow: /*lon-max=
+Disallow: /*lon-min=
+Disallow: /*lon-min=
+# spider traps etc
+Disallow: /*...*
+Disallow: /*/disposition/location/
+Disallow: /*/undefined/
+Disallow: /*/click$
+Disallow: *//*
+# filtry
+Disallow: /hledani/filtr
+Disallow: /en/search/filter
+Disallow: /ru/search/filter
+# previously Allow filters with comma
+Disallow: /hledani/filtr/*region=*,
+Disallow: /hledani/filtr/*region=*%2c
+Disallow: /hledani/filtr/*region=*%2C
+Disallow: /*/search/filter/*region=*,
+Disallow: /*/search/filter/*region=*%2c
+Disallow: /*/search/filter/*region=*%2C
+Disallow: *image-search-id=
+
+# Better safe than sorry
+User-agent: Mediapartners-Google
+Disallow:
+
+User-agent: facebot
+Disallow:
+
+User-agent: facebookexternalhit
+Disallow:
+
+User-agent: Twitterbot
+Disallow:
+
+User-agent: BingPreview
+Disallow:
+
+User-agent: vkShare
+Disallow:
+
+User-agent: Mail.RU_Bot
+Disallow:
+
+
+Sitemap: https://www.sreality.cz/sitemap.xml

@@ -1,0 +1,254 @@
+name: Weekly rent scrape
+
+on:
+  schedule:
+    # Sundays at 00:00 UTC, which is 02:00 in Prague, with four hours to
+    # finish in - so the window is 02:00-06:00 Prague and nothing else runs
+    # inside it (see the sale workflow's schedule, which skips those hours).
+    #
+    # Rent is collected once a week for the whole of Prague on every source,
+    # including sreality, which the hourly sale run confines to the watched
+    # area. Keeping sreality small is about not sweeping the city every hour;
+    # once every seven days is a different trade.
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+    inputs:
+      transactions:
+        # Rent only. Sale runs hourly from scrape.yml with a different scope,
+        # so the two never share a run.
+        description: "Transaction types (prodej / pronajem)"
+        required: false
+        default: "pronajem"
+      sources:
+        # Order matters and is deliberate: sreality first (the watched area,
+        # ~35 requests), then iDNES (a few hundred), then bezrealitky, which
+        # is by far the largest and therefore the one that should be the one
+        # cut short when the hour runs out. Sources are run in the order given.
+        description: "Comma-separated sources to run, in the order they run"
+        required: false
+        default: "sreality,idnes,bezrealitky"
+      max_seconds:
+        # Four hours, the whole window. This pass is city-wide across all
+        # three sources and gets one attempt a week, so a run cut short waits
+        # seven days for the remainder - which is the opposite of the hourly
+        # case, where being cut short costs an hour. Here the slack is the
+        # point.
+        description: "Wall-clock budget for fetching (seconds)"
+        required: false
+        default: "14400"
+      notify_on_success:
+        # See the "Announce a successful run" step: a success opens an issue
+        # only when none is already open, so this input exists to silence
+        # even that for a one-off run.
+        description: "Set to false to stay quiet even if no confirmation issue is open"
+        required: false
+        default: "true"
+      max_new_details:
+        description: "Cap on one-time detail fetches for newly-seen listings"
+        required: false
+        default: "1500"
+
+# Never let two runs write/commit concurrently - a scrape can occasionally
+# run long, and two overlapping runs both writing listings.csv would race.
+# Queue instead of overlapping.
+concurrency:
+  # One group for BOTH workflows. The weekly rent run writes the same
+  # listings.csv as the hourly sale run, so they must never overlap - two
+  # runs merging into the same file would race and one would lose its work.
+  # Queueing is the right behaviour here, not cancelling.
+  group: scrape-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  # Only for the success notification below; nothing else in this workflow
+  # touches issues.
+  issues: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 280
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Checkout the dataset
+        # The data lives in a private repository so it is never published;
+        # the code lives here so the Actions minutes are free. A deploy key
+        # with write access joins the two - see docs/rozdeleni.md.
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague_reality_sector_analysis
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: claude/real-estate-market-scraper-1tgiei
+          path: store
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        # A scraper that writes to a committed dataset should not run at all
+        # if its own parsing/merging logic is broken - the tests are offline
+        # and take under a second.
+        run: python -m pytest -q
+
+      - name: Run scraper
+        id: scrape
+        # Never let a non-zero exit skip the commit step below: whatever
+        # data/log output run.py produced before failing must still be
+        # persisted. The job is still failed deliberately at the end (see
+        # "Fail job if scrape reported errors").
+        continue-on-error: true
+        env:
+          SOURCES: ${{ github.event.inputs.sources || 'sreality,idnes,bezrealitky' }}
+          MAX_SECONDS: ${{ github.event.inputs.max_seconds || '14400' }}
+          MAX_NEW_DETAILS: ${{ github.event.inputs.max_new_details || '1500' }}
+          TRANSACTIONS: ${{ github.event.inputs.transactions || 'pronajem' }}
+          # ------------------------------------------------------------------
+          # THE ONE PLACE where this project stops treating a robots.txt as
+          # binding. Delete this line and strict compliance returns everywhere.
+          #
+          # Why only sreality: bezrealitky publishes a sitemap and permits its
+          # listing detail pages, so it is collected entirely through the route
+          # the site itself offers - no override needed, and none given. Its
+          # GraphQL host (api.bezrealitky.cz, "Disallow: /") is not touched.
+          #
+          # Reality.iDNES.cz needs no override either: "Allow: /" with only
+          # search-filter URL shapes disallowed, and VOP that are advertiser
+          # billing terms. Realingo and CeskeReality are deliberately NOT
+          # collected - realingo's terms forbid crawlers and scraping by
+          # name, CeskeReality's robots.txt is "Disallow: /" - so the only
+          # source this project overrides remains the one below.
+          #
+          # sreality has no such route: its robots.txt is "Disallow: /" for
+          # every agent that is not one of eighteen named search engines, so
+          # there is no compliant automated path to the data at all. This is an
+          # informed operator decision for personal, non-commercial market
+          # tracking with no redistribution, and it is paired with a footprint
+          # deliberately kept near a person's: an honest self-identifying
+          # User-Agent (no browser impersonation), 1-2s between requests, each
+          # listing's detail fetched once ever, and - the big one - reading the
+          # search index rather than one request per listing, which is the
+          # difference between ~30 requests an hour and ~12,000.
+          # See docs/robots/www.sreality.cz.robots.txt for the exact text.
+          SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
+        run: |
+          python run.py \
+            --sources "$SOURCES" \
+            --max-seconds "$MAX_SECONDS" \
+            --max-new-details "$MAX_NEW_DETAILS" \
+            --transactions "$TRANSACTIONS" \
+            --data-dir store/data \
+            --logs-dir store/logs
+
+      - name: Export human-readable CSV views
+        # Cheap, offline, and makes the dataset browsable straight from the
+        # repo without loading the full listings.csv.
+        continue-on-error: true
+        run: python -m tools.export_csv --data-dir store/data
+
+      - name: Commit and push data changes
+        # The whole sequence lives in tools/commit_data.sh, which both
+        # workflows call and tests/test_commit_step.py exercises against real
+        # git repositories. It was inline and identical in both files, which
+        # is how a bug that reverts code pushes survived in two places at
+        # once. The script's header explains the two rules it enforces.
+        env:
+          DATA_ROOT: store
+        run: bash tools/commit_data.sh "claude/real-estate-market-scraper-1tgiei" "Rent scrape run"
+
+      - name: Announce a successful run
+        # GitHub emails you when a workflow FAILS; there is no built-in
+        # notification for one that worked. So a successful run announces
+        # itself by opening an issue, which the repository owner watches by
+        # default and therefore receives by email.
+        #
+        # At most one such issue is open at a time. That is what keeps an
+        # hourly schedule from becoming an hourly inbox: the first successful
+        # run opens one, every run after that sees it and stays quiet. Close
+        # the issue and the next success opens a fresh one - which is also
+        # how you ask for another confirmation later.
+        #
+        # `notify_on_success: false` on a manual run suppresses it entirely.
+        if: steps.scrape.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NOTIFY: ${{ github.event.inputs.notify_on_success }}
+          # Its own label: sharing one with the hourly sale run would mean
+          # an open sale confirmation silences the weekly rent one, and the
+          # rent run is the one you hear from least often.
+          LABEL: rent-scrape-ok
+        run: |
+          set -euo pipefail
+
+          if [ "${NOTIFY:-}" = "false" ]; then
+            echo "notify_on_success=false for this run; staying quiet."
+            exit 0
+          fi
+          # Create the label first: `gh issue list --label` errors on a label
+          # that does not exist, and under `set -e` that would fail the job
+          # over a notification. Both calls are allowed to fail softly - a
+          # missing confirmation must never turn a good run into a bad one.
+          gh label create "$LABEL" --repo "$GITHUB_REPOSITORY" \
+            --description "Confirmation that a weekly rent scrape succeeded" \
+            --color 0e8a16 >/dev/null 2>&1 || true
+          OPEN=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+                   --label "$LABEL" --limit 1 --json number --jq 'length' 2>/dev/null || echo 0)
+          if [ "$OPEN" != "0" ]; then
+            echo "A confirmation issue is already open; not opening another."
+            exit 0
+          fi
+
+          # The numbers come from the run's own log, so the email says what
+          # was collected rather than just that something happened.
+          SUMMARY=$(python - <<'PY'
+          import glob, json
+          logs = sorted(glob.glob("logs/*.jsonl"))
+          if not logs:
+              print("No run log was written.")
+              raise SystemExit
+          with open(logs[-1], encoding="utf-8") as handle:
+              last = json.loads(handle.readlines()[-1])
+          lines = [
+              f"Started:  {last.get('started_at')}",
+              f"Finished: {last.get('finished_at')}",
+              f"Listings tracked: {last.get('total_listings')}",
+              f"Observations written this run: {last.get('total_observations_written')}",
+              "",
+              "| source | fetched | new | updated | swept fully | stopped early |",
+              "|---|---|---|---|---|---|",
+          ]
+          for name, stats in (last.get("sources") or {}).items():
+              lines.append(
+                  f"| {name} | {stats.get('fetched')} | {stats.get('new')} | "
+                  f"{stats.get('updated')} | {stats.get('run_complete')} | "
+                  f"{len(stats.get('interruptions') or [])} |"
+              )
+          budget = last.get("budget") or {}
+          lines += ["", f"Time used: {budget.get('elapsed_s')}s of {budget.get('max_seconds')}s"]
+          print("\n".join(lines))
+          PY
+          )
+          BODY=$(printf '%s\n\n%s\n\n[Run log](%s)\n\n%s\n' \
+            "The weekly rent scrape finished successfully." "$SUMMARY" "$RUN_URL" \
+            "_Close this issue to acknowledge it. While it is open no further success notifications are sent; the next success after you close it opens a new one._")
+          gh issue create \
+            --title "Rent scrape succeeded - $(date -u +'%Y-%m-%d %H:%M UTC')" \
+            --body "$BODY" \
+            --label "$LABEL" \
+            --repo "$GITHUB_REPOSITORY" || echo "could not open the confirmation issue"
+
+      - name: Fail job if the scrape reported errors
+        if: steps.scrape.outcome == 'failure'
+        run: |
+          echo "run.py exited non-zero this run (see the 'Run scraper' step log and logs/*.jsonl for details)."
+          echo "Failing the job on purpose so GitHub's built-in workflow-failure email fires."
+          exit 1

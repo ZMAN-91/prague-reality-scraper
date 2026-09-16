@@ -1,0 +1,40 @@
+# Fetched 2026-09-15T15:43:20+00:00 from https://reality.idnes.cz/robots.txt by tools/probe_sources.py
+# Verbatim copy, unedited. 37 lines, 952 bytes.
+# ---------------------------------------------------------------
+User-agent: *
+Allow: /
+# search
+Disallow: /s/*|* #multihodnoty
+Disallow: /s/*%7C* #multihodnoty
+Disallow: /s/*s-rd
+Disallow: /s/*s-rd*&*
+Allow: /s/*s-rd=3
+Disallow: /s/*page=*sort=
+Disallow: /s/*;
+Disallow: /s/*cena-nad-*
+Disallow: /s/*cena-do*sort=
+Disallow: /s/*/do-*sort=
+Disallow: /s/*priceMin*sort=
+Disallow: /s/*priceMax*sort=
+# Zahraničí
+Disallow: /s/*s-l=STAT*&
+Allow: /s/*s-l=STAT*&page
+Disallow: /s/*s-l=STAT*&page*&
+Disallow: /s/*cena-*s-l=STAT
+# Hledání u makléřů, poboček, rk
+Disallow: /s/*-rk-*/?
+Allow: /s/*-rk-*/?page
+Disallow: /projekty/*s-ea  #zákaz hledání DP
+# Hledání v rámci projektů
+Disallow: /s/*s-dp
+# general block
+Disallow: *addRemoveLocality
+Disallow: *s-localitySelector-locality
+Disallow: *s-result-openPopup
+Disallow: *popupManager-popups
+Disallow: /s/*openHouse
+Disallow: /broker-evaluation/*
+Disallow: *inquiryFilter
+Disallow: *watchdogFilter
+Disallow: *estateType* #filtr druhu nemovitosti u DP
+Disallow: */admin.api/*

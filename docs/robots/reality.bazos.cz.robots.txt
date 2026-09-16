@@ -1,0 +1,54 @@
+# Fetched 2026-09-15T15:43:20+00:00 from https://reality.bazos.cz/robots.txt by tools/probe_sources.py
+# Verbatim copy, unedited. 51 lines, 912 bytes.
+# ---------------------------------------------------------------
+User-agent: *
+Disallow: /*hledat=
+Disallow: /*hlokalita=
+Disallow: /*humkreis
+Disallow: /*order=
+Disallow: /*cenaod=
+Disallow: /*cenado=
+Disallow: /*rubriky=
+Disallow: /*type=
+Disallow: /*category=
+Disallow: /suggest.php
+Disallow: /suggestpsc.php
+Disallow: /suggestpscinsert.php
+Disallow: /ad-phone.php
+Disallow: /ad-mail.php
+Disallow: /agent.php
+Disallow: /favourite.php
+Disallow: /upload.php
+Disallow: /insert.php
+Disallow: /deletei2.php
+Disallow: /zip.php
+Disallow: /smazat/
+
+User-agent: Mediapartners-Google
+Disallow:
+
+User-agent: trovitBot
+Disallow: /
+
+User-agent: pricebot
+Disallow: /
+
+User-agent: magpie-crawler
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-Agent: trendictionbot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-Agent: trendictionbot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+Sitemap: https://reality.bazos.cz/sitemap.php

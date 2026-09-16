@@ -1,0 +1,150 @@
+name: Weekly data backup
+
+# DEPLOYED FILE - the copy that runs lives in the private data repository at
+# .github/workflows/backup.yml. This is the source of truth: edit it here,
+# where the tests can see it, then copy it across. It cannot simply run from
+# the public repository, because the release it publishes carries the whole
+# dataset and so must be created somewhere private.
+
+on:
+  schedule:
+    # Sunday 05:30 UTC = 07:30 Prague. Deliberately placed after the weekly
+    # rent pass, so the week's archive contains it: rent starts at 00:00 UTC
+    # with a four-hour budget and a 4h40m job timeout, so 05:30 is clear of
+    # even its worst case plus the commit.
+    #
+    # The hourly sale run resumes at 05:00 UTC and may well be running at the
+    # same moment. That is fine and is why this workflow does NOT join the
+    # scrape-data concurrency group: it only ever reads, from a checkout at
+    # one commit, so there is no file to race over. The archive records which
+    # commit it was taken from.
+    - cron: "30 5 * * 0"
+  workflow_dispatch:
+
+# Only reads the repository; writes nothing back to the branch. The release
+# is the artifact.
+concurrency:
+  group: weekly-backup
+  cancel-in-progress: false
+
+permissions:
+  # Creating the release that holds the archive. Nothing here pushes a commit.
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout the dataset
+        uses: actions/checkout@v4
+
+      - name: Checkout the code
+        # Public, so no key is needed in this direction.
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague-reality-scraper
+          path: code
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r code/requirements-dev.txt
+
+      - name: Run tests
+        # The backup tool verifies its own output, so a broken verifier is the
+        # one bug that could turn a bad archive into a green job.
+        run: python -m pytest -q
+        working-directory: code
+
+      - name: Build and verify the archive
+        id: backup
+        # Builds the .tar.gz, then restores it to a temporary directory,
+        # re-hashes every file against the manifest and reads listings.csv
+        # back through the project's own loader. A non-zero exit here fails
+        # the job rather than uploading something unverified.
+        run: python -m tools.backup --root "${GITHUB_WORKSPACE}" --out "${GITHUB_WORKSPACE}/backup" --github-output
+        working-directory: code
+
+      - name: Publish the archive as a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: backup-${{ steps.backup.outputs.week }}
+          ARCHIVE: ${{ steps.backup.outputs.archive }}
+          WEEK: ${{ steps.backup.outputs.week }}
+          LISTINGS: ${{ steps.backup.outputs.listings }}
+          OBSERVATIONS: ${{ steps.backup.outputs.observations }}
+        run: |
+          set -euo pipefail
+          MANIFEST="backup/prague-reality-${WEEK}.manifest.json"
+
+          # A release, not an Actions artifact: artifacts expire after 90 days
+          # at most, which makes them a transfer mechanism rather than a
+          # backup. Release assets stay until someone deletes them, and they
+          # do not enlarge the clone the way committing the archive would.
+          cat > notes.md <<EOF
+          Dataset snapshot for ISO week ${WEEK}, taken from commit ${GITHUB_SHA}.
+
+          * ${LISTINGS} listings
+          * ${OBSERVATIONS} observations
+          * Built and verified by \`tools/backup.py\` - the archive was
+            restored to a temporary directory and every file re-hashed against
+            the manifest before this release was created.
+
+          Restore into a checkout:
+
+          \`\`\`
+          tar xzf $(basename "${ARCHIVE}") --strip-components=1 -C /path/to/repo
+          \`\`\`
+
+          Check it first:
+
+          \`\`\`
+          python -m tools.backup --verify $(basename "${ARCHIVE}")
+          \`\`\`
+
+          Holds the dataset (listings, observations, state, progress and the
+          browsable views in \`data/csv/\`). Does **not** hold \`data/raw/\`,
+          the archive of the portals' raw HTTP responses - that is append-only
+          and lives in git history. See \`tools/backup.py\` for the reasoning.
+          EOF
+
+          # Re-running the workflow for a week that already has a release
+          # replaces its assets rather than failing.
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${ARCHIVE}" "${MANIFEST}" --clobber
+            gh release edit "${TAG}" --notes-file notes.md
+          else
+            gh release create "${TAG}" "${ARCHIVE}" "${MANIFEST}" \
+              --target "${GITHUB_SHA}" \
+              --title "Data backup ${WEEK}" \
+              --notes-file notes.md
+          fi
+
+      - name: Summarise
+        if: always()
+        env:
+          WEEK: ${{ steps.backup.outputs.week }}
+          LISTINGS: ${{ steps.backup.outputs.listings }}
+          OBSERVATIONS: ${{ steps.backup.outputs.observations }}
+          BYTES: ${{ steps.backup.outputs.bytes }}
+        run: |
+          {
+            echo "## Weekly backup ${WEEK:-(not built)}"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| listings | ${LISTINGS:-—} |"
+            echo "| observations | ${OBSERVATIONS:-—} |"
+            echo "| archive size | ${BYTES:-—} bytes |"
+            echo "| commit | ${GITHUB_SHA} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      # No success notification. A backup that runs every week would make the
+      # confirmation the noise and the failure the thing you stop reading;
+      # GitHub's own e-mail on a failed scheduled run is the signal that
+      # matters, and it is the same mechanism the scrape workflows use.

@@ -1,0 +1,47 @@
+name: Probe data sources (diagnostic)
+
+# Manual only. This project is developed without network access to the two
+# portals, so this workflow is the stand-in for "open DevTools and look":
+# it runs tools/probe_sources.py on a runner that does have internet, and
+# prints what the portals actually serve into the job log.
+#
+# Read-only: it fetches a couple of dozen pages, writes nothing, commits
+# nothing, and is never scheduled.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # pypdf only for this diagnostic workflow, never for the scraper:
+      # bezrealitky publishes its contracts as PDFs, and reading them is
+      # the whole point of the terms step.
+      - run: pip install -r requirements.txt pypdf
+      - run: python -m tools.probe_sources
+
+      - name: Commit robots.txt, terms and reference-point snapshots
+        # The probe writes verbatim copies of each portal's robots.txt and
+        # terms into docs/robots/, and the resolved reference coordinates the
+        # collection area is built from into docs/geo/. Keeping them in version
+        # control means every rule this project follows and every number it
+        # watches is reviewable against its source, and a change shows up as a
+        # diff rather than as silently different behaviour.
+        run: |
+          git config user.name "prague-reality-scraper-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/robots/ docs/geo/ docs/sources/
+          if git diff --cached --quiet; then
+            echo "Snapshots unchanged."
+            exit 0
+          fi
+          git commit -m "Snapshot portal rules and reference points from $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"

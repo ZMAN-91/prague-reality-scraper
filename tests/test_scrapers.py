@@ -1,0 +1,126 @@
+"""The pure parsing functions in scrapers/sreality.py.
+
+The fixture shapes are not guesses any more: the sreality v1 API was probed
+live (tools/probe_sources.py) and these mirror what it actually returns,
+including the {"name", "value"} enum objects and the `locality` block that
+carries GPS on an index row - the discovery that turned a sweep of Prague
+from ~12 000 requests into ~35.
+
+What these still cannot prove is that the live API has not changed since.
+That is what the empty-result alarm in run.merge_source is for.
+"""
+
+from scrapers.sreality import (
+    _build_source_url,
+    _cb_value,
+    _disposition,
+    _extract_index_id,
+    _extract_index_price,
+    _fallback_url,
+    _unwrap_estate,
+)
+
+
+def _cb(value, name=None):
+    return {"value": value, "name": name}
+
+
+def test_cb_value_extracts_int_and_treats_zero_as_unspecified():
+    assert _cb_value({"value": 4, "name": "Byt"}) == 4
+    assert _cb_value({"value": 0, "name": "nezadano"}) is None
+    assert _cb_value(None) is None
+    assert _cb_value("not a dict") is None
+
+
+def test_unwrap_estate_handles_flat_and_wrapped_envelopes():
+    flat = {"category_main_cb": _cb(1), "hash_id": 1}
+    assert _unwrap_estate(flat) is flat
+
+    wrapped = {"result": {"category_main_cb": _cb(1), "hash_id": 1}, "status_code": 200}
+    assert _unwrap_estate(wrapped) == wrapped["result"]
+
+    # No estate marker anywhere - returns the payload unchanged so the
+    # caller's own "category_main_cb" not in raw check catches it.
+    envelope_only = {"status_code": 200, "status_message": "Not found"}
+    assert _unwrap_estate(envelope_only) == envelope_only
+
+
+def test_disposition_prefers_category_sub_cb_name_then_advert_name():
+    raw = {"category_sub_cb": _cb(4, "2+kk"), "advert_name": "Prodej bytu 3+1"}
+    assert _disposition(raw) == "2+kk"
+
+    raw_fallback = {"category_sub_cb": _cb(0, None), "advert_name": "Prodej bytu 3+1 80 m2"}
+    assert _disposition(raw_fallback) == "3+1"
+
+    assert _disposition({}) is None
+
+
+def test_extract_index_id_and_price_try_multiple_keys():
+    assert _extract_index_id({"hash_id": 123456}) == "123456"
+    assert _extract_index_id({"id": 999}) == "999"
+    assert _extract_index_id({}) is None
+
+    assert _extract_index_price({"price_summary_czk": 6_500_000}) == 6_500_000
+    assert _extract_index_price({"price_czk": 25000}) == 25000
+    assert _extract_index_price({}) is None
+
+
+def test_build_source_url_happy_path():
+    raw = {
+        "hash_id": 123456,
+        "category_main_cb": _cb(1),  # byt
+        "category_type_cb": _cb(1),  # prodej
+        "category_sub_cb": _cb(4),  # 2+kk
+        "locality": {
+            "city_seo_name": "praha",
+            "citypart_seo_name": "praha-10-strasnice",
+            "street_seo_name": "korunni",
+        },
+    }
+    url = _build_source_url(raw)
+    assert url == "https://www.sreality.cz/detail/prodej/byt/2+kk/praha-praha-10-strasnice-korunni/123456"
+
+
+def test_build_source_url_repeats_city_when_citypart_missing():
+    raw = {
+        "hash_id": 1,
+        "category_main_cb": _cb(2),  # dum
+        "category_type_cb": _cb(2),  # pronajem
+        "category_sub_cb": _cb(37),  # rodinny
+        "locality": {"city_seo_name": "prestavlky"},
+    }
+    url = _build_source_url(raw)
+    assert url == "https://www.sreality.cz/detail/pronajem/dum/rodinny/prestavlky-prestavlky-/1"
+
+
+def test_build_source_url_returns_none_when_sub_cb_unmapped_or_mismatched():
+    base = {
+        "hash_id": 1,
+        "category_main_cb": _cb(1),
+        "category_type_cb": _cb(1),
+        "locality": {"city_seo_name": "praha"},
+    }
+    assert _build_source_url({**base, "category_sub_cb": _cb(999)}) is None  # unmapped code
+    assert _build_source_url({**base, "category_sub_cb": _cb(37)}) is None  # dum code on a byt listing
+    assert _build_source_url({**base, "category_sub_cb": _cb(0)}) is None  # unspecified
+
+
+def test_build_source_url_returns_none_without_city():
+    raw = {
+        "hash_id": 1,
+        "category_main_cb": _cb(1),
+        "category_type_cb": _cb(1),
+        "category_sub_cb": _cb(4),
+        "locality": {},
+    }
+    assert _build_source_url(raw) is None
+
+
+def test_fallback_url_is_well_formed_and_never_raises():
+    url = _fallback_url("byt", "prodej", "Praha Vinohrady", "999")
+    assert url.startswith("https://www.sreality.cz/detail/prodej/byt/")
+    assert url.endswith("/999")
+
+    # No address text at all - still produces something usable.
+    url_no_address = _fallback_url("dum", "pronajem", None, "1")
+    assert "pronajem/dum" in url_no_address

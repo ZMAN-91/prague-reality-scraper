@@ -1,0 +1,328 @@
+# Text extracted from https://api.bezrealitky.cz/page-file/62-smluvni-podminky-sluzby-inzerce-nove-1745494027.pdf
+# Link label: 'obchodní podmínky služby inzerce'
+# 2113 readable words; extraction is best-effort - the PDF next to this
+# file is the authoritative copy.
+# ---------------------------------------------------------------
+Obchodní podmínky služby Inzerce 
+Aktuální obchodní podmínky služby Inzerce serveru Bezrealitky  
+1. Úvodní ustanovení  
+1. Tyto obchodní podmínky služby inzerce (dále jen „Obchodní podmínky 
+inzerce“) upravují v souladu s ustanovením § 1751 odst. 1 zákona č. 89/2012 Sb., 
+občanský zákoník (dále jen „občanský zákoník“) vzájemná práva a povinnosti 
+vzniklá na základě smlouvy o inzerci uzavřené mezi společností Bezrealitky s.r.o., 
+se sídlem Praha 8 - Karlín, Karolinská 661/4, PSČ 186 00, IČO: 08 063 168, 
+zapsané v obchodním rejstříku pod sp. zn. C 126369 vedenou u Městského 
+soudu v Praze, Bezrealitky a Objednatelem. 
+2. Bezrealitky je oprávněným provozovatelem a správcem internetového serveru 
+Bezrealitky, dostupného na internetové adrese 
+3. Pro účely těchto Obchodních podmínek inzerce mají níže uvedené termíny 
+uváděné s velkým počátečním písmenem následující význam: 
+• Balíček inzerce  – soubor služeb spočívajících ve zveřejnění Inzerátu  
+Objednatele na Serveru, případně na partnerském serveru třetí osoby  
+a poskytnutí případných souvisejících služeb. Obsah jednotlivých Balíčků 
+inzerce, jejich cena, podmínky a doba poskytování, resp. trvání Balíčku, 
+spolu s cenou a podmínkami pro následnou úpravu Inzerátu, jeho 
+opětovnou aktivaci a další s tím spojené a/nebo možné a navázané kroky, 
+jsou uvedeny v Ceníku na Serveru 
+• Bezrealitky – společnost Bezrealitky s.r.o., IČO: 08 063 168, se sídlem 
+Praha 8 - Karlín, Karolinská 661/4, PSČ 186 00  
+• Cena inzerce  – cena Balíčku inzerce uvedená v ceníku na Serveru 
+• Inzerát – nabídka koupě, prodeje nebo pronájmu Nemovitosti 
+Objednatele, která obsahuje alespoň 5 fotografií Nemovitosti (fotografie 
+Nemovitosti nesmí obsahovat reklamu, vodoznak apod.) a která je součástí 
+Objednávky a je určena ke zveřejnění na Serveru, případně na partnerském 
+serveru třetí osoby  
+• Licence – licence Bezrealitky k Obsahu Uživatele na Serveru dle čl. 4. 
+odst. 2. těchto Obchodních podmínek inzerce 
+• Nemovitost – konkrétní jednotlivě určená nemovitá věc nebo členský 
+podíl v družstvu, se kterými může jejich vlastník nakládat, tj. zejména je 
+zcizit nebo pronajmout; Objednatel je povinen na žádost Bezrealitky 
+prokázat, že je vlastníkem Nemovitosti, případně že je oprávněn vlastníka 
+Nemovitosti v potřebném rozsahu zastupovat  
+• Obchodní podmínky  – obchodní podmínky serveru Bezrealitky, které 
+upravují vzájemná práva a povinnosti mezi Bezrealitky a osobami 
+využívající služby Serveru, zejména práva a povinnosti související 
+se založením, provozováním a užíváním Účtu 
+• Objednatel – uživatel, který provádí Objednávku inzerce nebo uzavřel 
+Smlouvu o inzerci, Objednatelem se rozumí také Spotřebitel  
+• Osoba provádějící správu nemovitých věcí  – osoba, která vykonává 
+výdělečnou činnost správy nemovitých věcí. Za výdělečnou činnost správy 
+nemovitých věcí se pro účely těchto Obchodních podmínek inzerce 
+považuje jakákoliv činnost prováděná za účelem dosažení zisku, spočívající 
+zejména v: převzetí sp ravované nemovité věci od vlastníka za účelem její 
+správy, vedení agendy nájmu a souvisejících služeb, zajišťování běžné 
+údržby, opravy a ochrany před poškozením či zničením a/nebo plnění 
+dalších smluvních či zákon ných povinností za vlastníka spravované 
+nemovité věci, ledaže se jedná o činnost provozovanou pro Bezrealitky 
+nebo pro Skupinu Bezrealitky. 
+Za Osobu provádějící správu nemovitých věcí se dále též považují všechny osoby, 
+které vystupují jako osoby (spolu)pracující (bez ohledu na povahu právního vztahu) 
+s Osobou provádějící správu nemovitých věcí a osoby uvedené na webových stránkách 
+příslušných Osob provádějící správu nemovitých věcí s tím, že je na Objednateli, 
+aby prokázal, že Osobou provádějící správu nemovitých věcí není. Za Osobu 
+provádějící správu nemovitých věcí se též považují všechny osoby, které provedou 
+nebo hodlají nebo přislíbí provést Objednávku inzerce za subjekty, které splňují 
+kteroukoliv definici Oso by provádějící správu nemovitých věcí dle předchozích vět.  
+V případě pochybností je určení Osoby provádějící správu nemovitých věcí dle 
+Obchodních podmínek inzerce na úvaze Bezrealitky. 
+• Objednávka inzerce  – odeslání objednávkového formuláře dle čl. 2. odst. 1. 
+těchto Obchodních podmínek inzerce 
+• Obsah – alespoň 5 fotografií Nemovitosti , obrázky, textový popis a další data 
+zveřejňovaná Objednatelem na Serveru 
+• Osobní údaje – může se jednat o jméno a příjmení, adresa bydliště, identifikační 
+číslo, daňové identifikační číslo, adresa elektronické pošty, telefonní číslo, číslo 
+účtu, IP adresa, identifikace Nemovitosti, kterou zadává Objednatel 
+při provádění Objednávky (zejména adresa Nemovitosti) , (blíže viz Zásady 
+zpracování osobních údajů) 
+• Registrace – proces vedoucí k založení Účtu (blíže viz Obchodní podmínky)  
+• Skupina Bezrealitky  – všechny společnosti, v nichž má přímou či nepřímou 
+majetkovou účast mateřská společnost Bezrealitky, společnost European 
+Housing Services s.r.o., IČO: 078 14 496; tyto osoby se mohou v průběhu doby 
+měnit 
+• Server – internetový server Bezrealitky dostupný na internetové adrese 
+https://www.bezrealitky.cz 
+• Smlouva o inzerci – smlouva uzavřená mezi Objednatelem a Bezrealitky, kterou 
+se Bezrealitky zavazuje poskytnout Objednateli jím zvolený Balíček inzerce 
+ke konkrétní Nemovitosti a Objednatel se zavazuje zaplatit Bezrealitky Cenu 
+inzerce. Obchodní podmínky inzerce jsou nedílnou součástí Smlouvy o inzerci  
+• Spotřebitel – každý Uživatel, který mimo rámec své podnikatelské činnosti 
+nebo mimo rámec samostatného výkonu svého povolání uzavírá smlouvu 
+s Bezrealitky 
+• Uživatel – osoba, která má zaregistrovaný svůj Účet  
+• Účet – součást Serveru s názvem „moje bezrealitky“, která je zpřístupněna právě 
+jednomu Uživateli a je zřízena Registrací a zpřístupněna po zadání uživatelského 
+jména a hesla  
+2. Uzavření Smlouvy o inzerci a aktivace Inzerátu  
+1. Objednávku Balíčku inzerce provede Objednatel následujícím způsobem: 
+Krok 1. Vložení inzerátu: Objednatel na Serveru klikne na „Vložit inzerát“, 
+doplní Obsah Inzerátu a provede Registraci/přihlásí ke svému Účtu.  
+Tento krok je ukončen kliknutím na „Pokračovat“.  
+ 
+Krok 2. Objednávka inzerce: Objednatel vyplní objednávkový formulář, 
+který obsahuje: 
+- údaje o objednávaném Balíčku inzerce, 
+- údaje o zvoleném způsobu úhrady Ceny inzerce, 
+Tento krok je ukončen kliknutím na „Dokončit“.  
+2. Objednávka odeslaná kliknutím na tlačítko „Dokončit“ je návrhem Objednatele 
+na uzavření Smlouvy o inzerci. 
+3. Před odesláním Objednávky inzerce může Objednatel měnit údaje,  
+které do Objednávky inzerce vložil, a to i s ohledem na možnost Objednatele 
+Objednávku zkontrolovat a opravit možné chyby vzniklé při zadávání dat 
+do Objednávky inzerce. 
+4. Bezrealitky Objednateli neprodleně potvrdí, že Objednávku inzerce obdržela, 
+a to na adresu elektronické pošty Objednatele uvedenou v Účtu. Potvrzení 
+Objednávky inzerce podle tohoto odstavce se nepovažuje za akceptaci nabídky 
+ve smyslu občanského zákoníku a tímto okamžikem nevzniká Smlouva o inzerci. 
+5. Po dokončení Objednávky inzerce je Objednatel přesměrován na stránku 
+obsahující informace potřebné k zaplacení Ceny inzerce. 
+6. Zaplacením Ceny inzerce je Smlouva o inzerci uzavřena a Inzerát je aktivován, 
+tj. je umístěn ve veřejné části Serveru, případně je exportován na partnerský 
+server třetí osoby.  
+7. Smlouvu o inzerci lze uzavřít v českém jazyce.  
+8. Objednatel uzavřením Smlouvy o inzerci výslovně souhlasí s tím, aby mu bylo 
+poskytováno jím požadované plnění před uplynutím čtrnáctidenní lhůty 
+k odstoupení od smlouvy dle § 1824a odst. 3 občanského zákoníku. Objednatel 
+z tohoto důvodu dle konkrétního plnění  
+(i) nemůže v souladu s ust. § 1837 písm. a), resp. d) a l) občanského zákoníku 
+od Smlouvy o inzerci odstoupit podle § 1829 občanského zákoníku; 
+nebo v případě odstoupení mu bude vrácena pouze poměrná část Ceny 
+inzerce. Nejkratší doba inzerce činí 1 kalendářní měsíc. 
+3. Základní práva a povinnosti smluvních stran  
+1. Realitní makléř není oprávněn provést Objednávku inzerce ani uzavřít Smlouvu 
+o inzerci za účelem inzerce nabídky pronájmu Nemovitosti. V případě porušení 
+této povinnosti vznikne Bezrealitky vůči Realitnímu makléři právo na smluvní 
+pokutu ve výši 35.000 Kč (slovy: třicet pět tisíc korun českých) za každé 
+jednotlivé porušení této povinnosti. Smluvní pokuta je splatná do 15 dnů 
+ode dne porušení uvedené povinnosti. Tímto ustanovením není dotčen nárok 
+na náhradu újmy Bezrealitky.  V případě porušení tohoto ustano vení 
+je Bezrealitky dále oprávněná smazat Inzerát Realitního makléře porušující 
+uvedenou povinnost, a to i bez předchozího upozornění Realitního makléře 
+a bez náhrady již uhrazené Ceny Inzerce. 
+2. Osoba provádějící správu nemovitých věcí není oprávněna provést Objednávku 
+inzerce ani uzavřít Smlouvu o inzerci za účelem inzerce nabídky prodeje 
+Nemovitosti. V případě porušení této povinnosti vznikne Bezrealitky vůči Osobě 
+provádějící správu nemovitých věcí právo na smluvní pokutu ve výši 35.000 Kč 
+(slovy: třicet pět tisíc korun českých) za každé jednotlivé porušení této 
+povinnosti. Smluvní pokuta je splatná do 15 dnů ode dne porušení uvedené 
+povinnosti. Tímto ustanovením ne ní dotčen nárok na náhradu újmy 
+Bezrealitky. V případě porušení tohoto ustanovení je Bezrealitky oprávněná 
+smazat Inzerát Osoby provádějící správu nemovitých věcí porušující toto 
+ustanovení, a to i bez předchozího upozornění Osoby provádějící správu 
+nemovitých věcí a bez náhrady již uhrazené Ceny Inzerce. 
+3. Veškerá data zadává Objednatel do Serveru na vlastní náklady a v souladu 
+s pokyny Bezrealitky uvedenými na Serveru. 
+4. Objednatel je v rámci možností poskytovaných mu Serverem oprávněn 
+prostřednictvím Účtu svůj Inzerát a Obsah editovat. Objednatel je povinen 
+bezodkladně aktualizovat své Inzeráty v případě, že dojde ke změně jejich stavu 
+nebo údajů v nich uvedených. 
+5. Objednatel se zavazuje zveřejňovat na Serveru pouze pravdivé a nezkreslené 
+údaje, které nejsou zavádějící ani jinak závadné (vč. přímých kontaktních údajů, 
+např. telefonní číslo, e-mail, atp.) na Objednatele a/nebo jinou kontaktní osobu 
+či jiný kontaktní údaj, který obchází komunikační prostředky Bezrealitky) 
+a neporušují práva třetích osob. V případě porušení tohoto ustanovení 
+je Bezrealitky oprávněna dle závažnosti porušení vyzvat Uživatele k nápravě 
+a pozastavit či ukončit zveřejňování Inzerátu na Serveru a/nebo na partnerském 
+serveru třetí osoby, a to bez nároku Objednatele na vrácení již uhrazené Ceny 
+Inzerce. 
+6. Objednatel bere na vědomí, že údaje o Nemovitostech jím zveřejňované 
+na Serveru jsou přístupny uživatelům internetu, a to prostřednictvím Serveru 
+a dalších internetových serverů provozovaných Bezrealitky, Skupinou 
+Bezrealitky či jinou osobou. Objednavatel souhlasí s tím, že údaje o jím 
+inzerovaných Nemovitostech mohou být též zveřejněny v propagačních 
+materiálech a jiných reklamních sděleních Bezrealitky a osob Skupiny 
+Bezrealitky. 
+7. Objednatel se nesmí jakýmkoliv způsobem pokoušet o neoprávněný přístup 
+a manipulaci dat na Serveru. Redirect není povolen – adresa URL Objednatele 
+v Inzerátu nesmí směřovat zejména na komerční realitní servery, tedy na servery 
+se stejným nebo obdobným tematickým obsahem, jako je Server, 
+nebo na servery prezentující obsah, který je v rozporu s právním řádem České 
+republiky, s dobrými mravy, nebo který ohrožuje veřejný pořádek, 
+nebo na servery, které svým obsahem odporují oprávněným zájmům 
+Bezrealitky nebo Sk upiny Bezrealitky. V případě porušení tohoto ustanovení 
+nebo porušení povinného Obsahu Inzerátu je Bezrealitky oprávněna 
+dle závažnosti porušení vyzvat Uživatele k nápravě a pozastavit či ukončit 
+zveřejňování Inzerátu na Serveru či na partnerském serveru třetí osoby, a to bez 
+nároku Objednatele na vrácení již uhrazené Ceny Inzerce. 
+8. Má se za to, že údaje uvedené Objednatelem v Objednávce inzerce jsou 
+pravdivé a správné. Odpovědnost vyplývající z nesprávného či nepravdivého 
+uvedení údajů nese výlučně Objednatel. 
+9. Objednatel je oprávněn svůj Inzerát kdykoli smazat nebo deaktivovat 
+prostřednictvím Účtu nebo požádat o zrušení svého Inzerátu písemně 
+na elektronické adrese  info@bezrealitky.cz. 
+10. Objednatel bere na vědomí, že Server je určen pro nekomerční Inzerci. 
+Objednatel se proto zavazuje nezveřejňovat Inzeráty sloužící k podnikatelským 
+účelům (například nabídka Nemovitostí v developerských projektech) 
+bez předchozího písemného souhlasu Bezrealitky. V této souvislosti 
+si Bezrealitky vyhrazuje právo označit zveřejněnou Inzerci tak, aby byl komerční 
+Inzerát odlišen od soukromých Inzerátů. V případě, porušení povinnosti 
+Objednatele dle tohoto odstavce vznikne Bezrealitky vůči Objednateli právo 
+na smluvní pokutu ve výši 35.000 Kč (slovy: třicet pět tisíc korun českých) 
+za každé jednotlivé porušení této povinnosti. Smluvní pokuta je splatná 
+do 15 dnů ode dne porušení uvedené povinnosti. Tímto ustanovením není 
+dotčen nárok na náhradu újmy Bezrealitky. V případě porušení tohoto 
+ustanovení je Bezrealitky oprávněná smazat Inzerát Objednatele porušující toto 
+ustanovení, a to i bez předchozího upozornění Objednatele a bez náhrady již 
+uhrazené Ceny Inzerce.  
+Za obsah Inzerátu a za případnou újmu způsobenou zveřejněním Inzerátu či Obsahu 
+třetím osobám i Bezrealitky nese odpovědnost Objednatel. Objednatel se zavazuje 
+případnou újmu Bezrealitky a/nebo poškozené třetí osobě na výzvu bezodkladně 
+uhradit. Vzhledem k  tomu, že je Inzerát přístupný uživatelům internetu, Bezrealitky 
+nedoporučuje v Inzerátu zveřejňovat jakékoliv osobní údaje. 
+4. Licenční a související ujednání  
+1. Objednatel prohlašuje, že pokud zveřejňuje na Serveru Obsah, který je, 
+byť i částečně, předmětem práv duševního vlastnictví, je vlastníkem těchto práv 
+nebo je vykonavatelem souvisejících majetkových práv nebo je oprávněn 
+k výkonu práv duševního vlastnictví a k užití předmětu práv duševního 
+vlastnictví v rozsahu nezbytném k uzavření a plnění Smlouvy o inzerci.  
+2. Objednatel v případě, že je Obsah, který zveřejňuje na Serveru, předmětem práv 
+z duševního vlastnictví, uděluje Bezrealitky oprávnění k výkonu práv duševního 
+vlastnictví v rozsahu nezbytném pro plnění Smlouvy o inzerci a také v rozsahu 
+pro propagační účely  Bezrealitky (dále jen „Licence“). Licence je poskytnuta 
+bezúplatně a s možností poskytnutí sublicence společnostem ve Skupině 
+Bezrealitky ve stejném rozsahu. 
+3. V případě, že Bezrealitky bude muset zaplatit jakékoli osobě peněžité plnění 
+z důvodu porušení práv duševního vlastnictví třetí osoby k Obsahu nebo 
+Bezrealitky vznikne jakákoli újma v důsledku porušení práv třetí osoby 
+k Obsahu, zavazuje se Objednatel Bezrealitky nahradit veškerá peněžitá plnění 
+a náklady vynaložené z důvodů uvedených v tomto odstavci, a to včetně 
+nákladů případného sporu a právního zastoupení.  
+4. Bezrealitky je v případě porušení ustanovení tohoto čl. 4 Objednatelem 
+oprávněna ukončit okamžitě zveřejňování Obsahu na Serveru a/nebo 
+na partnerském serveru třetí osoby, a to bez jakékoli náhrady ve vztahu 
+k Objednateli. 
+5. Platební podmínky 
+1. Server obsahuje informace o Balíčcích inzerce, a to včetně uvedení cen. Ceny 
+jsou uvedeny včetně daně z přidané hodnoty a všech souvisejících poplatků. 
+Ceny zůstávají v platnosti po dobu, po kterou jsou zveřejněny na Serveru. Tímto 
+ustanovením není omezena  možnost Bezrealitky uzavřít Smlouvu o inzerci 
+za individuálně sjednaných podmínek. 
+2. Náklady na prostředky komunikace na dálku se neliší od základní sazby 
+a Bezrealitky si neúčtuje žádné další poplatky vyjma smluvní přepravy.  
+3. Cenu inzerce může Objednatel uhradit Bezrealitky následujícími způsoby:  
+a. prostřednictvím internetového bankovnictví; 
+b. platební kartou prostřednictvím internetové platební brány;  
+c. bankovním převodem; 
+d. prostřednictvím služby Bezrealitky peněženka; 
+e. prostřednictvím elektronického platebního systému Google Pay;  
+f. prostřednictvím elektronického platebního systému Apple Pay.  
+4. Zvolený způsob úhrady uvede Objednatel v Objednávce inzerce. 
+5. Bezrealitky si vyhrazuje právo rozhodnout o tom, že některé ze způsobů platby 
+uvedené v odstavci 5. tohoto článku nelze pro konkrétní případ použít.  
+6. Pokud je Objednateli po odeslání Objednávky inzerce přidělen variabilní symbol 
+a specifický symbol platby, je Objednatel při úhradě Ceny inzerce povinen tyto 
+údaje uvést pro ztotožnění platby.  
+7. Závazek Objednatele uhradit Cenu inzerce je splněn okamžikem připsání Ceny 
+inzerce na Bezrealitky uvedený účet, nebo na účet, na který je platba 
+automaticky odesílána.  
+8. Případné slevy z Ceny inzerce poskytnuté Bezrealitky Objednateli nelze 
+vzájemně kombinovat.  
+9. Je-li to v obchodním styku obvyklé nebo je-li tak stanoveno obecně závaznými 
+právními předpisy, vystaví Bezrealitky ohledně plateb prováděných na základě 
+Smlouvy o inzerci Objednateli daňový doklad – fakturu.  
+6. Vadné plnění služeb Balíčku inzerce  
+1. Práva a povinnosti smluvních stran ohledně práv z vadného plnění se řídí 
+příslušnými obecně závaznými předpisy, zejména příslušnými ustanoveními 
+občanského zákoníku. 
+2. V případě, že Bezrealitky poskytne vadné plnění (tj. plnění nemá sjednané nebo 
+obvyklé vlastnosti nebo není způsobilé sloužit svému účelu), má Objednatel 
+práva z vadného plnění. 
+3. Objednatel je povinen oznámit vadu plnění Bezrealitky bez zbytečného odkladu 
+poté, kdy měl možnost plnění Balíčku inzerce ze strany Bezrealitky zkontrolovat 
+a vadu zjistit, a to buď označením vady, nebo oznámením, jak se projevuje. Vadu 
+lze vytknout do šes ti měsíců od okamžiku poskytnutí jednotlivých služeb 
+obsažených v Balíčku inzerce. Vadu lze oznámit emailem na info@bezrealitky.cz, 
+telefonicky na + 420 226 227 522 nebo jakýmkoli jiným způsobem tak, 
+aby se o jejím oznámení Bezrealitky dozvěděla. 
+4. Vytkl-li Objednatel vůči Bezrealitky vadu oprávněně, neběží lhůta pro uplatnění 
+práv z vadného plnění po dobu, po kterou Objednatel nemůže vadně 
+poskytnutou službu Balíčku inzerce přijímat.  
+5. Je-li vada odstranitelná, může se Objednatel domáhat buď opravy, 
+nebo doplnění toho, co chybí, anebo přiměřené slevy z Ceny inzerce. Nelze -li 
+vadu odstranit a z důvodu vady plnění řádně užívat, může Objednatel odstoupit 
+od Smlouvy o inzerci nebo se domáhat přiměřené slevy z Ceny inzerce.  
+6. Právo z vadného plnění nevylučuje právo na náhradu škody; čeho však 
+lze dosáhnout uplatněním práva z vadného plnění, toho se nelze domáhat 
+z jiného právního důvodu.  
+7. Odstoupení od Smlouvy o inzerci  
+1. Objednatel je oprávněn od Smlouvy o inzerci odstoupit v případech uvedených 
+v těchto Obchodních podmínkách inzerce. 
+2. Pro odstoupení od Smlouvy o inzerci může Spotřebitel využít vzorový formulář 
+Bezrealitky. Odstoupení lze provést také odesláním formuláře na elektronickou 
+adresu Bezrealitky, přičemž přijetí tohoto formuláře bude Spotřebiteli 
+bezprostředně v textové podobě potvrzeno.  
+3. Je-li s odstoupením od Smlouvy o inzerci spojena povinnost vrátit Objednateli 
+peněžní prostředky, vrátí je Bezrealitky stejným způsobem, jakým jí byly 
+poskytnuty, s čímž Objednatel souhlasí.  
+8. Ostatní ujednání 
+1. Bezrealitky garantuje Uživateli vrácení Ceny inzerce pro Inzeráty týkající 
+se pronájmu Nemovitosti zveřejněné na Serveru, případně na partnerském 
+serveru třetí osoby (v rámci balíčku „Komplet“ (dále jen „Garance vrácení ceny“) 
+za následujících podmínek: 
+a. Nejméně do 60 dnů od aktivace konkrétního Inzerátu nezískal Uživatel 
+žádnou zprávu a/nebo reakci na Inzerát (tj. Balíček trvá minimálně 
+60 dnů); 
+b. V Inzerátu nebyl uveden přímý kontakt (GSM, e -mail atp.) na Uživatele 
+a/nebo jinou kontaktní osobu či jiný kontaktní údaj, který obchází 
+komunikační prostředky Bezrealitky; a 
+c. Inzerát nemá výrazné nedostatky (chybějící fotografie, chybějící popis 
+Nemovitosti, neúplné či nesmyslné údaje o ceně apod.) 
+2. Bezrealitky si vyhrazuje každý jednotlivý případ uplatnění práva Garance vrácení 
+ceny posoudit jednotlivě, přičemž pro případ odmítnutí uplatnění Garance 
+vrácení ceny je Bezrealitky oprávněna nabídnout Uživateli dle svého uvážení 
+zdarma možnost úpravy a/nebo prodloužení platnosti Inzerátu o stanovenou 
+dobu. 
+3. Bližší postup podmínek a uplatnění práva Garance vrácení ceny (zejména 
+pak způsob, a doba platného uplatnění práva Garance vrácení ceny), 
+je zveřejněn na Serveru. 
+9. Závěrečná ujednání 
+1. Bezrealitky se zavazuje nakládat s  osobními údaji Objednatele v  souladu 
+s Nařízením Evropského parlamentu a Rady (EU) 2016/679 ze dne 27. dubna 
+2016 o ochraně fyzických osob v souvislosti se zpracováním osobních údajů 
+a o volném pohybu těchto údajů a o zrušení směrnice 95/46/ES (obecné 
+nařízení o ochraně osobních údajů) a se Zásadami zpracování osobních údajů.  
+2. Tyto Obchodní podmínky inzerce a Obchodní podmínky jsou nedílnou součástí 
+Smlouvy o inzerci. 
+3. Dojde-li mezi stranami Smlouvy o inzerci ke sporu, má Spotřebitel právo na jeho 
+mimosoudní řešení. Návrh na mimosoudní řešení sporu je Spotřebitel oprávněn 
+podat k České obchodní inspekci. Veškeré podrobnosti k mimosoudnímu řešení 
+jsou uvedeny na webových stránkách www.coi.cz. 
