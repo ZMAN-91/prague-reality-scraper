@@ -564,3 +564,31 @@ jednotlivých funkcí testují i to, co se nejhůř hledá:
   lže o počtu řádků — a ověření to musí ve všech třech případech odmítnout.
   Plus že prázdný strom skončí chybou, ne tichým 200bajtovým „úspěchem",
   a že se `data/raw/` do archivu nedostane.
+
+## Co budí sběr
+
+GitHub's own scheduler does not deliver: across two days it ran 4 of roughly
+150 scheduled attempts, including a stretch of nine hours with none, and
+moving the cron off minute 0 and then to `*/15` changed nothing. The schedule
+event is documented as best effort and on this repository it behaves like it.
+
+So the collection is woken from outside, by a Cloudflare Worker on the free
+plan that fires every fifteen minutes and does one thing:
+
+    POST /repos/ZMAN-91/prague-reality-scraper/actions/workflows/scrape.yml/dispatches
+    {"ref":"main","inputs":{"as_schedule":"true"}}
+
+All the work still happens here, where the Actions minutes are free. What
+crosses the network from outside is one request an hour's worth of bytes.
+
+`as_schedule` is the load-bearing part: it sends the waker through the guard
+(`tools/scrape_guard.sh`), which allows one sweep per fifty minutes. Without
+it every firing would scrape and the portals would see four sweeps an hour
+instead of the one this project takes.
+
+The `*/15` cron stays in the workflow. It costs nothing, and on the rare
+occasion GitHub does deliver, the guard rations it the same way - a delivered
+attempt 35 minutes after a sweep is stopped in eight seconds.
+
+The waker holds a fine-grained token scoped to this repository with
+`Actions: write` and no expiry. It cannot reach the private dataset.

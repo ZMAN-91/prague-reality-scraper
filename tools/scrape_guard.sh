@@ -47,6 +47,11 @@ decide() { echo "go=$1"; say "$2"; exit 0; }
 # A person pressing the button is not the schedule being rationed. The
 # concurrency group still serialises it against a running scrape, so this
 # cannot race the data.
+#
+# An external waker is NOT a person: the Cloudflare Worker that keeps this
+# collection alive fires every fifteen minutes, so it sets as_schedule and
+# arrives here as EVENT_NAME=schedule. Without that it would put four sweeps
+# an hour through the portals instead of one.
 if [ "$EVENT_NAME" != "schedule" ]; then
     decide true "Triggered by ${EVENT_NAME}, not the schedule - running on request."
 fi

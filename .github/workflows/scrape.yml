@@ -72,12 +72,19 @@ on:
         required: false
         default: "400"
       as_schedule:
-        # The guard short-circuits for a hand-triggered run, so pressing the
-        # button never exercises the branch that calls the API - the one that
-        # decides everything and can only fail in production. This forces it,
-        # so the risky path can be proven on demand instead of waiting for
-        # GitHub to deliver a cron.
-        description: "Run the guard as if this were the schedule"
+        # Set this whenever something OTHER THAN A PERSON presses the button.
+        #
+        # A hand-triggered run skips the guard entirely, on the reasoning that
+        # a person who pressed the button wants a run. An external waker is
+        # not a person: it fires every fifteen minutes, and without this it
+        # would put four sweeps an hour through the portals instead of one.
+        # With it the guard rations the waker exactly as it rations the cron.
+        #
+        # The Cloudflare Worker that wakes this workflow sets it - GitHub's
+        # own scheduler delivered 4 of ~150 attempts over two days, so the
+        # waker is what actually keeps the collection running. It also makes
+        # the API branch provable on demand, which is why it was added.
+        description: "Rate-limit this run through the guard (external wakers set this)"
         required: false
         default: "false"
 
