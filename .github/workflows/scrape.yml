@@ -71,6 +71,15 @@ on:
         description: "Cap on one-time detail fetches for newly-seen listings"
         required: false
         default: "400"
+      as_schedule:
+        # The guard short-circuits for a hand-triggered run, so pressing the
+        # button never exercises the branch that calls the API - the one that
+        # decides everything and can only fail in production. This forces it,
+        # so the risky path can be proven on demand instead of waiting for
+        # GitHub to deliver a cron.
+        description: "Run the guard as if this were the schedule"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
@@ -98,7 +107,7 @@ jobs:
         id: decide
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT_NAME: ${{ github.event_name }}
+          EVENT_NAME: ${{ (github.event_name == 'workflow_dispatch' && inputs.as_schedule == 'true') && 'schedule' || github.event_name }}
           # How old the last real run must be before another one starts.
           # Fifty, not sixty: attempts land every fifteen minutes, so a
           # sixty-minute floor would push each run to the attempt after the

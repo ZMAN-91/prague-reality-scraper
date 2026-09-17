@@ -474,7 +474,17 @@ def test_a_run_the_guard_stopped_does_not_count_as_a_run():
 def test_the_guard_is_told_what_triggered_the_run():
     """Without this the script cannot tell a person from the schedule and
     would ration the button press too."""
-    assert decide_step()["env"]["EVENT_NAME"] == "${{ github.event_name }}"
+    assert "github.event_name" in decide_step()["env"]["EVENT_NAME"]
+
+
+def test_the_schedule_path_can_be_exercised_on_demand():
+    """The guard short-circuits for a hand-triggered run, so the button never
+    reaches the branch that calls the API - the one that decides everything
+    and can only fail in production. Waiting for GitHub to deliver a cron is
+    not a test strategy when GitHub is the thing that is unreliable."""
+    assert "as_schedule" in inputs_of(load(SALE))
+    env = decide_step()["env"]["EVENT_NAME"]
+    assert "inputs.as_schedule" in env and "'schedule'" in env
 
 
 def test_the_guard_may_read_run_history():
