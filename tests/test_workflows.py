@@ -64,11 +64,55 @@ def fires_at(spec, weekday, hour):
     return False
 
 
-def test_rent_runs_once_a_week_on_sunday_night():
+def rent_window_start():
+    """The first UTC hour of the Sunday window rent owns."""
+    entries = load(RENT)[True]["schedule"]
+    assert len(entries) == 1, "one window, not several"
+    return int(entries[0]["cron"].split()[1].split("-")[0])
+
+
+def test_rent_attempts_only_ever_land_on_sunday_night():
+    """The cron no longer decides how OFTEN rent runs - the guard's six-day
+    floor does that, because one shot a week at a scheduler that drops most
+    of them is one shot a week at losing the week. What the cron still has to
+    guarantee is WHERE the attempts land: the window sale stays out of."""
     rent = load(RENT)
-    assert fires_at(rent, 0, 0), "rent must start in the 00:00 UTC hour on Sunday"
-    fires = [(d, h) for d in range(7) for h in range(24) if fires_at(rent, d, h)]
-    assert fires == [(0, 0)], f"rent must fire exactly once a week, got {fires}"
+    days = {d for d in range(7) for h in range(24) if fires_at(rent, d, h)}
+    assert days == {0}, f"rent must only attempt on Sunday, got {days}"
+    hours = [h for h in range(24) if fires_at(rent, 0, h)]
+    assert hours == [0, 1], hours
+
+
+def test_a_late_rent_start_does_not_eat_sunday_morning():
+    """Attempts land across a window, so the pass can start at the END of it
+    and still run its full budget. With a four-hour window that put the worst
+    case at 07:45 - sale resumes at 05:00, and the guard would have stood it
+    down for nearly three hours. More attempts is better for rent, but not at
+    that price."""
+    rent = load(RENT)
+    hours = [h for h in range(24) if fires_at(rent, 0, h)]
+    budget_h = int(inputs_of(rent)["max_seconds"]["default"]) / 3600
+    # Last attempt of the window is at :45 of its final hour.
+    worst_finish = hours[-1] + 0.75 + budget_h
+    sale_resumes = min(h for h in range(24) if fires_at(load(SALE), 0, h))
+    assert worst_finish - sale_resumes <= 1, (
+        f"a pass starting at the end of the window runs to {worst_finish:.2f}h, "
+        f"and sale resumes at {sale_resumes}:00"
+    )
+
+
+def test_rent_may_only_start_one_pass_a_week():
+    """What the cron used to promise, now enforced where it belongs."""
+    env = [s for s in load(RENT)["jobs"]["guard"]["steps"]
+           if s.get("id") == "decide"][0]["env"]
+    assert env["MEASURE_WORKFLOW"] == "scrape-rent.yml", (
+        "measured against the hourly sale sweep, rent would never run"
+    )
+    floor_days = int(env["MIN_GAP_MINUTES"]) / (60 * 24)
+    assert 5 <= floor_days < 7, (
+        "under a week so the start does not drift later out of the window, "
+        "but far enough that a second pass cannot start the same Sunday"
+    )
 
 
 def test_sale_runs_every_hour_outside_the_rent_window():
@@ -110,7 +154,7 @@ def test_sale_stays_out_of_the_window_rent_owns():
     once the moment rent finishes, collecting the same hour four times."""
     sale, rent = load(SALE), load(RENT)
     rent_budget_hours = int(inputs_of(rent)["max_seconds"]["default"]) / 3600
-    rent_start = int(rent[True]["schedule"][0]["cron"].split()[1])
+    rent_start = rent_window_start()
 
     for offset in range(int(rent_budget_hours) + 1):
         hour = (rent_start + offset) % 24
@@ -144,7 +188,7 @@ def test_both_workflows_share_one_concurrency_group():
     """They write the same listings.csv. Two runs merging into it at once
     would race and one would lose its work."""
     assert scrape_group(load(SALE)) == scrape_group(load(RENT))
-    for spec in (load(SALE)["jobs"]["scrape"], load(RENT)):
+    for spec in (load(SALE)["jobs"]["scrape"], load(RENT)["jobs"]["scrape"]):
         assert spec["concurrency"]["cancel-in-progress"] is False, (
             "queue behind a running scrape, never kill it mid-sweep"
         )
@@ -222,8 +266,8 @@ def test_the_backup_waits_for_the_rent_pass_to_be_over():
     if someone lengthens the rent window, this fails instead of quietly
     archiving a week that is missing its rent data."""
     rent = load(RENT)
-    rent_start = int(rent[True]["schedule"][0]["cron"].split()[1])
-    rent_latest_end = rent_start * 60 + rent["jobs"]["scrape"]["timeout-minutes"]
+    rent_latest_end = (rent_window_start() * 60
+                       + rent["jobs"]["scrape"]["timeout-minutes"])
 
     minute, hour, _ = backup_cron()
     assert hour * 60 + minute > rent_latest_end, (

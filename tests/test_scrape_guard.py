@@ -48,11 +48,16 @@ def run_row(run_id=1, path=SALE, status="completed", started_min_ago=120,
     }
 
 
-def guard(rows, tmp_path, event="schedule", **env):
+def guard(rows, tmp_path, event="schedule", mine=None, **env):
     payload = tmp_path / "runs.json"
     payload.write_text(json.dumps({"workflow_runs": list(rows)}))
+    argv = ["bash", str(GUARD), "--runs", str(payload)]
+    if mine is not None:
+        own = tmp_path / "mine.json"
+        own.write_text(json.dumps({"workflow_runs": list(mine)}))
+        argv += ["--mine", str(own)]
     result = subprocess.run(
-        ["bash", str(GUARD), "--runs", str(payload)],
+        argv,
         capture_output=True, text=True,
         env={"PATH": "/usr/bin:/bin", "NOW": iso(NOW), "EVENT_NAME": event,
              "GITHUB_RUN_ID": str(SELF_ID), **{k: str(v) for k, v in env.items()}},
@@ -210,3 +215,75 @@ def test_the_reason_is_always_stated(tmp_path):
                  [run_row(1, started_min_ago=5)], [run_row(1, started_min_ago=90)]):
         _, reason = guard(rows, tmp_path)
         assert len(reason) > 20, reason
+
+
+# --- the weekly pass, which measures itself ---------------------------------
+
+
+def test_the_rent_pass_is_not_held_back_by_a_sale_sweep(tmp_path):
+    """The whole reason MEASURE_WORKFLOW exists. Rent shares the repository
+    with a sweep that ran minutes ago; measured against that it would never
+    run at all."""
+    rows = [run_row(1, SALE, started_min_ago=5),
+            run_row(2, RENT, started_min_ago=60 * 24 * 7)]
+    assert went(rows, tmp_path, MEASURE_WORKFLOW=RENT.split("/")[-1],
+                MIN_GAP_MINUTES=8640)
+
+
+def test_the_rent_pass_runs_once_a_week_not_once_a_window(tmp_path):
+    """Sixteen attempts arrive across the Sunday window. The first may start
+    a four-hour city-wide pass; the fifteen behind it may not."""
+    rows = [run_row(1, RENT, started_min_ago=30, duration_s=3600)]
+    assert not went(rows, tmp_path, MEASURE_WORKFLOW=RENT.split("/")[-1],
+                    MIN_GAP_MINUTES=8640)
+
+
+def test_a_week_later_the_rent_pass_runs_again(tmp_path):
+    rows = [run_row(1, RENT, started_min_ago=60 * 24 * 7, duration_s=3600)]
+    assert went(rows, tmp_path, MEASURE_WORKFLOW=RENT.split("/")[-1],
+                MIN_GAP_MINUTES=8640)
+
+
+def test_a_sale_sweep_in_flight_still_stops_the_rent_pass(tmp_path):
+    """Measuring separately must not mean ignoring each other: they write the
+    same listings.csv, so either running is a reason to stand down."""
+    rows = [run_row(1, SALE, status="in_progress"),
+            run_row(2, RENT, started_min_ago=60 * 24 * 7)]
+    assert not went(rows, tmp_path, MEASURE_WORKFLOW=RENT.split("/")[-1],
+                    MIN_GAP_MINUTES=8640)
+
+
+def test_the_sale_guard_still_ignores_rent_history_for_its_floor(tmp_path):
+    """The mirror image: a rent pass an hour ago is not a sale sweep, so it
+    must not hold the hourly floor shut."""
+    rows = [run_row(1, RENT, started_min_ago=60, duration_s=3600)]
+    assert went(rows, tmp_path)
+
+
+def test_the_default_workflow_is_the_hourly_one(tmp_path):
+    """Nothing passes MEASURE_WORKFLOW for the sale workflow, so the default
+    has to be right or the hourly floor silently stops working."""
+    rows = [run_row(1, SALE, started_min_ago=5)]
+    assert not went(rows, tmp_path)
+
+
+def test_the_floor_reads_this_workflow_s_own_history(tmp_path):
+    """The repository-wide list holds about one day, because the waker puts
+    ninety-six runs a day into it. The weekly floor has to look further back
+    than that, so it asks a different endpoint - and if it ever stopped
+    doing so, rent would find no previous pass and start at every attempt.
+
+    Here the two disagree on purpose: repository-wide shows nothing, the
+    workflow's own history shows a pass thirty minutes ago.
+    """
+    assert not went([], tmp_path,
+                    mine=[run_row(1, RENT, started_min_ago=30, duration_s=3600)],
+                    MEASURE_WORKFLOW="scrape-rent.yml", MIN_GAP_MINUTES=8640)
+
+
+def test_the_busy_check_reads_the_repository_wide_list(tmp_path):
+    """The mirror: a sale sweep in flight appears repository-wide, never in
+    rent's own history, and must still stop the pass."""
+    assert not went([run_row(1, SALE, status="in_progress")], tmp_path,
+                    mine=[], MEASURE_WORKFLOW="scrape-rent.yml",
+                    MIN_GAP_MINUTES=8640)

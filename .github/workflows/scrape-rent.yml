@@ -15,7 +15,7 @@ on:
     # including sreality, which the hourly sale run confines to the watched
     # area. Keeping sreality small is about not sweeping the city every hour;
     # once every seven days is a different trade.
-    - cron: "13 0 * * 0"
+    - cron: "*/15 0-1 * * 0"
   workflow_dispatch:
     inputs:
       transactions:
@@ -52,28 +52,65 @@ on:
         description: "Cap on one-time detail fetches for newly-seen listings"
         required: false
         default: "1500"
-
-# Never let two runs write/commit concurrently - a scrape can occasionally
-# run long, and two overlapping runs both writing listings.csv would race.
-# Queue instead of overlapping.
-concurrency:
-  # One group for BOTH workflows. The weekly rent run writes the same
-  # listings.csv as the hourly sale run, so they must never overlap - two
-  # runs merging into the same file would race and one would lose its work.
-  # Queueing is the right behaviour here, not cancelling.
-  group: scrape-data
-  cancel-in-progress: false
+      as_schedule:
+        # Set this whenever something OTHER THAN A PERSON presses the button.
+        # The waker fires every fifteen minutes through the Sunday window;
+        # without this each firing would start a four-hour city-wide pass.
+        description: "Rate-limit this run through the guard (external wakers set this)"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
   # Only for the success notification below; nothing else in this workflow
   # touches issues.
   issues: write
+  # The guard job reads this repository's own run history.
+  actions: read
 
 jobs:
+  guard:
+    # Same shape as the sale workflow's guard and the same script, with one
+    # difference that is the whole point: the floor is six days rather than
+    # fifty minutes. Sixteen attempts arrive across the Sunday window and at
+    # most one of them may start a pass.
+    #
+    # Outside the concurrency group on purpose - it has to be able to answer
+    # "something is already running" while that something runs.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.decide.outputs.go }}
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Decide whether this attempt should scrape
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ (github.event_name == 'workflow_dispatch' && inputs.as_schedule == 'true') && 'schedule' || github.event_name }}
+          # Measure THIS workflow, not the hourly sale one - otherwise every
+          # attempt would see a sale sweep from minutes ago and never run.
+          MEASURE_WORKFLOW: scrape-rent.yml
+          # Six days, not seven: the pass itself takes up to four hours, so a
+          # seven-day floor would push each week's start later than the last
+          # until it fell out of the Sunday window entirely.
+          MIN_GAP_MINUTES: "8640"
+          MIN_REAL_RUN_SECONDS: "300"
+        run: tools/scrape_guard.sh >> "$GITHUB_OUTPUT"
+
   scrape:
+    needs: guard
+    if: needs.guard.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 280
+    # One group for BOTH workflows. This pass writes the same listings.csv as
+    # the hourly sale run, so they must never overlap - two runs merging into
+    # the same file would race and one would lose its work.
+    concurrency:
+      group: scrape-data
+      cancel-in-progress: false
     steps:
       - name: Checkout the code
         uses: actions/checkout@v4

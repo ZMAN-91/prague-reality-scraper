@@ -8,7 +8,12 @@
 # does not need. This is the throwing-away.
 #
 #   scrape_guard.sh                 # ask the API (what the workflow does)
-#   scrape_guard.sh --runs FILE     # read a fixture instead (what tests do)
+#   scrape_guard.sh --runs ALL [--mine MINE]
+#                                   # read fixtures instead (what tests do).
+#                                   # ALL stands in for the repository-wide
+#                                   # query, MINE for this workflow's own
+#                                   # history; without --mine they are the
+#                                   # same file.
 #
 # Writes "go=true" or "go=false" to stdout, and the reason to stderr. The
 # workflow appends stdout to $GITHUB_OUTPUT.
@@ -19,6 +24,10 @@
 #   EVENT_NAME              github.event_name; anything but "schedule" runs
 #   MIN_GAP_MINUTES         how old the last real run must be (default 50)
 #   MIN_REAL_RUN_SECONDS    below this a run was a guard saying no (default 300)
+#   MEASURE_WORKFLOW        whose last run sets the floor (default scrape.yml).
+#                           The rent pass measures itself, on a weekly floor;
+#                           what counts as "too soon" differs per workflow, but
+#                           "something else is writing listings.csv" does not.
 #   NOW                     ISO time, for tests; defaults to the clock
 #
 # WHY DURATION DECIDES WHAT COUNTS AS A RUN
@@ -33,13 +42,19 @@ set -euo pipefail
 
 MIN_GAP_MINUTES="${MIN_GAP_MINUTES:-50}"
 MIN_REAL_RUN_SECONDS="${MIN_REAL_RUN_SECONDS:-300}"
+MEASURE_WORKFLOW="${MEASURE_WORKFLOW:-scrape.yml}"
 EVENT_NAME="${EVENT_NAME:-schedule}"
 GITHUB_RUN_ID="${GITHUB_RUN_ID:-0}"
 
 runs_file=""
-if [ "${1:-}" = "--runs" ]; then
-    runs_file="${2:?--runs needs a file}"
-fi
+mine_file=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --runs) runs_file="${2:?--runs needs a file}"; shift 2 ;;
+        --mine) mine_file="${2:?--mine needs a file}"; shift 2 ;;
+        *) echo "unknown argument: $1" >&2; exit 2 ;;
+    esac
+done
 
 say() { echo "$1" >&2; }
 decide() { echo "go=$1"; say "$2"; exit 0; }
@@ -56,17 +71,29 @@ if [ "$EVENT_NAME" != "schedule" ]; then
     decide true "Triggered by ${EVENT_NAME}, not the schedule - running on request."
 fi
 
+# TWO QUERIES, NOT ONE, AND THE REASON MATTERS
+#
+# "Is anything running" wants the repository's newest runs, because anything
+# in flight is by definition recent. "How old is the last real run" wants the
+# one workflow's own history, because the waker fires ninety-six times a day
+# and ninety-six runs is about ONE DAY of the repository-wide list. Asked
+# there, the weekly rent pass would never find its previous run, conclude it
+# had never run, and start again at every attempt in its window.
+#
+# Tests can pass a different fixture for each (--runs and --mine), which is
+# the only way to catch the floor reading the wrong one.
 if [ -n "$runs_file" ]; then
-    runs=$(cat "$runs_file")
+    all_runs=$(cat "$runs_file")
+    mine=$(cat "${mine_file:-$runs_file}")
 else
-    # No --paginate: anything running or queued is among the newest runs by
-    # definition, and this script runs ninety-six times a day.
-    runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100")
+    all_runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100")
+    mine=$(gh api \
+        "repos/${GITHUB_REPOSITORY}/actions/workflows/${MEASURE_WORKFLOW}/runs?per_page=50")
 fi
 
 # Both scrape workflows write the same listings.csv, so either one holding it
 # is a reason to stand down. Queued counts too, or this races the queue.
-busy=$(printf '%s' "$runs" | jq "
+busy=$(printf '%s' "$all_runs" | jq "
     [ .workflow_runs[]
       | select(.id != ${GITHUB_RUN_ID})
       | select(.status == \"in_progress\" or .status == \"queued\")
@@ -80,10 +107,10 @@ fi
 
 # The most recent run that actually swept. Nulls are skipped rather than
 # crashing the guard: a malformed row must not stop the collection.
-last=$(printf '%s' "$runs" | jq -r "
+last=$(printf '%s' "$mine" | jq -r "
     [ .workflow_runs[]
       | select(.id != ${GITHUB_RUN_ID})
-      | select(.path == \".github/workflows/scrape.yml\")
+      | select(.path == \".github/workflows/${MEASURE_WORKFLOW}\")
       | select(.status == \"completed\")
       | select(.run_started_at != null and .updated_at != null)
       | select((.updated_at | fromdateiso8601)
