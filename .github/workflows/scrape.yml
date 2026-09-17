@@ -240,6 +240,15 @@ jobs:
           DATA_ROOT: store
         run: bash tools/commit_data.sh "claude/real-estate-market-scraper-1tgiei" "Scrape run"
 
+      - name: Check the collection's health
+        # Runs even when the scrape failed: a failed run still has something
+        # to say about how long the silence before it was. Its own exit code
+        # decides nothing here - "Fail job if the scrape reported errors"
+        # below owns that - but a finding fails the job, and a failed job is
+        # the only thing GitHub emails about without being asked.
+        if: always() && steps.scrape.conclusion != 'skipped'
+        run: python -m tools.health --data-dir store/data --logs-dir store/logs
+
       - name: Announce a successful run
         # GitHub emails you when a workflow FAILS; there is no built-in
         # notification for one that worked. So a successful run announces

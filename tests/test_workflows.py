@@ -10,6 +10,7 @@ starts before rent could have finished.
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parent.parent / ".github" / "workflows"
@@ -533,3 +534,45 @@ def test_the_schedule_path_can_be_exercised_on_demand():
 
 def test_the_guard_may_read_run_history():
     assert load(SALE)["permissions"]["actions"] == "read"
+
+
+# --- the health check must be wired in, not just written --------------------
+
+
+def health_step(workflow):
+    steps = load(workflow)["jobs"]["scrape"]["steps"]
+    found = [s for s in steps if "tools.health" in str(s.get("run", ""))]
+    assert len(found) == 1, f"{workflow.name}: expected one health step"
+    return found[0], steps
+
+
+@pytest.mark.parametrize("workflow", [SALE, RENT])
+def test_both_scrapes_check_their_own_health(workflow):
+    """A check nothing runs is a file, not a check."""
+    step, _ = health_step(workflow)
+    assert "--data-dir store/data" in step["run"]
+    assert "--logs-dir store/logs" in step["run"], (
+        "the dataset is checked out into store/; reading logs/ finds an "
+        "empty directory and reports nothing, green"
+    )
+
+
+@pytest.mark.parametrize("workflow", [SALE, RENT])
+def test_the_health_check_runs_even_after_a_failed_scrape(workflow):
+    """A failed run still knows how long the silence before it was, and that
+    is exactly when you want to hear about it."""
+    step, _ = health_step(workflow)
+    assert "always()" in step["if"]
+
+
+@pytest.mark.parametrize("workflow", [SALE, RENT])
+def test_the_health_check_comes_before_the_success_announcement(workflow):
+    """Otherwise a run announces itself as fine and only then discovers it
+    is not, and the email you get says the wrong thing."""
+    _, steps = health_step(workflow)
+    names = [str(s.get("name") or s.get("run", "")) for s in steps]
+    health_at = next(i for i, s in enumerate(steps)
+                     if "tools.health" in str(s.get("run", "")))
+    announce_at = next(i for i, n in enumerate(names)
+                       if n.startswith("Announce a successful run"))
+    assert health_at < announce_at
