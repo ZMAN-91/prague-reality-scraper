@@ -12,7 +12,11 @@ name: Weekly report
 
 on:
   schedule:
-    - cron: "43 6 * * 1"
+    # Attempts across a window, not one shot. GitHub delivered 4 of ~150
+    # scheduled attempts over two days, and a weekly job that depends on
+    # one of them loses the week. The waker fires every fifteen minutes;
+    # the due-check below lets one report through.
+    - cron: "*/15 6-7 * * 1"
   workflow_dispatch:
 
 concurrency:
@@ -27,7 +31,39 @@ env:
   DATA_BRANCH: claude/real-estate-market-scraper-1tgiei
 
 jobs:
+  due:
+    # Asks REPORT.md when it was last written. The scrape guard tells a real
+    # run from a refusal by duration; here those are thirty seconds and
+    # fifteen, and a rule with that little daylight would one day call a real
+    # run a refusal and stop the report for good.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.check.outputs.go }}
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Checkout the dataset
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague_reality_sector_analysis
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: claude/real-estate-market-scraper-1tgiei
+          path: store
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Has this week's report already been written?
+        id: check
+        run: python -m tools.report_due --data-dir store/data >> "$GITHUB_OUTPUT"
+
   report:
+    needs: due
+    if: needs.due.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

@@ -247,31 +247,44 @@ def test_tests_run_before_any_scraping():
 BACKUP = WORKFLOWS.parent.parent / "deploy" / "backup.yml"  # runs in the data repo
 
 
-def backup_cron():
-    """The backup's single schedule, as (minute, hour, day-of-week)."""
-    entries = load(BACKUP)[True]["schedule"]
-    assert len(entries) == 1, "one weekly schedule, not several"
-    minute, hour, dom, month, dow = entries[0]["cron"].split()
-    assert (dom, month) == ("*", "*"), entries[0]["cron"]
-    return int(minute), int(hour), dow
+def window(spec, weekday):
+    """The UTC hours this workflow attempts on that weekday, first and last.
+
+    Everything weekly now attempts across a window rather than once, because
+    one shot at a scheduler that drops most of them is one shot at losing the
+    week. So "when does it run" is a range, and the interesting end depends
+    on the question: the first attempt for "has it started", the last for
+    "could it still be running".
+    """
+    hours = [h for h in range(24) if fires_at(spec, weekday, h)]
+    assert hours, f"nothing fires on weekday {weekday}"
+    return hours[0], hours[-1]
 
 
-def test_the_backup_runs_once_a_week_on_sunday():
-    minute, hour, dow = backup_cron()
-    assert dow == "0", "Sunday, so the week's rent pass is already in it"
-    del minute, hour
+def worst_finish(spec, job, weekday):
+    """The latest a pass could still be running, in hours past midnight.
 
+    An attempt lands at :45 of the window's final hour and then runs its
+    whole timeout. Measuring from the window's START is how a backup at 05:30
+    came to sit inside a rent pass that could run until 06:25.
+    """
+    return window(spec, weekday)[1] + 0.75 + spec["jobs"][job]["timeout-minutes"] / 60
+
+
+def test_the_backup_only_ever_attempts_on_sunday():
+    """How MANY times it runs is the due job's business now - it asks the
+    releases whether the week is already archived. What the schedule still
+    owns is which day the attempts land on."""
+    days = {d for d in range(7) for h in range(24) if fires_at(load(BACKUP), d, h)}
+    assert days == {0}, days
 
 def test_the_backup_waits_for_the_rent_pass_to_be_over():
     """Derived from rent's own budget rather than asserted as a magic hour:
     if someone lengthens the rent window, this fails instead of quietly
     archiving a week that is missing its rent data."""
-    rent = load(RENT)
-    rent_latest_end = (rent_window_start() * 60
-                       + rent["jobs"]["scrape"]["timeout-minutes"])
-
-    minute, hour, _ = backup_cron()
-    assert hour * 60 + minute > rent_latest_end, (
+    rent_latest_end = worst_finish(load(RENT), "scrape", 0) * 60
+    backup_starts = window(load(BACKUP), 0)[0] * 60
+    assert backup_starts > rent_latest_end, (
         "the backup can start before the rent run's worst case has finished, "
         "so a week's rent data could miss the archive"
     )
@@ -438,10 +451,13 @@ def test_the_report_rebuilds_the_whole_chain():
 def test_the_report_runs_after_the_rent_pass_and_its_backup():
     """Sunday's rent run and the backup that follows it are what make the
     week complete; a report before them is a report about six days."""
-    minute, hour, _, _, dow = load(REPORT)[True]["schedule"][0]["cron"].split()
-    assert dow == "1", "Monday, so Sunday's rent pass is already in it"
-    assert int(hour) >= 6, "after the Sunday backup at 05:30 UTC"
-    del minute
+    days = {d for d in range(7) for h in range(24) if fires_at(load(REPORT), d, h)}
+    assert days == {1}, f"Monday, so Sunday's rent pass is already in it: {days}"
+    # The backup is Sunday and the report Monday, so the only way they could
+    # collide is a backup running past midnight.
+    assert worst_finish(load(BACKUP), "backup", 0) < 24, (
+        "the Sunday backup could still be running on Monday morning"
+    )
 
 
 def test_the_report_uses_the_dataset_checkout():

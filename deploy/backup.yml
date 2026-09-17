@@ -18,7 +18,13 @@ on:
     # scrape-data concurrency group: it only ever reads, from a checkout at
     # one commit, so there is no file to race over. The archive records which
     # commit it was taken from.
-    - cron: "30 5 * * 0"
+    # Attempts across a window, not one shot: GitHub delivered 4 of ~150
+    # scheduled attempts over two days, and a weekly archive that depends
+    # on one of them is no archive at all. The due job below lets one
+    # through. 07:00, not 05:30 - the rent pass can now start as late as
+    # 01:45 and run its 280-minute timeout, finishing at 06:25, and an
+    # archive taken before it is an archive missing the week's rent data.
+    - cron: "*/15 7-8 * * 0"
   workflow_dispatch:
 
 # Only reads the repository; writes nothing back to the branch. The release
@@ -32,7 +38,35 @@ permissions:
   contents: write
 
 jobs:
+  due:
+    # The archive is idempotent - a second run for the same week reuploads
+    # over the first - but sixteen attempts would mean sixteen archives built
+    # and thrown away. This asks the releases whether the week is already
+    # done, which is the archive's own record rather than a proxy for it.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.check.outputs.go }}
+    steps:
+      - name: Has this week's archive already been published?
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # %G-W%V is the ISO week, the same one the archive tags itself with.
+          TAG="backup-$(date -u +%G-W%V)"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$TAG is already published; nothing to do."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$TAG is not published yet."
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+
   backup:
+    needs: due
+    if: needs.due.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
