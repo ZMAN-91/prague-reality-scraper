@@ -91,71 +91,27 @@ jobs:
     outputs:
       go: ${{ steps.decide.outputs.go }}
     steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
       - name: Decide whether this attempt should scrape
         id: decide
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
           # How old the last real run must be before another one starts.
           # Fifty, not sixty: attempts land every fifteen minutes, so a
           # sixty-minute floor would push each run to the attempt after the
           # hour and drift the cadence later every time.
           MIN_GAP_MINUTES: "50"
-          # A run the guard stopped finishes in seconds; a real sweep takes
-          # about half an hour. Duration is what tells them apart, and it
-          # costs one API call rather than one per run.
+          # Below this a "run" was this guard saying no, not a sweep. See
+          # tools/scrape_guard.sh - getting this wrong stops the collection
+          # silently and forever.
           MIN_REAL_RUN_SECONDS: "300"
-        run: |
-          set -euo pipefail
-
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "Triggered by ${{ github.event_name }} - running on request."
-            echo "go=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Anything already running or queued, in either scrape workflow:
-          # they share listings.csv and must never overlap.
-          # No --paginate: anything running or queued is among the newest
-          # runs by definition, and this job fires ninety-six times a day.
-          busy=$(gh api \
-            "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" \
-            --jq "[.workflow_runs[]
-                   | select(.id != ${GITHUB_RUN_ID})
-                   | select(.status == \"in_progress\" or .status == \"queued\")
-                   | select(.path == \".github/workflows/scrape.yml\"
-                         or .path == \".github/workflows/scrape-rent.yml\")]
-                  | length")
-          if [ "$busy" -gt 0 ]; then
-            echo "A scrape is already running or queued - letting it finish."
-            echo "go=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          last=$(gh api \
-            "repos/$GITHUB_REPOSITORY/actions/workflows/scrape.yml/runs?per_page=50" \
-            --jq "[.workflow_runs[]
-                   | select(.id != ${GITHUB_RUN_ID})
-                   | select(.status == \"completed\")
-                   | select((.updated_at | fromdateiso8601)
-                            - (.run_started_at | fromdateiso8601)
-                            > ${MIN_REAL_RUN_SECONDS})
-                   | .run_started_at]
-                  | sort | last // empty")
-
-          if [ -z "$last" ]; then
-            echo "No previous real run on record - running."
-            echo "go=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          age=$(( ( $(date -u +%s) - $(date -u -d "$last" +%s) ) / 60 ))
-          echo "Last real run started $last, $age minutes ago."
-          if [ "$age" -lt "$MIN_GAP_MINUTES" ]; then
-            echo "Under the ${MIN_GAP_MINUTES}-minute floor - skipping."
-            echo "go=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "go=true" >> "$GITHUB_OUTPUT"
-          fi
+        # The logic lives in a script because inline YAML shell cannot be
+        # tested, and this decides whether the project collects anything at
+        # all. tests/test_scrape_guard.py covers it.
+        run: tools/scrape_guard.sh >> "$GITHUB_OUTPUT"
 
   scrape:
     needs: guard

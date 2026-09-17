@@ -434,16 +434,31 @@ def test_the_scrape_only_runs_when_the_guard_says_so():
     assert "needs.guard.outputs.go == 'true'" in scrape["if"]
 
 
-def test_the_guard_refuses_while_another_scrape_holds_the_file():
-    """Both workflows write listings.csv, so either one running is a reason
-    to stand down - and a queued one counts, or the check races it."""
-    body = " ".join(str(s.get("run", "")) for s in guard_job()["steps"])
-    assert "scrape.yml" in body and "scrape-rent.yml" in body
-    assert "in_progress" in body and "queued" in body
+def decide_step():
+    return [s for s in guard_job()["steps"] if s.get("id") == "decide"][0]
+
+
+def test_the_guard_logic_lives_in_a_script_that_can_be_tested():
+    """Inline YAML shell cannot be tested, and this step decides whether the
+    project collects anything at all. See tests/test_scrape_guard.py."""
+    step = decide_step()
+    assert "tools/scrape_guard.sh" in str(step["run"])
+    assert (Path(__file__).resolve().parents[1]
+            / "tools" / "scrape_guard.sh").exists()
+
+
+def test_the_guard_checks_out_the_code_it_runs():
+    uses = [s.get("uses", "") for s in guard_job()["steps"]]
+    assert any(u.startswith("actions/checkout") for u in uses)
+
+
+def test_the_decision_reaches_the_scrape_job():
+    assert decide_step()["run"].strip().endswith('>> "$GITHUB_OUTPUT"')
+    assert guard_job()["outputs"]["go"] == "${{ steps.decide.outputs.go }}"
 
 
 def test_the_guard_keeps_the_hourly_floor():
-    env = guard_job()["steps"][0]["env"]
+    env = decide_step()["env"]
     assert 45 <= int(env["MIN_GAP_MINUTES"]) < 60, (
         "under an hour so the cadence does not drift later every run, but "
         "close enough to it that the portals still see one sweep an hour"
@@ -452,18 +467,14 @@ def test_the_guard_keeps_the_hourly_floor():
 
 def test_a_run_the_guard_stopped_does_not_count_as_a_run():
     """The killer bug in this design: a skipped run finishes in seconds and,
-    counted as the last run, would hold the floor closed forever. Duration
-    is what separates a real sweep from a guard saying no."""
-    step = guard_job()["steps"][0]
-    assert int(step["env"]["MIN_REAL_RUN_SECONDS"]) >= 120
-    assert "MIN_REAL_RUN_SECONDS" in str(step["run"])
+    counted as the last run, would hold the floor closed forever."""
+    assert int(decide_step()["env"]["MIN_REAL_RUN_SECONDS"]) >= 120
 
 
-def test_a_hand_triggered_run_is_never_held_back():
-    """The floor is there to ration the schedule, not to argue with a person
-    who just pressed the button."""
-    body = str(guard_job()["steps"][0]["run"])
-    assert "github.event_name }}\" != \"schedule\"" in body
+def test_the_guard_is_told_what_triggered_the_run():
+    """Without this the script cannot tell a person from the schedule and
+    would ration the button press too."""
+    assert decide_step()["env"]["EVENT_NAME"] == "${{ github.event_name }}"
 
 
 def test_the_guard_may_read_run_history():
