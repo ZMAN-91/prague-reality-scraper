@@ -39,13 +39,13 @@ def fires_at(spec, weekday, hour):
 
     Only as clever as these schedules need: day-of-month and month always
     "*". Anything else would be a schedule nobody meant to write. The minute
-    is deliberately not 0 (see test_no_schedule_sits_on_the_top_of_the_hour)
-    and does not affect which hour a cron fires in.
+    decides how many attempts an hour gets, not which hour they land in, so
+    it plays no part here.
     """
     for entry in spec[True]["schedule"]:
         minute, hours, dom, month, dow = entry["cron"].split()
         assert (dom, month) == ("*", "*"), entry["cron"]
-        assert minute.isdigit() and 0 <= int(minute) < 60, entry["cron"]
+        del minute
 
         def matches(field, value):
             if field == "*":
@@ -75,6 +75,17 @@ def test_sale_runs_every_hour_outside_the_rent_window():
     sale = load(SALE)
     for hour in range(24):
         assert fires_at(sale, 3, hour), f"sale must run hourly on a weekday ({hour}:00)"
+
+
+def scrape_group(spec):
+    """The scrape's concurrency group, wherever it is declared.
+
+    The sale workflow moved it onto the job so its guard can answer while a
+    scrape is running; the rent workflow still declares it at the top.
+    """
+    if "concurrency" in spec:
+        return spec["concurrency"]["group"]
+    return spec["jobs"]["scrape"]["concurrency"]["group"]
 
 
 def test_no_schedule_sits_on_the_top_of_the_hour():
@@ -132,8 +143,11 @@ def test_the_default_is_passed_through_to_run_py():
 def test_both_workflows_share_one_concurrency_group():
     """They write the same listings.csv. Two runs merging into it at once
     would race and one would lose its work."""
-    assert load(SALE)["concurrency"]["group"] == load(RENT)["concurrency"]["group"]
-    assert load(SALE)["concurrency"]["cancel-in-progress"] is False
+    assert scrape_group(load(SALE)) == scrape_group(load(RENT))
+    for spec in (load(SALE)["jobs"]["scrape"], load(RENT)):
+        assert spec["concurrency"]["cancel-in-progress"] is False, (
+            "queue behind a running scrape, never kill it mid-sweep"
+        )
 
 
 def test_the_two_confirmation_labels_are_different():
@@ -222,7 +236,7 @@ def test_the_backup_does_not_queue_behind_the_scrapers():
     """It reads a checkout at one commit, so there is nothing to race over -
     and sharing the group would mean a long rent run could push the backup
     out of its slot entirely."""
-    assert load(BACKUP)["concurrency"]["group"] != load(SALE)["concurrency"]["group"]
+    assert load(BACKUP)["concurrency"]["group"] != scrape_group(load(SALE))
 
 
 def test_the_backup_never_writes_to_the_branch():
@@ -390,3 +404,67 @@ def test_the_report_uses_the_dataset_checkout():
                     for s in load(REPORT)["jobs"]["report"]["steps"])
     assert "--data-dir store/data" in body
     assert 'glob.glob("logs/' not in body
+
+
+# --- the guard: four attempts an hour, one run ------------------------------
+
+
+def guard_job():
+    return load(SALE)["jobs"]["guard"]
+
+
+def test_the_schedule_attempts_far_more_often_than_it_wants_to_run():
+    """GitHub drops most schedule events, and no cron expression fixes that.
+    Asking four times an hour and discarding three is the way to get one."""
+    for entry in load(SALE)[True]["schedule"]:
+        assert entry["cron"].split()[0] == "*/15", entry["cron"]
+
+
+def test_the_guard_is_outside_the_group_it_guards():
+    """Inside it, the guard would queue behind the running scrape and wake to
+    find the coast clear - which is the pile-up it exists to prevent."""
+    assert "concurrency" not in load(SALE), "must not be workflow-wide"
+    assert "concurrency" not in guard_job()
+    assert scrape_group(load(SALE)) == "scrape-data"
+
+
+def test_the_scrape_only_runs_when_the_guard_says_so():
+    scrape = load(SALE)["jobs"]["scrape"]
+    assert scrape["needs"] == "guard"
+    assert "needs.guard.outputs.go == 'true'" in scrape["if"]
+
+
+def test_the_guard_refuses_while_another_scrape_holds_the_file():
+    """Both workflows write listings.csv, so either one running is a reason
+    to stand down - and a queued one counts, or the check races it."""
+    body = " ".join(str(s.get("run", "")) for s in guard_job()["steps"])
+    assert "scrape.yml" in body and "scrape-rent.yml" in body
+    assert "in_progress" in body and "queued" in body
+
+
+def test_the_guard_keeps_the_hourly_floor():
+    env = guard_job()["steps"][0]["env"]
+    assert 45 <= int(env["MIN_GAP_MINUTES"]) < 60, (
+        "under an hour so the cadence does not drift later every run, but "
+        "close enough to it that the portals still see one sweep an hour"
+    )
+
+
+def test_a_run_the_guard_stopped_does_not_count_as_a_run():
+    """The killer bug in this design: a skipped run finishes in seconds and,
+    counted as the last run, would hold the floor closed forever. Duration
+    is what separates a real sweep from a guard saying no."""
+    step = guard_job()["steps"][0]
+    assert int(step["env"]["MIN_REAL_RUN_SECONDS"]) >= 120
+    assert "MIN_REAL_RUN_SECONDS" in str(step["run"])
+
+
+def test_a_hand_triggered_run_is_never_held_back():
+    """The floor is there to ration the schedule, not to argue with a person
+    who just pressed the button."""
+    body = str(guard_job()["steps"][0]["run"])
+    assert "github.event_name }}\" != \"schedule\"" in body
+
+
+def test_the_guard_may_read_run_history():
+    assert load(SALE)["permissions"]["actions"] == "read"

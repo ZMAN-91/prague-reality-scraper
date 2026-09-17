@@ -13,14 +13,20 @@ on:
     # Sunday resumes at 05:37 UTC - well after rent's budget ends - so a
     # rent pass that uses every minute it has still finishes first.
     #
-    # Minute 37, not minute 0. GitHub delays and drops scheduled runs under
-    # load, and the top of the hour is the busiest slot there is - every
-    # cron anybody writes by hand lands on it. Asking for 24 runs a day at
-    # minute 0 got three: 13:17, 18:01 and 21:58 UTC, each of them a cron
-    # that fired late after the ones in between were dropped entirely.
-    # An odd minute is the standard way out of that queue.
-    - cron: "37 * * * 1-6"
-    - cron: "37 5-23 * * 0"
+    # Four attempts an hour, for one run an hour.
+    #
+    # GitHub's schedule event is best effort and drops most of them: asking
+    # for 24 runs a day at minute 0 got three (13:17, 18:01, 21:58 UTC), and
+    # moving to minute 37 got none at all overnight. Nothing about the cron
+    # expression fixes that, so the answer is to ask more often and throw
+    # away what is not needed - the `guard` job below starts a scrape only
+    # when the last real one is over MIN_GAP_MINUTES old and nothing is
+    # running now.
+    #
+    # The portals see the same one sweep an hour either way. What changes is
+    # only how many chances GitHub has to deliver it.
+    - cron: "*/15 * * * 1-6"
+    - cron: "*/15 5-23 * * 0"
   workflow_dispatch:
     inputs:
       transactions:
@@ -66,27 +72,104 @@ on:
         required: false
         default: "400"
 
-# Never let two runs write/commit concurrently - a scrape can occasionally
-# run long, and two overlapping runs both writing listings.csv would race.
-# Queue instead of overlapping.
-concurrency:
-  # One group for BOTH workflows. The weekly rent run writes the same
-  # listings.csv as the hourly sale run, so they must never overlap - two
-  # runs merging into the same file would race and one would lose its work.
-  # Queueing is the right behaviour here, not cancelling.
-  group: scrape-data
-  cancel-in-progress: false
-
 permissions:
   contents: write
   # Only for the success notification below; nothing else in this workflow
   # touches issues.
   issues: write
+  # The guard job reads this repository's own run history.
+  actions: read
 
 jobs:
+  guard:
+    # Deliberately OUTSIDE the scrape-data concurrency group. This job has to
+    # be able to run and say "no" while a scrape is in progress; inside the
+    # group it would queue behind that scrape and then wake to find the coast
+    # clear, which is the pile-up it exists to prevent.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.decide.outputs.go }}
+    steps:
+      - name: Decide whether this attempt should scrape
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # How old the last real run must be before another one starts.
+          # Fifty, not sixty: attempts land every fifteen minutes, so a
+          # sixty-minute floor would push each run to the attempt after the
+          # hour and drift the cadence later every time.
+          MIN_GAP_MINUTES: "50"
+          # A run the guard stopped finishes in seconds; a real sweep takes
+          # about half an hour. Duration is what tells them apart, and it
+          # costs one API call rather than one per run.
+          MIN_REAL_RUN_SECONDS: "300"
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Triggered by ${{ github.event_name }} - running on request."
+            echo "go=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Anything already running or queued, in either scrape workflow:
+          # they share listings.csv and must never overlap.
+          # No --paginate: anything running or queued is among the newest
+          # runs by definition, and this job fires ninety-six times a day.
+          busy=$(gh api \
+            "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" \
+            --jq "[.workflow_runs[]
+                   | select(.id != ${GITHUB_RUN_ID})
+                   | select(.status == \"in_progress\" or .status == \"queued\")
+                   | select(.path == \".github/workflows/scrape.yml\"
+                         or .path == \".github/workflows/scrape-rent.yml\")]
+                  | length")
+          if [ "$busy" -gt 0 ]; then
+            echo "A scrape is already running or queued - letting it finish."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          last=$(gh api \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/scrape.yml/runs?per_page=50" \
+            --jq "[.workflow_runs[]
+                   | select(.id != ${GITHUB_RUN_ID})
+                   | select(.status == \"completed\")
+                   | select((.updated_at | fromdateiso8601)
+                            - (.run_started_at | fromdateiso8601)
+                            > ${MIN_REAL_RUN_SECONDS})
+                   | .run_started_at]
+                  | sort | last // empty")
+
+          if [ -z "$last" ]; then
+            echo "No previous real run on record - running."
+            echo "go=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          age=$(( ( $(date -u +%s) - $(date -u -d "$last" +%s) ) / 60 ))
+          echo "Last real run started $last, $age minutes ago."
+          if [ "$age" -lt "$MIN_GAP_MINUTES" ]; then
+            echo "Under the ${MIN_GAP_MINUTES}-minute floor - skipping."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+
   scrape:
+    needs: guard
+    if: needs.guard.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    # Never let two runs write/commit concurrently - a scrape can occasionally
+    # run long, and two overlapping runs both writing listings.csv would race.
+    # One group for BOTH workflows: the weekly rent run writes the same file.
+    # The guard above means this is now only a backstop against a race
+    # between two guards deciding at once, not the everyday mechanism.
+    concurrency:
+      group: scrape-data
+      cancel-in-progress: false
     steps:
       - name: Checkout the code
         uses: actions/checkout@v4
