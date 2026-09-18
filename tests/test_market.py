@@ -330,3 +330,23 @@ def test_the_absorption_rate_uses_the_same_honest_denominator():
     # Three of thirty-three left on the only day there is: that is 3 a day,
     # 90 a month, not 3 a month.
     assert row["absorpce_pct"] == pytest.approx(272.7, abs=1.0)
+
+
+# --- the day in progress is marked as such ----------------------------------
+
+
+def test_the_current_day_is_marked_incomplete():
+    """Supply for today is an undercount until the day's sweeps have landed,
+    and nothing in the numbers says so. The row does."""
+    rows = market_of(5, first="2026-01-01", last="2026-02-10", outcome="active")
+    series = market.daily(rows, today=date(2026, 2, 10))
+    assert cell(series, "2026-02-10")["den_uplny"] == "ne"
+    assert cell(series, "2026-02-09")["den_uplny"] == "ano"
+
+
+def test_every_earlier_day_is_complete():
+    rows = market_of(5, first="2026-01-01", last="2026-02-10", outcome="active")
+    series = market.daily(rows, today=date(2026, 2, 10))
+    marks = {r["den"]: r["den_uplny"] for r in series if r["okno_dnu"] == 1}
+    assert set(marks.values()) == {"ano", "ne"}
+    assert [d for d, m in marks.items() if m == "ne"] == ["2026-02-10"]

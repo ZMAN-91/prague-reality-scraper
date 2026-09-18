@@ -258,3 +258,37 @@ def test_a_real_discount_reads_as_a_fall():
              "last_price": "7000000", "days_on_market": "40",
              "discount_pct": "6.50", "attribute_changes": "0"}]
     assert "-6.50 %" in render(days(3, nabidka=5), rows)
+
+
+# --- the day in progress is not a day ---------------------------------------
+
+
+def complete_day(den, **values):
+    return row(den, den_uplny="ano", **values)
+
+
+def test_the_report_is_about_the_last_day_that_is_over():
+    """An episode leaves the live set on its last_seen, so one not yet swept
+    today looks like it ended yesterday. On the first full day supply read
+    4402 against 4721 episodes at 02:15 - a 7% undercount that fills itself
+    in as the day's sweeps land. Reporting that as "today's market" reports
+    how far through the day the collection had got."""
+    series = ([complete_day(f"2026-01-{d:02d}", nabidka=100) for d in range(1, 10)]
+              + [row("2026-01-10", den_uplny="ne", nabidka=61)])
+    text = render(series)
+    assert "Data k **2026-01-09**" in text
+    assert "61" not in text, "the day in progress must not be reported"
+
+
+def test_a_partial_day_is_used_when_there_is_nothing_else_yet():
+    """Day one has no completed day at all. Better a disclosed undercount
+    than an empty report."""
+    series = [row("2026-01-01", den_uplny="ne", nabidka=61)]
+    text = render(series, when="2026-01-01")
+    assert "Data k **2026-01-01**" in text
+    assert "Den ještě neskončil" in text
+
+
+def test_a_completed_day_carries_no_partial_warning():
+    series = [complete_day("2026-01-09", nabidka=100)]
+    assert "Den ještě neskončil" not in render(series)

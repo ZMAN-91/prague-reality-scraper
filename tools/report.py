@@ -203,9 +203,15 @@ def chart(by_day: dict[str, dict], field: str, label: str) -> list[str]:
     ]
 
 
-def caveats(latest_row: dict) -> list[str]:
-    """The two things the numbers cannot say for themselves."""
+def caveats(latest_row: dict, partial: bool = False) -> list[str]:
+    """The things the numbers cannot say for themselves."""
     out = []
+    if partial:
+        out.append(
+            "- **Den ještě neskončil.** Není tu zatím ani jeden celý den, "
+            "takže nabídka je spodní odhad: nemovitost, kterou dnešní sběry "
+            "ještě nestihly projít, v ní chybí. Doplní se sama, jak den běží."
+        )
     history = as_num(latest_row.get("uplnost_dnu")) or 0
     if history < 90:
         out.append(
@@ -231,7 +237,15 @@ def render(series: list[dict], episodes_rows: list[dict],
         return "# Report trhu\n\nZatím nejsou žádná data.\n"
 
     days = sorted({r["den"] for r in series})
-    latest = days[-1]
+    # The day in progress is not a day yet. An episode leaves the live set on
+    # its last_seen, so one not yet swept today looks like it ended yesterday:
+    # at 02:15 on the first full day supply read 4402 against 4721 episodes,
+    # a 7% undercount that fills itself in as the day's sweeps land. Reporting
+    # it as "today's market" would be reporting how far through the day the
+    # collection had got.
+    complete = [r["den"] for r in series if r.get("den_uplny") == "ano"]
+    latest = max(complete) if complete else days[-1]
+    partial = not complete
     segments = sorted({r["segment"] for r in series},
                       key=lambda s: (not s.startswith("vse/"), s))
 
@@ -253,7 +267,7 @@ def render(series: list[dict], episodes_rows: list[dict],
             continue
 
         out += [f"## {segment}", ""]
-        out += caveats(today) + [""]
+        out += caveats(today, partial) + [""]
 
         out += ["### Stav", "",
                 "| ukazatel | teď | před 7 dny | před 30 dny |",

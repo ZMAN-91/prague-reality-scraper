@@ -90,7 +90,7 @@ import csv
 import statistics
 import sys
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -117,7 +117,7 @@ MIN_SAMPLE = 5
 
 FIELDS = [
     "den", "segment", "okno_dnu",
-    "uplnost_dnu", "zmizele_potvrzeno",
+    "uplnost_dnu", "zmizele_potvrzeno", "den_uplny",
     "nabidka", "nabidka_prumer",
     "cena_median", "cena_prumer", "cena_m2_median", "cena_m2_prumer",
     "stari_median_dnu",
@@ -233,7 +233,8 @@ def levels_on(day: date, on_market: list[dict]) -> dict:
 
 def measure(day: date, window: int, segment: str, first_day: date,
             on_market: list[dict], arrived: list[dict], left: list[dict],
-            supply_mean: float, levels: dict, covered: int) -> dict:
+            supply_mean: float, levels: dict, covered: int,
+            complete_through: date) -> dict:
     """Every indicator for one (day, window, segment).
 
     The caller does the slicing. It used to be done here, by scanning every
@@ -271,6 +272,11 @@ def measure(day: date, window: int, segment: str, first_day: date,
         # of the series always under-counts them.
         "zmizele_potvrzeno": "ano" if (day - timedelta(days=CONFIRMATION_LAG_DAYS))
                              >= since else "ne",
+        # Whether the day was over when this was built. An episode leaves the
+        # live set on its last_seen, so one not yet swept today looks like it
+        # ended yesterday, and today's supply is an undercount until the day's
+        # sweeps have all landed.
+        "den_uplny": "ano" if day <= complete_through else "ne",
 
         "nabidka_prumer": round(supply_mean, 2),
         **levels,
@@ -324,6 +330,18 @@ def daily(rows: list[dict], today: Optional[date] = None,
 
     first_day = min(r["start"] for r in prepared)
     last_day = today or max(r["end"] for r in prepared)
+
+    # TODAY IS NOT A DAY YET
+    #
+    # An episode leaves the live set on its last_seen, so one that has not
+    # been swept yet today looks like it ended yesterday. At 02:15 on the
+    # first full day, 319 of 4721 episodes were still active with last_seen
+    # on the previous day, and supply read 4402 instead of 4721 - a 7%
+    # undercount that fills itself in as the day's sweeps land.
+    #
+    # It is right for a day that is over and wrong for the one in progress,
+    # and nothing in the numbers says which is which. So the row says.
+    complete_through = (today or datetime.now(timezone.utc).date()) - timedelta(days=1)
 
     by_segment: dict[str, list[dict]] = defaultdict(list)
     for row in prepared:
@@ -381,7 +399,7 @@ def daily(rows: list[dict], today: Optional[date] = None,
                     supply_mean = (running[offset + 1] - running[low]) / covered
                     out.append(measure(day, window, segment, first_day,
                                        on_market, arrived, left, supply_mean,
-                                       levels, covered))
+                                       levels, covered, complete_through))
 
             for index in leaving_on.get(offset, []):
                 live.pop(id(segment_rows[index]), None)
