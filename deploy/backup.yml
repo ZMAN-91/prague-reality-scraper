@@ -21,9 +21,9 @@ on:
     # Attempts across a window, not one shot: GitHub delivered 4 of ~150
     # scheduled attempts over two days, and a weekly archive that depends
     # on one of them is no archive at all. The due job below lets one
-    # through. 07:00, not 05:30 - the rent pass can now start as late as
-    # 01:45 and run its 280-minute timeout, finishing at 06:25, and an
-    # archive taken before it is an archive missing the week's rent data.
+    # through. 07:00, not 05:30 - the rent pass can start as late as 03:45
+    # and run its 160-minute timeout, finishing at 06:25, and an archive
+    # taken before it is an archive missing the week's rent data.
     - cron: "*/15 7-8 * * 0"
   workflow_dispatch:
 
@@ -43,26 +43,28 @@ jobs:
     # over the first - but sixteen attempts would mean sixteen archives built
     # and thrown away. This asks the releases whether the week is already
     # done, which is the archive's own record rather than a proxy for it.
+    #
+    # "Done" means published today, not merely tagged for this week. See
+    # tools/backup_due.sh: a test release built on the Wednesday carried this
+    # week's tag, and on its own the tag would have skipped the real archive
+    # that Sunday and every Sunday after.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       go: ${{ steps.check.outputs.go }}
     steps:
+      - name: Checkout the code
+        # Public repository, so no key - this needs one script.
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague-reality-scraper
+          path: code
+
       - name: Has this week's archive already been published?
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          # %G-W%V is the ISO week, the same one the archive tags itself with.
-          TAG="backup-$(date -u +%G-W%V)"
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "$TAG is already published; nothing to do."
-            echo "go=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "$TAG is not published yet."
-            echo "go=true" >> "$GITHUB_OUTPUT"
-          fi
+        run: code/tools/backup_due.sh >> "$GITHUB_OUTPUT"
 
   backup:
     needs: due
@@ -151,7 +153,7 @@ jobs:
           # replaces its assets rather than failing.
           if gh release view "${TAG}" >/dev/null 2>&1; then
             gh release upload "${TAG}" "${ARCHIVE}" "${MANIFEST}" --clobber
-            gh release edit "${TAG}" --notes-file notes.md
+            gh release edit "${TAG}" --notes-file notes.md --target "${GITHUB_SHA}"
           else
             gh release create "${TAG}" "${ARCHIVE}" "${MANIFEST}" \
               --target "${GITHUB_SHA}" \
