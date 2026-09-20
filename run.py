@@ -506,7 +506,26 @@ def merge_source(
 
     def record_observation(internal_id: str, status: str, price, pm2=None) -> None:
         prev = last_obs.get(internal_id)
-        changed = prev is None or prev.get("price") != price or prev.get("status") != status
+        # An absence carries no price, and carrying no price is not the same
+        # as the price being gone. The state is "the last price we know for
+        # this listing", so a sweep that did not see it must leave that alone.
+        #
+        # Overwriting it with None cost about 0.5% of the supply series every
+        # time a listing missed a single sweep: dedup matches on price, so a
+        # listing with no price stopped matching, its cluster dissolved, the
+        # two rows became two episodes, and supply for every day that episode
+        # covered went up by one. The next sweep found the listing again, the
+        # price came back, the cluster re-formed and the number came back
+        # down. Measured on 2026-09-20: 228 prices erased in one run, sale
+        # clusters 693 -> 671, and a closed day's supply moving 4615 -> 4641
+        # -> 4618 with nothing having happened in the market at all.
+        #
+        # The observation row still records the absence with an empty price.
+        # That is the honest reading: we did not see it, so we do not have a
+        # price for it today.
+        known_price = price if price is not None else (prev or {}).get("price")
+        changed = (prev is None or prev.get("price") != known_price
+                   or prev.get("status") != status)
         if not changed:
             return
         observation_rows.append(
@@ -518,7 +537,7 @@ def merge_source(
                 "status": status,
             }
         )
-        last_obs[internal_id] = {"price": price, "status": status}
+        last_obs[internal_id] = {"price": known_price, "status": status}
 
     for source_id, listing in fetched_by_id.items():
         internal_id = make_internal_id(source_name, source_id)

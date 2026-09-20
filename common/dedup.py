@@ -378,9 +378,11 @@ def cluster_listings(
     """Assign/refresh `cluster_id` and `dedup_confidence` on every row, in place.
 
     `listings` maps internal_id -> row dict (the same structure held in
-    listings.csv). Existing non-empty cluster_id values are preserved and
-    reused (clusters are sticky across runs); only genuinely new matches get
-    a freshly generated id.
+    listings.csv). Clusters are rebuilt from scratch every run and an existing
+    id is reused only when the same rows are still together - a cluster keeps
+    its NAME across runs, not its membership, because a cluster built by an
+    older matcher has to be allowed to break up. A row that matches nothing
+    this run loses its id; see "Materialize" below.
 
     `now` overrides the wall clock used for the "recently seen" window (see
     CLUSTER_RECENT_WINDOW_DAYS) - tests pin it so fixtures don't silently
