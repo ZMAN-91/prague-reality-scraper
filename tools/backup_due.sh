@@ -26,20 +26,30 @@
 # of something else, and nothing anywhere said so.
 #
 # The archive is the week's closing snapshot, so what counts is not that a
-# release carries the week's name but that it was published on the day the
-# window runs. A Wednesday test release for this week is not this week's
-# backup.
+# release carries the week's name but that the archive itself was built on
+# the day the window runs. A Wednesday test release for this week is not this
+# week's backup.
+#
+# WHY THE ASSET'S DATE AND NOT THE RELEASE'S
+#
+# Re-running for a week that already has a release uploads over its assets
+# rather than creating a new release, and neither `gh release upload` nor
+# `gh release edit` moves publishedAt - it stays at whenever the tag was
+# first cut. Read there, a refreshed archive still looks like the stale one,
+# and every attempt in the window would rebuild it: the sixteen archives
+# built and thrown away that this job exists to prevent. The assets carry
+# their own upload time, and the asset IS the backup.
 set -euo pipefail
 
 NOW="${NOW:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 TODAY="${NOW:0:10}"
 TAG="backup-$(date -u -d "$NOW" +%G-W%V 2>/dev/null || date -u +%G-W%V)"
-PUBLISHED=""
+UPLOADED=""
 HAVE_FIXTURE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --published) PUBLISHED="$2"; HAVE_FIXTURE=1; shift 2 ;;
+    --uploaded) UPLOADED="$2"; HAVE_FIXTURE=1; shift 2 ;;
     --today) TODAY="$2"; shift 2 ;;
     --tag) TAG="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -47,22 +57,24 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "$HAVE_FIXTURE" -eq 0 ]; then
-  # A missing release is a 404, which is an answer, not a failure.
-  PUBLISHED="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
-    --json publishedAt --jq .publishedAt 2>/dev/null || true)"
+  # A missing release is a 404, which is an answer, not a failure. A release
+  # with no assets answers the same way an absent one does, and should: a
+  # release whose upload failed is not a backup.
+  UPLOADED="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+    --json assets --jq '[.assets[].createdAt] | max // ""' 2>/dev/null || true)"
 fi
 
-if [ -z "$PUBLISHED" ]; then
-  echo "$TAG is not published yet." >&2
+if [ -z "$UPLOADED" ]; then
+  echo "$TAG holds no archive yet." >&2
   echo "go=true"
   exit 0
 fi
 
-if [ "${PUBLISHED:0:10}" = "$TODAY" ]; then
-  echo "$TAG was published today ($PUBLISHED); nothing to do." >&2
+if [ "${UPLOADED:0:10}" = "$TODAY" ]; then
+  echo "$TAG was archived today ($UPLOADED); nothing to do." >&2
   echo "go=false"
   exit 0
 fi
 
-echo "$TAG exists but is from ${PUBLISHED:0:10}, not today ($TODAY) - it is not this week's snapshot." >&2
+echo "$TAG exists but its archive is from ${UPLOADED:0:10}, not today ($TODAY) - it is not this week's snapshot." >&2
 echo "go=true"

@@ -15,8 +15,8 @@ import pytest
 SCRIPT = Path(__file__).resolve().parent.parent / "tools" / "backup_due.sh"
 
 
-def run(published, today="2026-09-20", tag=None):
-    args = [str(SCRIPT), "--published", published, "--today", today]
+def run(uploaded, today="2026-09-20", tag=None):
+    args = [str(SCRIPT), "--uploaded", uploaded, "--today", today]
     if tag:
         args += ["--tag", tag]
     done = subprocess.run(args, capture_output=True, text=True,
@@ -28,19 +28,41 @@ def run(published, today="2026-09-20", tag=None):
 def test_no_release_at_all_is_due():
     out, why = run("")
     assert out == "go=true"
-    assert "not published yet" in why
+    assert "holds no archive" in why
 
 
-def test_a_release_published_today_is_not_due():
+def test_a_release_whose_upload_failed_is_due():
+    """`gh release view --json assets` comes back empty for a release with no
+    assets, which reads the same as no release - and should. A tag with no
+    archive under it is not a backup."""
+    out, why = run("")
+    assert out == "go=true"
+
+
+def test_an_archive_uploaded_today_is_not_due():
     out, why = run("2026-09-20T07:15:00Z")
     assert out == "go=false"
-    assert "published today" in why
+    assert "archived today" in why
+
+
+def test_a_refreshed_archive_counts_from_its_upload_not_the_tag():
+    """The bug in the first version of this check.
+
+    Re-running for a week that already has a release uploads over its assets,
+    and neither `gh release upload` nor `gh release edit` moves the release's
+    publishedAt - the real backup-2026-W38 was refreshed at 07:19:31 on the
+    20th and still reported publishedAt 2026-09-16T06:07:37Z. Read there,
+    every one of the window's sixteen attempts would have rebuilt the archive
+    it had just rebuilt.
+    """
+    out, _ = run("2026-09-20T07:19:31Z")
+    assert out == "go=false"
 
 
 def test_a_release_from_earlier_in_the_same_week_is_still_due():
     """The bug, stated directly: a Wednesday test release for this week's tag
     is not this week's closing snapshot."""
-    out, why = run("2026-09-16T06:07:37Z")
+    out, why = run("2026-09-16T06:07:36Z")
     assert out == "go=true"
     assert "not this week's snapshot" in why
 
