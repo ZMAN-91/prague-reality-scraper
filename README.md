@@ -592,3 +592,21 @@ attempt 35 minutes after a sweep is stopped in eight seconds.
 
 The waker holds a fine-grained token scoped to this repository with
 `Actions: write` and no expiry. It cannot reach the private dataset.
+
+### Co waker zatím nebudí
+
+Na neděli 20. 9. jeho dispatche skončily v 23:45 a vrátily se v 05:00:32 -
+přesně to okno, které patří nájmům - a žádný z nich nikdy nemíří na
+`scrape-rent.yml`. Týdenní průchod nájmů tedy jako jediný pořád stojí na
+plánovači GitHubu, tedy na tom, co waker nahrazuje. Do okna toho rána
+doručil jeden pokus.
+
+Než se to spraví na straně workeru, drží nájmy nad vodou dvě věci v tomhle
+repozitáři: okno má šestnáct pokusů místo osmi a `tools/rent_due.py` z nich
+pustí nejvýš jeden. Doplnit to znamená jeden `POST` navíc, nedělní ráno:
+
+    POST /repos/ZMAN-91/prague-reality-scraper/actions/workflows/scrape-rent.yml/dispatches
+    {"ref":"main","inputs":{"as_schedule":"true"}}
+
+Stejný token, stejný repozitář, žádné nové oprávnění. `as_schedule` je i tady
+to nosné: bez něj by každé zazvonění spustilo celopražský průchod.
