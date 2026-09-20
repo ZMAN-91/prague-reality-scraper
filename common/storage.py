@@ -66,7 +66,15 @@ def write_last_observation_state(state: dict[str, dict], path: Path = LAST_OBSER
     fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp-", suffix=".json")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(state, f, ensure_ascii=False, indent=0, sort_keys=True)
+            # indent=1 and a trailing newline, matching tools/reconcile.py and
+            # common/progress.py. Not cosmetic: the commit step runs reconcile
+            # on every run, so whatever shape this leaves the file in, git only
+            # ever sees reconcile's. Writing a different one here means every
+            # commit either reformats all ten thousand lines or does not,
+            # depending on a detail nobody would think to check, and a 43,000
+            # line diff hides the four that mattered.
+            f.write(json.dumps(state, ensure_ascii=False, indent=1,
+                               sort_keys=True) + "\n")
         os.replace(tmp_path, path)
     except BaseException:
         if os.path.exists(tmp_path):
