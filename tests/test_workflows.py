@@ -73,15 +73,18 @@ def rent_window_start():
 
 
 def test_rent_attempts_only_ever_land_on_sunday_night():
-    """The cron no longer decides how OFTEN rent runs - the guard's six-day
-    floor does that, because one shot a week at a scheduler that drops most
-    of them is one shot a week at losing the week. What the cron still has to
-    guarantee is WHERE the attempts land: the window sale stays out of."""
+    """The cron does not decide how OFTEN rent runs - tools/rent_due.py does,
+    from the dataset. What the cron decides is WHERE the attempts land and
+    how many there are, and both matter for a different reason: these hours
+    are the ones the external waker sleeps through, so GitHub's own scheduler
+    is all rent has, and it drops most of what it is asked for. Every extra
+    attempt is another chance at the week; the due check makes the extras
+    free."""
     rent = load(RENT)
     days = {d for d in range(7) for h in range(24) if fires_at(rent, d, h)}
     assert days == {0}, f"rent must only attempt on Sunday, got {days}"
     hours = [h for h in range(24) if fires_at(rent, 0, h)]
-    assert hours == [0, 1], hours
+    assert hours == [0, 1, 2, 3], hours
 
 
 def test_a_late_rent_start_does_not_eat_sunday_morning():

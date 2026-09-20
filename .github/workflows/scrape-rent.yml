@@ -15,7 +15,7 @@ on:
     # including sreality, which the hourly sale run confines to the watched
     # area. Keeping sreality small is about not sweeping the city every hour;
     # once every seven days is a different trade.
-    - cron: "*/15 0-1 * * 0"
+    - cron: "*/15 0-3 * * 0"
   workflow_dispatch:
     inputs:
       transactions:
@@ -33,14 +33,16 @@ on:
         required: false
         default: "sreality,idnes,bezrealitky"
       max_seconds:
-        # Four hours, the whole window. This pass is city-wide across all
-        # three sources and gets one attempt a week, so a run cut short waits
-        # seven days for the remainder - which is the opposite of the hourly
-        # case, where being cut short costs an hour. Here the slack is the
-        # point.
+        # Two hours for a pass measured at 59 minutes. This is city-wide
+        # across all three sources and gets one attempt a week, so a run cut
+        # short waits seven days for the remainder - the opposite of the
+        # hourly case, where being cut short costs an hour. The slack is the
+        # point; what caps it is that a pass starting at the end of the
+        # window must still be done before sale resumes at 05:00. See
+        # tests/test_workflows.py, which holds the two to each other.
         description: "Wall-clock budget for fetching (seconds)"
         required: false
-        default: "14400"
+        default: "7200"
       notify_on_success:
         # See the "Announce a successful run" step: a success opens an issue
         # only when none is already open, so this input exists to silence
@@ -130,7 +132,7 @@ jobs:
     needs: guard
     if: needs.guard.outputs.go == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 280
+    timeout-minutes: 160
     # One group for BOTH workflows. This pass writes the same listings.csv as
     # the hourly sale run, so they must never overlap - two runs merging into
     # the same file would race and one would lose its work.
@@ -176,7 +178,7 @@ jobs:
         continue-on-error: true
         env:
           SOURCES: ${{ github.event.inputs.sources || 'sreality,idnes,bezrealitky' }}
-          MAX_SECONDS: ${{ github.event.inputs.max_seconds || '14400' }}
+          MAX_SECONDS: ${{ github.event.inputs.max_seconds || '7200' }}
           MAX_NEW_DETAILS: ${{ github.event.inputs.max_new_details || '1500' }}
           TRANSACTIONS: ${{ github.event.inputs.transactions || 'pronajem' }}
           # ------------------------------------------------------------------

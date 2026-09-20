@@ -118,6 +118,24 @@ def test_a_rent_pass_within_the_week_is_not_reported(tmp_path):
     assert findings(tmp_path, runs) == []
 
 
+def test_rent_that_never_ran_at_all_is_reported(tmp_path):
+    """The silence this check actually had to break.
+
+    Rent was stopped by its own guard every Sunday and produced nothing for
+    days. `of_kind(runs, "pronajem")` was empty, the check returned nothing,
+    and a pass that had never happened read exactly like a healthy one.
+    """
+    runs = [run(minutes_ago=60 * 24 * 12), run(minutes_ago=30)]
+    got = findings(tmp_path, runs)
+    assert any("never run" in f for f in got), got
+
+
+def test_rent_missing_from_a_young_dataset_is_not_reported(tmp_path):
+    """Two days in, a weekly pass is not yet owed."""
+    runs = [run(minutes_ago=60 * 24 * 2), run(minutes_ago=30)]
+    assert findings(tmp_path, runs) == []
+
+
 # --- what the newest run says about itself -----------------------------------
 
 

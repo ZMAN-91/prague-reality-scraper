@@ -110,6 +110,18 @@ def check_spacing(runs: list[dict]) -> list[str]:
 def check_rent(runs: list[dict], now: datetime) -> list[str]:
     rents = of_kind(runs, "pronajem")
     if not rents:
+        # Never having run is the worse version of having run too long ago,
+        # and this check used to stay silent about it - which it did for the
+        # four days the rent pass was being stopped by its own guard. It only
+        # counts once there is enough history for a weekly job to have owed
+        # us a pass: a dataset two days old is not missing its week yet.
+        oldest = parse((runs[0] if runs else {}).get("started_at"))
+        if oldest is None:
+            return []
+        days = (now - oldest).total_seconds() / 86400
+        if days > RENT_OVERDUE_DAYS:
+            return [f"The rent pass has never run, and there has been "
+                    f"{days:.1f} days of collection. It is weekly."]
         return []
     last = parse(rents[-1].get("started_at"))
     if last is None:
