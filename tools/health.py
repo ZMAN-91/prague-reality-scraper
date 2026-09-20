@@ -47,6 +47,13 @@ MIN_SPACING_MINUTES = 40
 # room to spare.
 RENT_OVERDUE_DAYS = 8.5
 
+# Sunday 00:00-05:00 UTC belongs to the rent pass: the sale cron skips it and
+# the external waker sleeps through it, both on purpose. Sale sweeps stop for
+# five hours every Sunday, which is not a broken waker - and a check that
+# says it is would cry wolf once a week until nobody read it any more.
+RENT_WINDOW_WEEKDAY = 6  # Sunday, as datetime.weekday() counts
+RENT_WINDOW_HOURS = (0, 5)
+
 
 def parse(stamp) -> Optional[datetime]:
     try:
@@ -76,18 +83,42 @@ def of_kind(runs: list[dict], transaction: str) -> list[dict]:
     return [r for r in runs if transaction in (r.get("transactions") or [])]
 
 
+def reserved_hours(start: datetime, end: datetime) -> float:
+    """Hours between the two that the rent window is entitled to."""
+    if end <= start:
+        return 0.0
+    total = 0.0
+    day = start.date()
+    while day <= end.date():
+        if day.weekday() == RENT_WINDOW_WEEKDAY:
+            opens = datetime.combine(day, datetime.min.time(), timezone.utc) \
+                + timedelta(hours=RENT_WINDOW_HOURS[0])
+            closes = datetime.combine(day, datetime.min.time(), timezone.utc) \
+                + timedelta(hours=RENT_WINDOW_HOURS[1])
+            overlap = min(end, closes) - max(start, opens)
+            total += max(0.0, overlap.total_seconds() / 3600)
+        day += timedelta(days=1)
+    return total
+
+
 def check_gap(runs: list[dict], now: datetime) -> list[str]:
-    """How long since the last sale sweep - the waker's pulse."""
+    """How long since the last sale sweep - the waker's pulse.
+
+    Minus the hours sale is not supposed to be running in. Without that this
+    reports a broken waker every Sunday morning, because the five hours the
+    rent pass owns look exactly like five hours of nothing happening.
+    """
     sales = of_kind(runs, "prodej")
     if not sales:
         return []
     last = parse(sales[-1].get("started_at"))
     if last is None:
         return []
-    hours = (now - last).total_seconds() / 3600
+    hours = (now - last).total_seconds() / 3600 - reserved_hours(last, now)
     if hours > MAX_GAP_HOURS:
-        return [f"Nothing collected for {hours:.1f} hours (last sweep "
-                f"{last:%Y-%m-%d %H:%M} UTC). The waker is not waking it."]
+        return [f"Nothing collected for {hours:.1f} hours of the hours it "
+                f"should have (last sweep {last:%Y-%m-%d %H:%M} UTC). "
+                "The waker is not waking it."]
     return []
 
 

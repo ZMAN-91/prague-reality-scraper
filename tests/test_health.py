@@ -193,3 +193,50 @@ def test_a_broken_line_does_not_stop_the_rest(tmp_path):
 def test_an_unparseable_timestamp_does_not_crash(tmp_path):
     assert health.report(*write(tmp_path, [run(started_at="nonsense")]),
                          now=NOW) is not None
+
+
+# --- the hours sale is not supposed to be running in -------------------------
+
+SUNDAY_0500 = datetime(2026, 9, 20, 5, 30, tzinfo=timezone.utc)
+
+
+def gap_findings(last_sweep, now):
+    runs = [{"started_at": last_sweep.isoformat(), "transactions": ["prodej"],
+             "sources": {}}]
+    return health.check_gap(runs, now)
+
+
+def test_the_sunday_rent_window_is_not_a_broken_waker(tmp_path):
+    """The real Sunday: last sale sweep 01:24, next attempt 05:00.
+
+    Three and a half hours of nothing, all of it inside the window the sale
+    cron skips and the waker sleeps through. Reported as a fault it would
+    have fired every Sunday morning for as long as the project runs.
+    """
+    last = datetime(2026, 9, 20, 1, 24, tzinfo=timezone.utc)
+    assert gap_findings(last, SUNDAY_0500) == []
+
+
+def test_a_waker_that_dies_during_the_rent_window_is_still_caught(tmp_path):
+    """The window excuses its own five hours and not one minute more."""
+    last = datetime(2026, 9, 20, 1, 24, tzinfo=timezone.utc)
+    # Four hours past the window's close, so four hours unaccounted for.
+    got = gap_findings(last, datetime(2026, 9, 20, 9, 0, tzinfo=timezone.utc))
+    assert any("not waking it" in f for f in got), got
+
+
+def test_a_saturday_gap_gets_no_such_excuse(tmp_path):
+    """Same hours, wrong day."""
+    last = datetime(2026, 9, 19, 1, 24, tzinfo=timezone.utc)
+    got = gap_findings(last, datetime(2026, 9, 19, 5, 30, tzinfo=timezone.utc))
+    assert any("not waking it" in f for f in got), got
+
+
+def test_a_gap_spanning_the_whole_weekend_counts_the_window_once(tmp_path):
+    """Friday to Sunday morning is two days of silence, not two days minus
+    a window per calendar day touched."""
+    last = datetime(2026, 9, 18, 12, 0, tzinfo=timezone.utc)
+    got = gap_findings(last, SUNDAY_0500)
+    assert any("not waking it" in f for f in got), got
+    hours = float(got[0].split()[3])
+    assert 36 < hours < 42, got
