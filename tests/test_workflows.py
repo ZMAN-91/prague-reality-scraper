@@ -630,3 +630,21 @@ def test_the_health_check_comes_before_the_success_announcement(workflow):
     announce_at = next(i for i, n in enumerate(names)
                        if n.startswith("Announce a successful run"))
     assert health_at < announce_at
+
+
+def test_the_rent_detail_cap_fits_inside_the_fetching_budget():
+    """Both are numbers in the same YAML and neither knows about the other.
+
+    Measured on the first real pass (2026-09-20): 4254s elapsed of which
+    ~1500 were detail fetches at one a second, so the sweep itself is about
+    2750s. Raise the cap without raising the budget and the pass gets cut
+    short - and a rent pass cut short waits a week for the rest.
+    """
+    rent_inputs = inputs_of(load(RENT))
+    cap = int(rent_inputs["max_new_details"]["default"])
+    budget = int(rent_inputs["max_seconds"]["default"])
+    sweep_seconds = 2750
+    assert sweep_seconds + cap <= budget * 0.85, (
+        f"{cap} details plus a {sweep_seconds}s sweep leaves nothing spare "
+        f"in a {budget}s budget"
+    )

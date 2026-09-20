@@ -51,9 +51,19 @@ on:
         required: false
         default: "true"
       max_new_details:
+        # Measured on the first real pass: 5245 rent listings found, 1500
+        # details fetched, 2489 left without one because this cap ran out
+        # first - and the pass is weekly, so each of those waits seven days
+        # for its turn. At 1500 the backlog takes four weeks to clear.
+        #
+        # What caps the cap is the fetching budget. That pass used 4254s of
+        # 5400, of which about 1500 were the details themselves (one a
+        # second), so the sweep alone is roughly 2750s. 3000 details puts the
+        # pass near 5750s against a 7200s budget - a real margin, and the
+        # backlog gone in two weeks instead of four.
         description: "Cap on one-time detail fetches for newly-seen listings"
         required: false
-        default: "1500"
+        default: "3000"
       as_schedule:
         # Set this whenever something OTHER THAN A PERSON presses the button.
         # The waker fires every fifteen minutes through the Sunday window;
@@ -179,7 +189,7 @@ jobs:
         env:
           SOURCES: ${{ github.event.inputs.sources || 'sreality,idnes,bezrealitky' }}
           MAX_SECONDS: ${{ github.event.inputs.max_seconds || '7200' }}
-          MAX_NEW_DETAILS: ${{ github.event.inputs.max_new_details || '1500' }}
+          MAX_NEW_DETAILS: ${{ github.event.inputs.max_new_details || '3000' }}
           TRANSACTIONS: ${{ github.event.inputs.transactions || 'pronajem' }}
           # ------------------------------------------------------------------
           # THE ONE PLACE where this project stops treating a robots.txt as
