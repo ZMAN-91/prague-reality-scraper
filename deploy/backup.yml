@@ -21,10 +21,16 @@ on:
     # Attempts across a window, not one shot: GitHub delivered 4 of ~150
     # scheduled attempts over two days, and a weekly archive that depends
     # on one of them is no archive at all. The due job below lets one
-    # through. 07:00, not 05:30 - the rent pass can start as late as 03:45
-    # and run its 160-minute timeout, finishing at 06:25, and an archive
-    # taken before it is an archive missing the week's rent data.
-    - cron: "*/15 7-8 * * 0"
+    # through. Twenty-four attempts, because on 2026-09-20 the eight it had
+    # then got nothing at all - GitHub delivered none of them, and the only
+    # archive of the week was one run by hand.
+    #
+    # 15:00, not 07:00: rent now has a fallback window at 10:00 for the
+    # Sunday its first one comes up empty, and a pass starting at 11:45 runs
+    # its 160-minute timeout to 14:25. An archive taken before that is an
+    # archive missing the week's rent data. The test below derives the bound
+    # from rent's own schedule rather than trusting this comment.
+    - cron: "*/15 15-20 * * 0"
   workflow_dispatch:
 
 # Only reads the repository; writes nothing back to the branch. The release

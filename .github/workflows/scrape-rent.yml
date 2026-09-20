@@ -16,6 +16,22 @@ on:
     # area. Keeping sreality small is about not sweeping the city every hour;
     # once every seven days is a different trade.
     - cron: "*/15 0-3 * * 0"
+    # And a second window, for the Sunday the first one gets nothing. On
+    # 2026-09-20 GitHub delivered one attempt out of sixteen into the first
+    # window; the week before that it would have been none. A weekly pass
+    # that loses its window loses the week.
+    #
+    # Ten o'clock, not eight: the first window's worst case is a pass still
+    # running at 06:25, and these attempts must not arrive while that one
+    # holds the lock. By ten it is long over, and if it collected anything
+    # at all then rent_due.py stops every attempt here in seven seconds. So
+    # this window costs nothing on a normal Sunday and saves the week on a
+    # bad one.
+    #
+    # What it does cost, on the Sunday it is needed, is two or three hourly
+    # sale sweeps - the guard stands them down while the pass runs. Set
+    # against losing a week of rent, that is not a close call.
+    - cron: "*/15 10-11 * * 0"
   workflow_dispatch:
     inputs:
       transactions:

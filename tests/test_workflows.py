@@ -65,11 +65,26 @@ def fires_at(spec, weekday, hour):
     return False
 
 
+def rent_windows():
+    """Rent's Sunday windows, each as (first hour, last hour).
+
+    Two, and they are not the same kind of thing. The first is the window
+    sale is kept out of, so a pass there disturbs nothing. The second is the
+    fallback for the Sunday the first one gets no attempt delivered at all -
+    it lands in the middle of sale's hours on purpose, and leans on the guard
+    and the shared concurrency group instead of on an empty schedule.
+    """
+    out = []
+    for entry in load(RENT)[True]["schedule"]:
+        hours = entry["cron"].split()[1]
+        low, _, high = hours.partition("-")
+        out.append((int(low), int(high or low)))
+    return sorted(out)
+
+
 def rent_window_start():
     """The first UTC hour of the Sunday window rent owns."""
-    entries = load(RENT)[True]["schedule"]
-    assert len(entries) == 1, "one window, not several"
-    return int(entries[0]["cron"].split()[1].split("-")[0])
+    return rent_windows()[0][0]
 
 
 def test_rent_attempts_only_ever_land_on_sunday_night():
@@ -83,8 +98,7 @@ def test_rent_attempts_only_ever_land_on_sunday_night():
     rent = load(RENT)
     days = {d for d in range(7) for h in range(24) if fires_at(rent, d, h)}
     assert days == {0}, f"rent must only attempt on Sunday, got {days}"
-    hours = [h for h in range(24) if fires_at(rent, 0, h)]
-    assert hours == [0, 1, 2, 3], hours
+    assert rent_windows()[0] == (0, 3), rent_windows()
 
 
 def test_a_late_rent_start_does_not_eat_sunday_morning():
@@ -94,10 +108,9 @@ def test_a_late_rent_start_does_not_eat_sunday_morning():
     down for nearly three hours. More attempts is better for rent, but not at
     that price."""
     rent = load(RENT)
-    hours = [h for h in range(24) if fires_at(rent, 0, h)]
     budget_h = int(inputs_of(rent)["max_seconds"]["default"]) / 3600
     # Last attempt of the window is at :45 of its final hour.
-    worst_finish = hours[-1] + 0.75 + budget_h
+    worst_finish = rent_windows()[0][1] + 0.75 + budget_h
     sale_resumes = min(h for h in range(24) if fires_at(load(SALE), 0, h))
     assert worst_finish - sale_resumes <= 1, (
         f"a pass starting at the end of the window runs to {worst_finish:.2f}h, "
@@ -190,7 +203,12 @@ def test_no_schedule_sits_on_the_top_of_the_hour():
 def test_sale_stays_out_of_the_window_rent_owns():
     """Kept out rather than queued: the two share a concurrency group, so
     queueing would pile four hours of sale runs into a heap that all fire at
-    once the moment rent finishes, collecting the same hour four times."""
+    once the moment rent finishes, collecting the same hour four times.
+
+    This is about rent's FIRST window, the one that exists so a normal week's
+    pass disturbs nothing. The fallback window is the opposite trade and has
+    its own test below.
+    """
     sale, rent = load(SALE), load(RENT)
     rent_budget_hours = int(inputs_of(rent)["max_seconds"]["default"]) / 3600
     rent_start = rent_window_start()
@@ -201,6 +219,37 @@ def test_sale_stays_out_of_the_window_rent_owns():
             f"a sale run is scheduled in the {hour}:00 UTC hour on Sunday, "
             "inside rent's window"
         )
+
+
+def test_rent_has_a_fallback_window_for_the_sunday_the_first_one_is_dropped():
+    """On 2026-09-20 GitHub delivered one of sixteen attempts into rent's
+    first window, and none of eight into the backup's. A weekly pass whose
+    only window comes up empty loses the week, so there is a second one."""
+    windows = rent_windows()
+    assert len(windows) == 2, f"expected a fallback window, got {windows}"
+
+
+def test_the_fallback_cannot_collide_with_a_pass_from_the_first_window():
+    """Both windows feed one concurrency group. An attempt arriving while the
+    first window's pass still holds it is stopped by the guard as busy - so
+    the fallback would be spent on nothing. It has to open after the first
+    window's worst case is over."""
+    rent = load(RENT)
+    first, fallback = rent_windows()
+    worst_finish = first[1] + 0.75 + rent["jobs"]["scrape"]["timeout-minutes"] / 60
+    assert fallback[0] > worst_finish, (
+        f"the fallback opens at {fallback[0]}:00 but a pass from the first "
+        f"window can still be running at {worst_finish:.2f}h"
+    )
+
+
+def test_the_fallback_leaves_the_rest_of_sunday_alone():
+    """It is a hedge, not a second schedule: a handful of attempts, and over
+    before the evening."""
+    _, fallback = rent_windows()
+    assert fallback[1] - fallback[0] <= 3, "a fallback, not a whole afternoon"
+    budget_h = int(inputs_of(load(RENT))["max_seconds"]["default"]) / 3600
+    assert fallback[1] + 0.75 + budget_h < 20, "must finish well inside Sunday"
 
 
 def test_sale_resumes_the_same_sunday():
