@@ -70,20 +70,45 @@ permissions:
 
 jobs:
   guard:
-    # Same shape as the sale workflow's guard and the same script, with one
-    # difference that is the whole point: the floor is six days rather than
-    # fifty minutes. Sixteen attempts arrive across the Sunday window and at
-    # most one of them may start a pass.
+    # Two questions, and the pass starts only if both say yes.
+    #
+    #   1. Is the week's rent already in the dataset? (tools/rent_due.py)
+    #   2. Is anything running, and did an attempt already start a pass in the
+    #      last fifty minutes? (tools/scrape_guard.sh, as for the sale sweep)
+    #
+    # The first is what rations a weekly job; the second only stops attempts
+    # from piling onto each other. It used to be the other way round - a
+    # six-day floor on the run history and nothing else - and that lost the
+    # first Sunday it was asked to work: the floor measured from a manual test
+    # run on the Wednesday, 3.7 days back, and stopped the pass in ten
+    # seconds. A run that left no rent behind in a dataset that has since been
+    # rebuilt cannot be what decides the week is done. See tools/rent_due.py.
     #
     # Outside the concurrency group on purpose - it has to be able to answer
     # "something is already running" while that something runs.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      go: ${{ steps.decide.outputs.go }}
+      go: ${{ steps.decide.outputs.go == 'true' && steps.week.outputs.go == 'true' }}
     steps:
       - name: Checkout the code
         uses: actions/checkout@v4
+
+      - name: Checkout what the dataset says about rent
+        # Only listings.csv, and only the newest commit: the question is one
+        # column of one file, and this runs at every attempt in the window.
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague_reality_sector_analysis
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: claude/real-estate-market-scraper-1tgiei
+          path: store
+          sparse-checkout: data/listings.csv
+          sparse-checkout-cone-mode: false
+
+      - name: Is this week's rent already collected?
+        id: week
+        run: python3 -m tools.rent_due --data-dir store/data >> "$GITHUB_OUTPUT"
 
       - name: Decide whether this attempt should scrape
         id: decide
@@ -93,10 +118,11 @@ jobs:
           # Measure THIS workflow, not the hourly sale one - otherwise every
           # attempt would see a sale sweep from minutes ago and never run.
           MEASURE_WORKFLOW: scrape-rent.yml
-          # Six days, not seven: the pass itself takes up to four hours, so a
-          # seven-day floor would push each week's start later than the last
-          # until it fell out of the Sunday window entirely.
-          MIN_GAP_MINUTES: "8640"
+          # Fifty minutes, the same as the sale sweep. This is no longer what
+          # keeps the pass weekly (rent_due.py is); it only keeps a pass that
+          # died before committing from being retried at every attempt for the
+          # rest of the window.
+          MIN_GAP_MINUTES: "50"
           MIN_REAL_RUN_SECONDS: "300"
         run: tools/scrape_guard.sh >> "$GITHUB_OUTPUT"
 

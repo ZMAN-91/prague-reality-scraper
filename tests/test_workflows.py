@@ -102,18 +102,53 @@ def test_a_late_rent_start_does_not_eat_sunday_morning():
     )
 
 
+def rent_guard_step(step_id):
+    return [s for s in load(RENT)["jobs"]["guard"]["steps"]
+            if s.get("id") == step_id][0]
+
+
 def test_rent_may_only_start_one_pass_a_week():
-    """What the cron used to promise, now enforced where it belongs."""
-    env = [s for s in load(RENT)["jobs"]["guard"]["steps"]
-           if s.get("id") == "decide"][0]["env"]
+    """And it asks the dataset, not the run history.
+
+    This was a six-day floor on the Actions run history, and it lost the first
+    Sunday it was asked to work: it measured from a manual test run on the
+    Wednesday - inside the floor - and stopped the pass in ten seconds. The
+    run it deferred to had left no rent in the dataset at all.
+    """
+    assert "tools.rent_due" in rent_guard_step("week")["run"], (
+        "what makes the pass weekly is whether the dataset already holds "
+        "this week's rent - nothing else answers that"
+    )
+    go = load(RENT)["jobs"]["guard"]["outputs"]["go"]
+    assert "steps.week.outputs.go" in go and "steps.decide.outputs.go" in go, (
+        "both questions gate the pass; either one alone lets it through"
+    )
+
+
+def test_the_rent_floor_is_a_retry_brake_and_not_the_weekly_schedule():
+    """A floor long enough to span a week is the bug described above."""
+    env = rent_guard_step("decide")["env"]
     assert env["MEASURE_WORKFLOW"] == "scrape-rent.yml", (
         "measured against the hourly sale sweep, rent would never run"
     )
-    floor_days = int(env["MIN_GAP_MINUTES"]) / (60 * 24)
-    assert 5 <= floor_days < 7, (
-        "under a week so the start does not drift later out of the window, "
-        "but far enough that a second pass cannot start the same Sunday"
+    floor_minutes = int(env["MIN_GAP_MINUTES"])
+    assert 45 <= floor_minutes <= 120, (
+        "long enough that a pass which died before committing is not retried "
+        "at every attempt for the rest of the window, short enough that it "
+        "cannot silently become the thing that decides the week"
     )
+
+
+def test_the_rent_guard_can_read_the_dataset_it_asks_about():
+    """The due check needs listings.csv present, and only that."""
+    checkout = [s for s in load(RENT)["jobs"]["guard"]["steps"]
+                if "checkout" in str(s.get("uses", "")) and "with" in s
+                and s["with"].get("path") == "store"][0]["with"]
+    assert checkout["sparse-checkout"] == "data/listings.csv"
+    assert checkout["sparse-checkout-cone-mode"] is False, (
+        "cone mode matches directories, not a single file"
+    )
+    assert "DATA_REPO_KEY" in checkout["ssh-key"]
 
 
 def test_sale_runs_every_hour_outside_the_rent_window():
