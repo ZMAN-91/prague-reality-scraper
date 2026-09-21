@@ -99,3 +99,33 @@ def test_the_workflow_overrides_exactly_one_host():
     assert len(line) == 1
     hosts = line[0].split(":", 1)[1].strip().strip('"').split(",")
     assert [h.strip() for h in hosts] == ["www.sreality.cz"]
+
+
+def test_no_workflow_overrides_robots_for_any_other_host():
+    """The override is per-workflow, so adding a workflow that touches a new
+    host is exactly the moment one could quietly widen.
+
+    It is not enough to check scrape.yml: probe-ruian.yml fetches from
+    cuzk.cz, and an override copied into it - or into a workflow added later
+    - would mean this project decided a public register's robots.txt did not
+    apply to it, without anyone deciding that."""
+    root = Path(__file__).resolve().parent.parent
+    workflows = sorted((root / ".github" / "workflows").glob("*.yml"))
+    workflows += sorted((root / "deploy").glob("*.yml"))
+    assert workflows, "no workflows found; this test would pass vacuously"
+
+    overriding = {}
+    for path in workflows:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if "SCRAPER_ROBOTS_OVERRIDE_HOSTS:" not in line:
+                continue
+            hosts = line.split(":", 1)[1].strip().strip('"')
+            overriding.setdefault(path.name, []).extend(
+                h.strip() for h in hosts.split(",") if h.strip())
+
+    unexpected = {name: hosts for name, hosts in overriding.items()
+                  if set(hosts) - {"www.sreality.cz"}}
+    assert not unexpected, (
+        f"a workflow overrides robots.txt for a host other than sreality: "
+        f"{unexpected}"
+    )

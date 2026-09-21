@@ -1,0 +1,31 @@
+name: Probe the RUIAN address register (diagnostic)
+
+# Manual only, and read-only. Development here has no network route to
+# cuzk.cz, so "what does the address export actually look like" is a question
+# only a runner can answer.
+#
+# Deliberately a workflow of its own rather than a step in probe-portals.yml:
+# that one sets SCRAPER_ROBOTS_OVERRIDE_HOSTS for sreality, and an override
+# must never be in scope for a host it was not decided for. Here there is
+# none, so if the register's robots.txt disallows the path the probe stops
+# and says so - which is an answer, not a failure.
+#
+# Downloads one zip, prints its header and a sample, writes nothing, commits
+# nothing, is never scheduled.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m tools.probe_ruian
