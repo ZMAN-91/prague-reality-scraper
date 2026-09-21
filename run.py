@@ -35,6 +35,7 @@ from typing import Optional
 from common import dedup, interruptions, net, storage
 from common.budget import Budget
 from common import address, collection_area, coords, progress as progress_state
+from common import ruian
 from common.geo import is_in_target_area, is_priority_zone
 from common.schema import (
     TRANSACTION_TYPES,
@@ -582,6 +583,10 @@ def merge_source(
                 "gps_zdroj": coords.OWN if listing.lat is not None else "",
                 "address": listing.address or "",
                 **address.parse(listing.address),
+                # Empty until the register is consulted - see the address
+                # matching step below. Present here so every row carries
+                # every column from the moment it is created.
+                **ruian.blank_match(),
                 "priority_zone": listing.priority_zone,
                 "description": listing.description or "",
                 "first_seen_at": now_iso,

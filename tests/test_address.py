@@ -34,23 +34,20 @@ def test_nothing_folds_to_nothing():
 def test_srealitys_three_parts():
     """2122 rows: street, district, city."""
     assert parse("Ke Slatinam, Dolni Mecholupy, Praha") == {
-        "ulice": "Ke Slatinam", "cislo_popisne": "",
-        "mestska_cast": "Dolni Mecholupy", "obec": "Praha"}
+        "ulice": "Ke Slatinam", "mestska_cast": "Dolni Mecholupy", "obec": "Praha"}
 
 
 def test_idness_borough_dash_district():
     """6694 rows: street, then "Praha 3 - Zizkov"."""
     assert parse("Roháčova, Praha 3 - Žižkov") == {
-        "ulice": "Rohacova", "cislo_popisne": "",
-        "mestska_cast": "Zizkov", "obec": "Praha"}
+        "ulice": "Rohacova", "mestska_cast": "Zizkov", "obec": "Praha"}
 
 
 def test_bezrealitkys_two_parts_have_no_district():
     """1737 rows: street and city, nothing finer. An empty district is the
     honest answer - inventing one from the street would be a guess."""
     assert parse("Štichova, Praha") == {
-        "ulice": "Stichova", "cislo_popisne": "",
-        "mestska_cast": "", "obec": "Praha"}
+        "ulice": "Stichova", "mestska_cast": "", "obec": "Praha"}
 
 
 # --- the shapes that break a parser written for the common case -------------
@@ -71,60 +68,62 @@ def test_a_street_standing_in_the_same_place_stays_a_street():
 def test_an_address_with_no_street_at_all():
     """103 rows: the portal gave only a borough and district."""
     assert parse("Praha 2 - Vinohrady") == {
-        "ulice": "", "cislo_popisne": "", "mestska_cast": "Vinohrady",
+        "ulice": "", "mestska_cast": "Vinohrady",
         "obec": "Praha"}
 
 
 def test_an_address_that_is_only_the_city():
-    assert parse("Praha") == {"ulice": "", "cislo_popisne": "",
-                              "mestska_cast": "", "obec": "Praha"}
+    assert parse("Praha") == {"ulice": "", "mestska_cast": "", "obec": "Praha"}
 
 
 def test_a_borough_with_no_district_is_the_finest_locality_there_is():
     """71 rows end in "Praha 9" and name no district. Keeping the borough
     beats dropping it: it is coarser than a district, not nothing."""
     assert parse("Poděbradská, Praha 9") == {
-        "ulice": "Podebradska", "cislo_popisne": "",
-        "mestska_cast": "Praha 9", "obec": "Praha"}
+        "ulice": "Podebradska", "mestska_cast": "Praha 9", "obec": "Praha"}
 
 
 def test_the_okres_tail_is_dropped():
     """5 rows end in "okres Praha", which says nothing the rest does not."""
     assert parse("Svitákova, Praha 5 - Stodůlky, okres Praha") == {
-        "ulice": "Svitakova", "cislo_popisne": "",
-        "mestska_cast": "Stodulky", "obec": "Praha"}
+        "ulice": "Svitakova", "mestska_cast": "Stodulky", "obec": "Praha"}
 
 
 def test_somewhere_that_is_not_prague_keeps_its_own_name():
     """The dataset is Prague, but the portals return neighbouring towns too,
     and calling Jesenice a district of Prague would be wrong twice over."""
     assert parse("Cedrová, Jesenice") == {
-        "ulice": "Cedrova", "cislo_popisne": "", "mestska_cast": "",
+        "ulice": "Cedrova", "mestska_cast": "",
         "obec": "Jesenice"}
 
 
 def test_a_borough_in_the_district_slot():
     """sreality sometimes writes "5 Kvetna, Praha 4, Praha"."""
     assert parse("5 Kvetna, Praha 4, Praha") == {
-        "ulice": "5 Kvetna", "cislo_popisne": "",
-        "mestska_cast": "Praha 4", "obec": "Praha"}
+        "ulice": "5 Kvetna", "mestska_cast": "Praha 4", "obec": "Praha"}
 
 
 def test_an_empty_address_parses_to_empty_fields():
     for empty in (None, "", "   ", ",,"):
-        assert parse(empty) == {"ulice": "", "cislo_popisne": "",
-                                "mestska_cast": "", "obec": ""}
+        assert parse(empty) == {"ulice": "", "mestska_cast": "", "obec": ""}
 
 
 # --- the house number, which is not there -----------------------------------
 
 
-def test_the_house_number_is_always_empty():
-    """Not an oversight: no Czech portal here publishes one."""
-    for address in ("Ke Slatinam, Dolni Mecholupy, Praha",
-                    "Roháčova, Praha 3 - Žižkov", "Štichova, Praha"):
-        assert parse(address)["cislo_popisne"] == ""
-
+def test_no_digits_are_mistaken_for_a_house_number():
+    """42 of the 10,943 addresses collected contain a digit and every one is
+    part of a street name. A parser that split digits off would invent house
+    numbers and destroy those streets at the same time."""
+    for address in ("5. kvetna, Praha 4 - Nusle",
+                    "28. pluku, Praha 10 - Vrsovice",
+                    "17. listopadu, Praha 1 - Stare Mesto",
+                    "namesti 14. rijna, Praha 5 - Smichov"):
+        parsed = parse(address)
+        assert parsed["ulice"], f"{address} lost its street"
+        assert any(ch.isdigit() for ch in parsed["ulice"]), (
+            f"{address} had its digits stripped out of the street name: "
+            f"{parsed['ulice']!r}")
 
 def test_a_number_in_a_street_name_stays_in_the_street_name():
     """The reason there is no digit-extraction rule. All 42 addresses in the
@@ -149,3 +148,27 @@ def test_a_borough_is_not_in_the_district_vocabulary():
     """"Praha 4" turns up in the district slot but is a borough; leaving it
     in the vocabulary would make the two indistinguishable."""
     assert "praha 4" not in DISTRICTS
+
+
+def test_the_parser_does_not_return_a_house_number_field():
+    """One owner per field, and this is not it.
+
+    run.py calls `row.update(address.parse(row["address"]))` on every pass,
+    so any key this returns is re-asserted hourly. A "cislo_popisne": ""
+    would therefore wipe the number common/ruian.py matched, every hour, and
+    the CSV would look exactly as it does when no number was ever found.
+
+    The same shape of bug - a re-derivation overwriting a field it does not
+    own - once erased 320 prices and dissolved the dedup clusters built on
+    them. It took a two-commit replay to find. This is cheaper."""
+    from common import ruian
+    for address in ("Ke Slatinam, Dolni Mecholupy, Praha",
+                    "Rohacova, Praha 3 - Zizkov",
+                    "Stichova, Praha",
+                    "Praha",
+                    ""):
+        keys = set(parse(address))
+        assert keys == {"ulice", "mestska_cast", "obec"}, (
+            f"parse({address!r}) returns {keys}")
+        assert not keys & set(ruian.MATCH_FIELDS), (
+            "the address parser and the register matcher both claim a field")

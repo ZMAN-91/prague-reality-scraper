@@ -1,0 +1,15 @@
+-r requirements.txt
+
+# Only the monthly address-index build needs this, and it is kept out of
+# requirements.txt on purpose.
+#
+# The hourly scrape installs its dependencies on every run. pyproj brings the
+# PROJ library and its datum grids with it - tens of megabytes of wheel for a
+# calculation that happens once a month, on 134,627 rows, whose result is
+# committed as plain WGS84. Paying for that twenty-four times a day to use it
+# never would be a poor trade.
+#
+# tools/build_ruian_index.py is the only importer, by way of common/krovak.py,
+# which imports pyproj inside a function so that the import graph does not
+# drag it in anywhere else.
+pyproj>=3.6,<4

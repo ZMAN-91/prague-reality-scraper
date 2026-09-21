@@ -14,19 +14,25 @@ portal happened to use, which is no order at all.
 This parses all of them into four fields and folds the result to ASCII, so
 "Rohacova" and "Roháčova" are the same string whichever portal said it.
 
-WHY THERE IS NO HOUSE NUMBER
+WHY NO HOUSE NUMBER COMES OUT OF HERE
 
-There is a `cislo_popisne` field and it is always empty. Czech property
-portals do not publish house numbers - you get them from the agent - and a
-search of all 10,943 addresses collected found 42 containing a digit, every
-one of them part of a street NAME: "5. kvetna", "28. pluku", "17. listopadu",
-"namesti 14. rijna". So a rule that pulled digits out would find no house
-numbers and would wreck those streets, turning "5. kvetna" into the street
-"kvetna" at number 5.
+Czech property portals do not publish house numbers - you get them from the
+agent - and a search of all 10,943 addresses collected found 42 containing a
+digit, every one of them part of a street NAME: "5. kvetna", "28. pluku",
+"17. listopadu", "namesti 14. rijna". A rule that pulled digits out would
+find no house numbers and would wreck those streets, turning "5. kvetna" into
+the street "kvetna" at number 5.
 
-The field exists so that the day a source does supply one there is somewhere
-to put it, and so that its emptiness is a stated fact about the sources
-rather than a gap someone has to rediscover.
+The listing row does have a `cislo_popisne`, but it is filled from the state
+address register by common/ruian.py, from the street and the coordinates. It
+is deliberately NOT returned here, and that is a correctness requirement
+rather than tidiness: run.py re-parses the address on every pass and updates
+the row with whatever this returns, so a "cislo_popisne": "" in that dict
+would erase the matched number once an hour, for ever. The same shape of bug
+once erased 320 prices.
+
+The rule is one owner per field. This function owns ulice, mestska_cast and
+obec; common/ruian.py owns the number fields.
 """
 
 from __future__ import annotations
@@ -78,13 +84,13 @@ def _key(text: str) -> str:
 
 
 def parse(raw: Optional[str]) -> dict:
-    """{ulice, cislo_popisne, mestska_cast, obec}, all ASCII, all possibly "".
+    """{ulice, mestska_cast, obec}, all ASCII, all possibly "".
 
     Read right to left: the last part names the municipality, a part carrying
     " - " is a borough and its district, and the first part is the street
     unless the vocabulary says it is a district.
     """
-    blank = {"ulice": "", "cislo_popisne": "", "mestska_cast": "", "obec": ""}
+    blank = {"ulice": "", "mestska_cast": "", "obec": ""}
     if not raw or not raw.strip():
         return blank
 
@@ -127,5 +133,4 @@ def parse(raw: Optional[str]) -> dict:
     if _key(ulice) == _key(obec):
         ulice = ""
 
-    return {"ulice": ulice, "cislo_popisne": "", "mestska_cast": mestska_cast,
-            "obec": obec}
+    return {"ulice": ulice, "mestska_cast": mestska_cast, "obec": obec}

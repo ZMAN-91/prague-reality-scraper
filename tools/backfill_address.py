@@ -2,12 +2,15 @@
 
     python -m tools.backfill_address --data-dir store/data [--apply]
 
-listings.csv gained ulice / cislo_popisne / mestska_cast / obec, and every
-row written before that has them blank. They are derived - nothing is lost by
-recomputing them - so this simply re-parses `address` for every row.
+listings.csv gained ulice / mestska_cast / obec, and every row written
+before that has them blank. They are derived - nothing is lost by recomputing
+them - so this simply re-parses `address` for every row.
 
-It writes only those four fields and never touches `address` itself, which is
-what the portal said and the thing everything else is derived from.
+It writes only those three fields and never touches `address` itself, which
+is what the portal said and the thing everything else is derived from. It
+also does not touch the house number: that comes from the state address
+register, not from the address string, and is tools/backfill_cislo.py's to
+fill. See common/address.py on why one field must have one owner.
 
 Re-running is safe and is the point: when the parser learns a shape it did
 not know, this puts the improvement through the whole history rather than
@@ -23,7 +26,7 @@ from pathlib import Path
 
 from common import address, storage
 
-FIELDS = ("ulice", "cislo_popisne", "mestska_cast", "obec")
+FIELDS = ("ulice", "mestska_cast", "obec")
 
 
 def backfill(listings: dict[str, dict]) -> tuple[int, Counter]:

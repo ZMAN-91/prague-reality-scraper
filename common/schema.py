@@ -66,7 +66,17 @@ LISTING_FIELDS = [
     # dedup matches on it, and it is the evidence these four are derived
     # from. See common/address.py, including why cislo_popisne is empty.
     "ulice",
+    # Inferred, not published - see common/ruian.py. No portal gives a house
+    # number, so this is the nearest address point the state register holds
+    # on that street, and the three fields after it are what say how much to
+    # believe it: the source, how far the portal's pin was from that point,
+    # and how many different houses were about equally close. A number
+    # without them would read as fact.
     "cislo_popisne",
+    "cislo_orientacni",
+    "cislo_zdroj",
+    "cislo_vzdalenost_m",
+    "cislo_kandidatu",
     "mestska_cast",
     "obec",
     "priority_zone",

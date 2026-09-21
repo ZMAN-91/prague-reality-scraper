@@ -7,7 +7,7 @@ from tools import backfill_address
 
 def row(address, **extra):
     base = {"internal_id": "a", "address": address, "ulice": "",
-            "cislo_popisne": "", "mestska_cast": "", "obec": ""}
+            "mestska_cast": "", "obec": ""}
     base.update(extra)
     return base
 
@@ -51,7 +51,9 @@ def test_coverage_counts_only_fields_that_got_a_value():
     assert coverage["obec"] == 2
     assert coverage["ulice"] == 1          # only Stichova
     assert coverage["mestska_cast"] == 0
-    assert coverage["cislo_popisne"] == 0
+    assert "cislo_popisne" not in coverage, (
+        "the address parser has started claiming the house number field "
+        "again; see common/address.py")
 
 
 def test_an_unparseable_address_leaves_empty_fields_not_an_error():
