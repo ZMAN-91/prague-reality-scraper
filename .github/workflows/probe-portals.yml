@@ -1,4 +1,4 @@
-name: Probe iDNES locality URLs (diagnostic)
+name: Probe portal locality filters (diagnostic)
 
 # Manual only, and read-only. This project is developed without network
 # access to the portals, so answering "does the site accept a locality in
@@ -22,3 +22,9 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -m tools.probe_idnes_scope
+      - name: sreality - the API filter, not the URL path
+        env:
+          # sreality's robots.txt disallows everything; this project's single
+          # documented override, the same one scrape.yml sets.
+          SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
+        run: python -m tools.probe_sreality_scope
