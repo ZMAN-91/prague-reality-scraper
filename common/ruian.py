@@ -18,6 +18,8 @@ So the number is never stored on its own. Three fields travel with it:
     cislo_vzdalenost_m  how far the pin was from that address point
     cislo_kandidatu     how many different houses on the street were about
                         equally close
+    cislo_typ           which of the two Czech numbering series it belongs
+                        to, in the register's own words
 
 A row with cislo_vzdalenost_m of 4 and cislo_kandidatu of 1 is a building the
 portal pinned exactly. A row with 90 and 6 is a street name and a shrug. Both
@@ -30,6 +32,23 @@ interpolated: cislo popisne is unique within a cadastral district and assigned
 in the order houses were built, so consecutive plates on one street can read
 1204, 87, 2310. Only the cislo orientacni counts along the street, and it is
 missing for 16% of points. Nearest-point is the only method the data supports.
+
+TWO NUMBERING SERIES, NOT ONE
+
+97.19% of Prague's address points carry a cislo popisne and 2.81% a cislo
+evidencni - a separate series, used for buildings that are not permanent
+dwellings. They are not interchangeable: evidencni 163 on U zakrutu is not
+house 163 on U zakrutu, it is a different building entirely.
+
+Measured, 18 of 5,652 matches land on one. That is 0.32%, and it is exactly
+the kind of small systematic wrongness that never gets noticed - the column
+looks populated and plausible. So cislo_typ carries the register's own label,
+"c.p." or "c.ev.", rather than this code deciding what the difference means
+or dropping the distinction.
+
+The nearest point is still the nearest point. Preferring a cislo popisne
+further away would be substituting a different building for the right one,
+which is worse than a number that says what series it is in.
 
 MATCHING IS BY STREET NAME, FOLDED
 
@@ -74,8 +93,8 @@ MAX_DISTANCE_M = 250.0
 AMBIGUITY_FLOOR_M = 5.0
 AMBIGUITY_FACTOR = 2.0
 
-MATCH_FIELDS = ("cislo_popisne", "cislo_orientacni", "cislo_zdroj",
-                "cislo_vzdalenost_m", "cislo_kandidatu")
+MATCH_FIELDS = ("cislo_popisne", "cislo_orientacni", "cislo_typ",
+                "cislo_zdroj", "cislo_vzdalenost_m", "cislo_kandidatu")
 
 SOURCE_NAME = "ruian"
 
@@ -170,6 +189,7 @@ class Index:
         return {
             "cislo_popisne": nearest.get("cislo_domovni", ""),
             "cislo_orientacni": _orientacni(nearest),
+            "cislo_typ": nearest.get("typ_cisla", ""),
             "cislo_zdroj": SOURCE_NAME,
             "cislo_vzdalenost_m": f"{nearest_away:.1f}",
             "cislo_kandidatu": str(len(crowd)),

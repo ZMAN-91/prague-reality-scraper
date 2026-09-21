@@ -321,3 +321,27 @@ def test_a_changed_index_does_produce_a_different_file(tmp_path):
     build_ruian_index.write_index(as_text(base), str(first))
     build_ruian_index.write_index(as_text(base[:-1]), str(second))
     assert first.read_bytes() != second.read_bytes()
+
+
+def test_the_numbering_series_travels_with_the_number():
+    """2.81% of Prague's address points are a cislo evidencni, a separate
+    series: evidencni 163 on a street is not house 163 on that street. 18 of
+    5,652 real matches land on one, which is small enough never to be noticed
+    and systematic enough to always be wrong."""
+    got = STREET.match(*at(0, 30), "Leopoldova")
+    assert got["cislo_typ"] == "č.p."
+
+    chata = index_of(point("uzakrutu", "163", 0, 0, typ="č.ev."))
+    got = chata.match(*at(0, 0), "Uzakrutu")
+    assert got["cislo_popisne"] == "163"
+    assert got["cislo_typ"] == "č.ev.", got
+
+
+def test_the_nearest_point_wins_even_when_it_is_the_other_series():
+    """Reaching past it for a cislo popisne would substitute a different
+    building for the right one - worse than a number that says what it is."""
+    mixed = index_of(point("uzakrutu", "163", 0, 0, typ="č.ev."),
+                     point("uzakrutu", "8", 0, 60, typ="č.p."))
+    got = mixed.match(*at(0, 2), "Uzakrutu")
+    assert got["cislo_popisne"] == "163"
+    assert got["cislo_typ"] == "č.ev."

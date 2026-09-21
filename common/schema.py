@@ -74,6 +74,11 @@ LISTING_FIELDS = [
     # without them would read as fact.
     "cislo_popisne",
     "cislo_orientacni",
+    # Which numbering series, in the register's own words: "c.p." for a
+    # cislo popisne, "c.ev." for a cislo evidencni. 2.81% of Prague's address
+    # points are the latter and they are a different series - evidencni 163
+    # is not house 163 - so the column cannot be assumed to hold one kind.
+    "cislo_typ",
     "cislo_zdroj",
     "cislo_vzdalenost_m",
     "cislo_kandidatu",

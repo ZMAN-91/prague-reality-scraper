@@ -398,9 +398,11 @@ je to jen booleovský příznak pro pozdější filtrování/prioritizaci.
   nezveřejňuje. `cislo_popisne` a `cislo_orientacni` se dopočítávají ze
   státního registru adres (RÚIAN, 134 627 adresních bodů pro Prahu): hledá
   se nejbližší adresní bod na téže ulici k GPS pinu inzerátu. Jak moc tomu
-  věřit, říkají tři sloupce vedle: `cislo_zdroj` (že jde o dopočet),
-  `cislo_vzdalenost_m` (jak daleko byl pin od toho bodu) a `cislo_kandidatu`
-  (kolik různých domů bylo zhruba stejně blízko). Řádek se 4 m a jedním
+  věřit, říkají sloupce vedle: `cislo_zdroj` (že jde o dopočet),
+  `cislo_vzdalenost_m` (jak daleko byl pin od toho bodu), `cislo_kandidatu`
+  (kolik různých domů bylo zhruba stejně blízko) a `cislo_typ` (`č.p.` nebo
+  `č.ev.` — 2,81 % pražských adresních bodů je číslo **evidenční**, což je
+  jiná řada: evidenční 163 není dům 163). Řádek se 4 m a jedním
   kandidátem je budova, kterou portál napinoval přesně; řádek s 90 m a šesti
   je název ulice a pokrčení rameny. Filtrujte podle těch dvou čísel —
   **samotné číslo popisné nečtěte jako fakt.**
