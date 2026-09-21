@@ -104,12 +104,25 @@ def test_a_pin_between_two_houses_says_so():
 
 
 def test_a_pin_on_the_building_is_not_called_ambiguous():
+    """A pin that lands on a building has ruled its neighbours out, even in a
+    terraced street where they are 15 m away. Measured over 5,652 real
+    matches the portals' pins are 3.1 m out at the median and a quarter land
+    within 0.1 m, so this is the common case, not the lucky one."""
     lat, lon = at(0, 0)
     got = STREET.match(lat, lon, "Leopoldova")
     assert got["cislo_popisne"] == "1204"
-    assert int(got["cislo_kandidatu"]) == 2, (
-        "houses 15 m either side are inside the 25 m uncertainty, so two is "
-        "the honest count here: %s" % got)
+    assert int(got["cislo_kandidatu"]) == 1, got
+
+
+def test_a_vague_pin_is_still_called_ambiguous():
+    """The counterpart: the radius has to grow with the error, or the same
+    change that stops crying wolf also stops warning at all."""
+    # 30 m off the street, behind the middle house. Every house on the row
+    # is then between 30 and 42 m away, and the pin distinguishes none of
+    # them.
+    got = STREET.match(*at(30, 30), "Leopoldova")
+    assert float(got["cislo_vzdalenost_m"]) > 25
+    assert int(got["cislo_kandidatu"]) >= 4, got
 
 
 def test_several_entrances_to_one_house_are_one_candidate():
@@ -245,3 +258,16 @@ def test_a_row_the_builder_could_not_place_is_skipped_on_load(tmp_path):
                          "lat": "50.03", "lon": "14.51"})
     loaded = ruian.Index.load(str(path))
     assert len(loaded) == 1
+
+
+def test_a_pin_dead_on_a_point_does_not_claim_infinite_precision():
+    """Two houses sharing a wall carry two numbers and two register points a
+    couple of metres apart. A pin landing 20 cm from one of them is not
+    evidence it is that one rather than its neighbour - GPS does not resolve
+    20 cm, and a radius that scaled purely with the error would shrink to
+    nothing here and report a single confident candidate."""
+    pair = index_of(point("belohorska", "17", 0, 0),
+                    point("belohorska", "19", 0, 2))
+    got = pair.match(*at(0, 0.2), "Belohorska")
+    assert float(got["cislo_vzdalenost_m"]) < 1
+    assert int(got["cislo_kandidatu"]) == 2, got

@@ -55,10 +55,24 @@ from common import geo
 # real data by tools/backfill_cislo.py, which prints the distribution.
 MAX_DISTANCE_M = 250.0
 
-# Two houses this close to equally near the pin are not distinguishable by
-# it. Used only to count candidates, never to reject: the nearest is still
-# reported, with the count saying how crowded the answer was.
-AMBIGUITY_M = 25.0
+# How far past the nearest point another house still counts as a plausible
+# alternative. Used only to count candidates, never to reject: the nearest is
+# always reported, with the count saying how crowded the answer was.
+#
+# Proportional to the pin's own error, because that error is what decides
+# whether two houses can be told apart - and it varies hugely. Measured over
+# 5,652 matches the portals' pins land 3.1 m out at the median, 13.5 m at p75
+# and 89.9 m at p99, and a quarter of them land within 0.1 m, which means
+# those portals geocode from this same register.
+#
+# A fixed radius cannot serve both ends of that. At 25 m it called a pin
+# sitting exactly on a building ambiguous with its neighbours 15 m away,
+# which is not ambiguity, it is a terraced street - and it reported only
+# 28.5% of matches as unambiguous when the median match is accurate to three
+# metres. Twice the observed error, with a floor so that a pin landing dead
+# on a point does not claim infinite precision.
+AMBIGUITY_FLOOR_M = 5.0
+AMBIGUITY_FACTOR = 2.0
 
 MATCH_FIELDS = ("cislo_popisne", "cislo_orientacni", "cislo_zdroj",
                 "cislo_vzdalenost_m", "cislo_kandidatu")
@@ -124,19 +138,20 @@ class Index:
         if nearest_away > max_distance_m:
             return None
 
-        # How many DIFFERENT houses could plausibly be the answer: those
-        # within the pin's uncertainty of the nearest one, not within a fixed
-        # circle round the pin. A pin 4 m out has neighbours at 29 m to worry
-        # about; a pin 200 m out is guessing among everything at 225 m, and a
-        # fixed radius would call that a confident single answer.
+        # How many DIFFERENT houses could plausibly be the answer. The radius
+        # grows with the pin's own error rather than sitting fixed: a pin
+        # 0.5 m from a building has ruled its neighbours out, while a pin
+        # 200 m away has ruled out nothing, and one number cannot describe
+        # both.
         #
         # Counted by number and not by point, because one building can carry
         # several entrances and so several register points, and three points
         # on one house is not an ambiguous answer.
+        radius = max(AMBIGUITY_FLOOR_M, AMBIGUITY_FACTOR * nearest_away)
         crowd = {
             point["cislo_domovni"]
             for away, point in scored
-            if away <= nearest_away + AMBIGUITY_M
+            if away <= radius
         }
 
         return {

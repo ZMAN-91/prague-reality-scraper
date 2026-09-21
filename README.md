@@ -394,6 +394,16 @@ je to jen booleovský příznak pro pozdější filtrování/prioritizaci.
   cestu (sitemap + detailové stránky) místo zakázaného GraphQL hostu.
   Předfiltr podle slugu to drží v rozumných mezích, ale plné pokrytí
   bezrealitky trvá víc běhů než u sreality.
+- **Číslo popisné je odhad, ne údaj z inzerátu.** Žádný z portálů ho
+  nezveřejňuje. `cislo_popisne` a `cislo_orientacni` se dopočítávají ze
+  státního registru adres (RÚIAN, 134 627 adresních bodů pro Prahu): hledá
+  se nejbližší adresní bod na téže ulici k GPS pinu inzerátu. Jak moc tomu
+  věřit, říkají tři sloupce vedle: `cislo_zdroj` (že jde o dopočet),
+  `cislo_vzdalenost_m` (jak daleko byl pin od toho bodu) a `cislo_kandidatu`
+  (kolik různých domů bylo zhruba stejně blízko). Řádek se 4 m a jedním
+  kandidátem je budova, kterou portál napinoval přesně; řádek s 90 m a šesti
+  je název ulice a pokrčení rameny. Filtrujte podle těch dvou čísel —
+  **samotné číslo popisné nečtěte jako fakt.**
 - **`priority_zone` je kruh, ne katastrální hranice.** Souřadnice středů
   Spořilova/Hostivaře jsou přibližné, ne geodeticky ověřené.
 - **`relisted_from` a `cluster_id` jsou heuristiky, ne pravda.** Nic se
