@@ -15,6 +15,10 @@ on:
         description: "Write the result (false = report only)"
         required: false
         default: "true"
+      probe_rules:
+        description: "Instead of borrowing, compare matching rules and print examples"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -51,7 +55,14 @@ jobs:
       - name: Run tests
         run: python -m pytest -q
 
+      - name: Compare matching rules against the real data
+        if: ${{ github.event.inputs.probe_rules == 'true' }}
+        env:
+          SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
+        run: python -m tools.probe_gps_donor_rules --data-dir store/data
+
       - name: Borrow coordinates
+        if: ${{ github.event.inputs.probe_rules != 'true' }}
         env:
           # The project's single robots override, for the single host it was
           # decided for. See tools/lend_gps_from_sreality.py on why an index
@@ -66,11 +77,13 @@ jobs:
           fi
 
       - name: Fill house numbers for whatever gained coordinates
-        if: ${{ (github.event.inputs.apply || 'true') == 'true' }}
+        if: ${{ (github.event.inputs.apply || 'true') == 'true'
+                && github.event.inputs.probe_rules != 'true' }}
         run: python -m tools.backfill_cislo --data-dir store/data --apply
 
       - name: Export human-readable CSV views
-        if: ${{ (github.event.inputs.apply || 'true') == 'true' }}
+        if: ${{ (github.event.inputs.apply || 'true') == 'true'
+                && github.event.inputs.probe_rules != 'true' }}
         continue-on-error: true
         run: |
           python -m tools.export_csv --data-dir store/data
@@ -78,7 +91,8 @@ jobs:
           python -m tools.market --data-dir store/data
 
       - name: Commit and push data changes
-        if: ${{ (github.event.inputs.apply || 'true') == 'true' }}
+        if: ${{ (github.event.inputs.apply || 'true') == 'true'
+                && github.event.inputs.probe_rules != 'true' }}
         run: bash tools/commit_data.sh "claude/real-estate-market-scraper-1tgiei" "Borrowed coordinates from sreality"
         env:
           DATA_ROOT: store
