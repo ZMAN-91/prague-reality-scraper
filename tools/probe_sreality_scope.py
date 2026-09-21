@@ -148,6 +148,29 @@ def main() -> int:
     print("4. Co posila web sreality sam")
     print("=" * 72)
     probe_site(session)
+
+    print("\n" + "=" * 72)
+    print("5. locality_district_id s hodnotou z jejich stranky")
+    print("=" * 72)
+    # The parameter name was right all along - locality_district_id is what
+    # this scraper already sends for Prague (47). Their own page for Praha 10
+    # sends 5010 in the same parameter, so the id space has a value per
+    # borough and only the value was ever missing.
+    for slug in AREA_SLUGS:
+        try:
+            html = net.fetch_text(session, SITE_SEARCH_TMPL.format(slug=slug))
+        except Exception as exc:  # noqa: BLE001
+            print(f"  {slug}: stranka selhala: {str(exc)[:80]}")
+            continue
+        found = DISTRICT_ID_RE.search(html)
+        net.polite_sleep()
+        if not found:
+            print(f"  {slug}: localityDistrictId na strance neni")
+            continue
+        district_id = int(found.group(1))
+        params = base_params()
+        params["locality_district_id"] = district_id
+        ask(session, f"{slug} -> locality_district_id={district_id}", params)
     return 0
 
 
@@ -162,12 +185,15 @@ def main() -> int:
 # it issued in an embedded __NEXT_DATA__ blob - that is the answer, stated by
 # the only party that knows it.
 
-SITE_SEARCH_URLS = [
-    "https://www.sreality.cz/hledani/prodej/byty/praha-10",
-    "https://www.sreality.cz/hledani/prodej/byty/praha,praha-10",
-    "https://www.sreality.cz/hledani/prodej/byty/praha/praha-10",
-    "https://www.sreality.cz/hledani/prodej/byty/hostivar",
-]
+# The shape that answers: a comma, not a slash. The others 404.
+SITE_SEARCH_TMPL = "https://www.sreality.cz/hledani/prodej/byty/praha,{slug}"
+
+# The watched area, as sreality's own site spells it.
+AREA_SLUGS = ("praha-4", "praha-10", "praha-11", "praha-15")
+
+SITE_SEARCH_URLS = [SITE_SEARCH_TMPL.format(slug=slug) for slug in AREA_SLUGS]
+
+DISTRICT_ID_RE = __import__("re").compile(r'"localityDistrictId"\s*:\s*\[?(\d+)')
 
 NEXT_DATA_RE = __import__("re").compile(
     r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
