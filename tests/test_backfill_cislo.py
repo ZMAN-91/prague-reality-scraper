@@ -126,3 +126,57 @@ def test_the_report_states_the_share_within_one_building(capsys):
     out = capsys.readouterr().out
     assert "within 25 m" in out
     assert "1 of 2" in out
+
+
+# --- the district cross-check ------------------------------------------------
+
+def test_the_register_s_district_is_checked_against_the_portal_s():
+    rows = {"a": listing("a", 0, 30, mestska_cast="Chodov")}
+    _, stats = backfill_cislo.backfill(rows, STREET)
+    assert stats["districts"]["agree"] == 1
+    assert stats["districts"]["disagree"] == 0
+
+
+def test_a_borough_counts_as_agreement_as_well_as_a_district():
+    """The portals say either. The register carries both, so both count -
+    "Praha 4" and "Chodov" describe the same place at different grain."""
+    rows = {"a": listing("a", 0, 30, mestska_cast="Praha 4"),
+            "b": listing("b", 0, 45, mestska_cast="Praha 11")}
+    _, stats = backfill_cislo.backfill(rows, STREET)
+    assert stats["districts"]["agree"] == 2, stats["districts"]
+
+
+def test_diacritics_do_not_make_every_row_a_disagreement():
+    """The register keeps its diacritics and the listings do not. Compared
+    unfolded, "zabehlice" never equals "Zabehlice" with the hacek, and the
+    check reports 100% disagreement while being completely broken. That is
+    what it did the first time it was run by hand."""
+    accented = index_of(point("leopoldova", "1204", 0, 0))
+    accented.by_street["leopoldova"][0]["cast_obce"] = "Záběhlice"
+    rows = {"a": listing("a", 0, 0, mestska_cast="Zabehlice")}
+    _, stats = backfill_cislo.backfill(rows, accented)
+    assert stats["districts"]["agree"] == 1, stats["districts"]
+
+
+def test_a_real_disagreement_is_counted_as_one():
+    rows = {"a": listing("a", 0, 30, mestska_cast="Vinohrady")}
+    _, stats = backfill_cislo.backfill(rows, STREET)
+    assert stats["districts"]["disagree"] == 1
+
+
+def test_a_listing_with_no_district_is_not_counted_either_way():
+    rows = {"a": listing("a", 0, 30, mestska_cast="")}
+    _, stats = backfill_cislo.backfill(rows, STREET)
+    assert stats["districts"]["agree"] == 0
+    assert stats["districts"]["disagree"] == 0
+    assert stats["districts"]["portal named no district"] == 1
+
+
+def test_the_report_states_the_cross_check(capsys):
+    rows = {"a": listing("a", 0, 30, mestska_cast="Chodov"),
+            "b": listing("b", 0, 45, mestska_cast="Vinohrady")}
+    _, stats = backfill_cislo.backfill(rows, STREET)
+    backfill_cislo.report(len(rows), stats)
+    out = capsys.readouterr().out
+    assert "Cross-check" in out
+    assert "50.0%" in out

@@ -119,6 +119,19 @@ class Index:
         street the register does not know, or a nearest point too far away to
         mean anything.
         """
+        found = self.match_detail(lat, lon, ulice, max_distance_m)
+        return found[0] if found else None
+
+    def match_detail(self, lat: Optional[float], lon: Optional[float],
+                     ulice: Optional[str],
+                     max_distance_m: float = MAX_DISTANCE_M) -> Optional[tuple]:
+        """(the five match fields, the register row they came from).
+
+        The row carries the district the register places that building in,
+        which nothing in the matching uses - which is exactly what makes it
+        worth checking against the district the portal stated. See
+        tools/backfill_cislo.py.
+        """
         if lat is None or lon is None or not ulice:
             return None
 
@@ -160,7 +173,7 @@ class Index:
             "cislo_zdroj": SOURCE_NAME,
             "cislo_vzdalenost_m": f"{nearest_away:.1f}",
             "cislo_kandidatu": str(len(crowd)),
-        }
+        }, nearest
 
 
 def _orientacni(point: dict) -> str:
