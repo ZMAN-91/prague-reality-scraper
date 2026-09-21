@@ -143,8 +143,67 @@ def main() -> int:
         params = base_params()
         params["locality_quarter_id"] = row["id"]
         ask(session, f"{row['label']} (id={row['id']})", params)
+
+    print("\n" + "=" * 72)
+    print("4. Co posila web sreality sam")
+    print("=" * 72)
+    probe_site(session)
     return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# --- round three: ask the website what IT sends ------------------------------
+#
+# Two rounds of guessing parameter names have now failed with ids that came
+# from sreality itself, which narrows it to "the name is something else" or
+# "the v1 search API cannot do this at all". Guessing a third time is not a
+# method. The site is a Next.js app, so its own search page carries the query
+# it issued in an embedded __NEXT_DATA__ blob - that is the answer, stated by
+# the only party that knows it.
+
+SITE_SEARCH_URLS = [
+    "https://www.sreality.cz/hledani/prodej/byty/praha-10",
+    "https://www.sreality.cz/hledani/prodej/byty/praha,praha-10",
+    "https://www.sreality.cz/hledani/prodej/byty/praha/praha-10",
+    "https://www.sreality.cz/hledani/prodej/byty/hostivar",
+]
+
+NEXT_DATA_RE = __import__("re").compile(
+    r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
+    __import__("re").S)
+
+
+def probe_site(session) -> None:
+    import re as _re
+    for url in SITE_SEARCH_URLS:
+        print(f"\n--- {url}")
+        try:
+            html = net.fetch_text(session, url)
+        except Exception as exc:  # noqa: BLE001
+            print(f"    selhalo: {str(exc)[:110]}")
+            continue
+        print(f"    HTML {len(html)} znaku")
+        match = NEXT_DATA_RE.search(html)
+        if match:
+            blob = match.group(1)
+            print(f"    __NEXT_DATA__ {len(blob)} znaku")
+            # Anything that looks like a locality filter, with its value.
+            hits = sorted(set(_re.findall(
+                r'"(locality[A-Za-z_]*|[a-z_]*quarter[a-z_]*|[a-z_]*ward[a-z_]*)"'
+                r'\s*:\s*("?[^,"}\]]{0,40}"?)', blob)))
+            for key, value in hits[:25]:
+                print(f"       {key} = {value}")
+            if not hits:
+                print("       zadny locality/quarter/ward klic")
+        else:
+            # Not a Next.js page, or rendered server-side: fall back to any
+            # search-API URL quoted anywhere in the markup.
+            calls = sorted(set(_re.findall(
+                r'/api/v1/estates/search\?[^"\'\\ ]{0,240}', html)))
+            print(f"    __NEXT_DATA__ nenalezen; volani API v HTML: {len(calls)}")
+            for call in calls[:5]:
+                print(f"       {call}")
+        net.polite_sleep()
