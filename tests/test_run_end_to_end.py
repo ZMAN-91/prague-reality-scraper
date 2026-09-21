@@ -431,3 +431,64 @@ def test_priority_zone_survives_a_second_run(no_sleep, paths):
 
     do_run(fake, data_dir, logs_dir)
     assert read_csv_rows(data_dir / "listings.csv")[0]["priority_zone"] == "True"
+
+
+# --- house numbers, on the way through --------------------------------------
+
+
+def test_a_scrape_run_gives_a_new_listing_its_house_number(
+        no_sleep, paths, tmp_path):
+    """The wiring, not the matcher.
+
+    fill_house_numbers can be perfectly correct and never called, and the
+    whole feature would then do nothing between monthly index builds while
+    every one of its own tests still passed. That is exactly what the first
+    version did.
+    """
+    from tools import build_ruian_index
+
+    data_dir, logs_dir = paths
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    # One address point, on the street and at the coordinate the fake
+    # sreality listing reports.
+    build_ruian_index.write_index([{
+        "kod_adm": "12345678",
+        "ulice": "nurniho",
+        "ulice_original": "Nurniho",
+        "cislo_domovni": "1481",
+        "typ_cisla": "č.p.",
+        "cislo_orientacni": "6",
+        "znak_orientacniho": "",
+        "mestska_cast": "Praha 4",
+        "obvod": "Praha 4",
+        "cast_obce": "Spořilov",
+        "psc": "14100",
+        "lat": f"{NURMIHO_LAT:.6f}",
+        "lon": f"{NURMIHO_LON:.6f}",
+    }], str(data_dir / "ruian_praha.csv.gz"))
+
+    fake = FakeSreality(present=[900001])
+    do_run(fake, data_dir, logs_dir)
+
+    rows = read_csv_rows(data_dir / "listings.csv")
+    assert rows, "the run collected nothing, so this proves nothing"
+    row = rows[0]
+    assert row["cislo_popisne"] == "1481", row
+    assert row["cislo_orientacni"] == "6"
+    assert row["cislo_typ"] == "č.p."
+    assert row["cislo_zdroj"] == "ruian"
+    assert float(row["cislo_vzdalenost_m"]) < 1.0
+
+
+def test_a_scrape_run_without_an_index_still_collects(no_sleep, paths):
+    """The index is built by a separate monthly workflow. A scrape that runs
+    before the first build - or while that build is failing - must still
+    write its listings."""
+    data_dir, logs_dir = paths
+    fake = FakeSreality(present=[900002])
+    assert do_run(fake, data_dir, logs_dir) == 0
+
+    rows = read_csv_rows(data_dir / "listings.csv")
+    assert len(rows) == 1
+    assert rows[0]["cislo_zdroj"] == ""

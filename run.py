@@ -732,6 +732,41 @@ DEFAULT_TRANSACTIONS = ("prodej",)
 IDNES_PAGES_PER_RUN = 400
 
 
+def fill_house_numbers(listings: dict, data_dir) -> int:
+    """Match rows that have no house number yet against the address index.
+
+    Returns how many gained one. Zero when the index is not there at all,
+    which is not an error: the index is built monthly by a separate workflow
+    and a scrape run that predates the first build must still collect.
+
+    The index costs about 1.2 seconds and 180 MB to load, and is not touched
+    at all when nothing needs it, so an hour that brings no new listings pays
+    none of that.
+    """
+    wanted = [row for row in listings.values()
+              if not row.get("cislo_zdroj")
+              and row.get("lat") and row.get("lon") and row.get("ulice")]
+    if not wanted:
+        return 0
+
+    index_path = Path(data_dir) / "ruian_praha.csv.gz"
+    if not index_path.exists():
+        return 0
+
+    index = ruian.Index.load(str(index_path))
+    filled = 0
+    for row in wanted:
+        try:
+            lat, lon = float(row["lat"]), float(row["lon"])
+        except (TypeError, ValueError):
+            continue
+        match = index.match(lat, lon, row["ulice"])
+        if match:
+            row.update(match)
+            filled += 1
+    return filled
+
+
 def run(
     sources: list[str],
     data_dir: Path,
@@ -899,6 +934,18 @@ def run(
     # flat: an iDNES row with no coordinates can take them from the sreality
     # row beside it.
     run_stats["gps_lent_within_clusters"] = coords.lend_within_clusters(listings)
+
+    # House numbers, for rows that do not have one yet.
+    #
+    # After the GPS lending above, deliberately: a row that has just borrowed
+    # coordinates from its cluster becomes matchable in the same pass rather
+    # than waiting a month for the next index build.
+    #
+    # Only rows without a number, which is what makes this affordable hourly.
+    # The monthly build re-does all of them, because that is when the index
+    # changes underneath; here the index is fixed, so re-matching a row that
+    # already has an answer would spend time to reach the same one.
+    run_stats["cislo_matched"] = fill_house_numbers(listings, data_dir)
 
     storage.write_listings(listings, listings_path)
     progress_state.write(listings_path.parent, progress)
