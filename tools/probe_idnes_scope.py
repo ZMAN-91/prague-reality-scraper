@@ -38,10 +38,25 @@ CANDIDATES = [
     ("katastr", f"{BASE}/s/prodej/byty/hostivar/"),
     ("obvod + ulice (tvar z detail URL)", f"{BASE}/s/prodej/byty/praha-15-honzikova/"),
     ("dotaz v query", f"{BASE}/s/prodej/byty/praha/?s-qc%5BlocalityId%5D=hostivar"),
+    # A second and third borough, because one page of one borough could look
+    # filtered by chance, and a borough on the other side of the city cannot.
+    ("obvod (Praha 6)", f"{BASE}/s/prodej/byty/praha-6/"),
+    ("obvod (Praha 9)", f"{BASE}/s/prodej/byty/praha-9/"),
+    ("obvod, druha strana", f"{BASE}/s/prodej/byty/praha-10/?page=2"),
+    ("obvod, pronajmy", f"{BASE}/s/pronajem/byty/praha-10/"),
 ]
 
 DETAIL_LOCALITY_RE = re.compile(
     r"reality\.idnes\.cz/detail/(?:prodej|pronajem)/(?:byt|dum)/([^/]+)/")
+
+
+BOROUGH_RE = re.compile(r"^(praha-\d+)")
+
+
+def borough_of(slug: str) -> str:
+    """"praha-15-bolonska" -> "praha-15". The slug's coarse half."""
+    match = BOROUGH_RE.match(slug or "")
+    return match.group(1) if match else (slug or "?")
 
 
 def localities(html: str) -> Counter:
@@ -67,8 +82,16 @@ def probe(session, label: str, url: str) -> dict:
           + (f"  -> redirected to {response.url}" if response.url != url else ""))
     print(f"    inzeratu na strance: {listings}")
     print(f"    ruznych lokalit mezi nimi: {len(slugs)}")
-    for slug, count in slugs.most_common(8):
+    # Every one of them, not the top few: the question is what the SPREAD is,
+    # and a truncated list cannot answer it. Counting distinct localities is
+    # no answer either - a working borough filter still returns one locality
+    # per street, so "24 localities" says nothing about whether the filter
+    # bit. What says it is which boroughs they belong to.
+    for slug, count in sorted(slugs.items()):
         print(f"       {slug:<44} {count}")
+    boroughs = Counter(borough_of(slug) for slug in slugs.elements())
+    print(f"    podle obvodu: "
+          + ", ".join(f"{b}={n}" for b, n in boroughs.most_common()))
     net.polite_sleep()
     return {"label": label, "url": url, "status": response.status_code,
             "final_url": response.url, "listings": listings, "slugs": slugs}
@@ -82,22 +105,26 @@ def main() -> int:
     print("ZAVER")
     print("=" * 72)
     control = results[0]
-    control_slugs = control.get("slugs") or Counter()
+    control_boroughs = Counter(
+        borough_of(s) for s in (control.get("slugs") or Counter()).elements())
+    print(f"  kontrola: {len(control_boroughs)} obvodu, "
+          + ", ".join(f"{b}={n}" for b, n in control_boroughs.most_common()))
     for result in results[1:]:
         label = result["label"]
         if not result.get("slugs"):
             print(f"  {label:<38} nepouzitelne "
                   f"({result.get('status') or result.get('error') or 'robots'})")
             continue
-        slugs = result["slugs"]
-        # A locality filter that works returns listings from that locality.
-        # One that is ignored returns the same spread the control does.
-        shared = sum((slugs & control_slugs).values())
-        overlap = shared / max(sum(slugs.values()), 1)
-        verdict = ("FILTRUJE" if len(slugs) <= 3 and overlap < 0.9
-                   else "ignoruje filtr (vraci celou Prahu)")
+        boroughs = Counter(borough_of(s) for s in result["slugs"].elements())
+        total = max(sum(boroughs.values()), 1)
+        # The verdict is the spread of BOROUGHS, against the control's. A
+        # filter that bit returns a handful of adjacent ones; one that was
+        # ignored returns as many as the unfiltered page did.
+        verdict = ("FILTRUJE" if len(boroughs) <= max(3, len(control_boroughs) // 2)
+                   else "ignoruje filtr")
         print(f"  {label:<38} HTTP {result['status']}  "
-              f"lokalit={len(slugs):<4} {verdict}")
+              f"obvodu={len(boroughs):<3} ({total} inzeratu)  {verdict}")
+        print(f"      {', '.join(f'{b}={n}' for b, n in boroughs.most_common())}")
     return 0
 
 
