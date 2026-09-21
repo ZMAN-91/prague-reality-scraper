@@ -54,12 +54,30 @@ from scrapers.idnes import SEARCH_URLS as SEARCH_SCOPES
 # suspicious (almost certainly a broken request, not a real market crash),
 # and we skip absence-marking for it this run rather than trust the data.
 # See README "Ochrana proti falešnému hromadnému smazání".
+# How much of Prague one run covers.
+#
+#   city  every listing the sources publish for Prague. Absence marking is
+#         only meaningful here: it concludes that what was not seen is gone,
+#         and that conclusion needs the walk to have covered the population
+#         it is judging.
+#   area  only the districts holding the watched belt. Cheap enough to run
+#         every hour, and it is the nightly city pass that keeps it honest -
+#         anything the narrow walk misses arrives within the day.
+#
+# bezrealitky has no locality filter worth the name - its sitemap slugs carry
+# a district for 47 of 1751 listings - so it walks the whole of Prague under
+# either scope. That costs little: the sitemap is a handful of files and the
+# details it fetches are the ones that changed.
+SCOPE_CITY = "city"
+SCOPE_AREA = "area"
+
 SUSPICIOUS_DROP_MIN_PREV_COUNT = 20
 SUSPICIOUS_DROP_RATIO = 0.5
 
 
 def fetch_sreality(session, listings: dict, budget: Budget, now=None,
-                   transactions=None) -> tuple[list, list, list[str], set]:
+                   transactions=None, scope: str = SCOPE_CITY
+                   ) -> tuple[list, list, list[str], set]:
     """Enrich only what the index walk could not already answer.
 
     sreality's index rows usually carry GPS, area and disposition outright,
@@ -73,7 +91,8 @@ def fetch_sreality(session, listings: dict, budget: Budget, now=None,
     """
     known_ids = {row["source_id"] for row in listings.values() if row["source"] == sreality.SOURCE_NAME}
     normalized, raw_pages, errors, completed_scopes = sreality.fetch_all(
-        session, budget, transactions=transactions
+        session, budget, transactions=transactions,
+        districts=sreality.AREA_DISTRICT_IDS if scope == SCOPE_AREA else None,
     )
 
     # sreality is collected for one patch of south-east Prague, not for the
@@ -219,7 +238,8 @@ def days_absent(row: dict, now_iso: str):
 
 
 def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
-                      transactions=None) -> tuple[list, list, list[str], set]:
+                      transactions=None, scope: str = SCOPE_CITY
+                      ) -> tuple[list, list, list[str], set]:
     """bezrealitky is collected through its published sitemap and the
     listing pages its robots.txt permits (see scrapers/bezrealitky.py), so
     every listing costs one request. The run budget therefore caps how many
@@ -255,7 +275,8 @@ def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
 
 
 def fetch_idnes(session, listings: dict, budget: Budget, now=None,
-                transactions=None, progress: Optional[dict] = None):
+                transactions=None, progress: Optional[dict] = None,
+                scope: str = SCOPE_CITY):
     """Reality.iDNES.cz: Prague flats, newest first, then the watched area,
     then as much of the index rotation as the hour allows.
 
@@ -303,6 +324,7 @@ def fetch_idnes(session, listings: dict, budget: Budget, now=None,
         # gone be recognised as gone.
         max_pages=IDNES_PAGES_PER_RUN,
         transactions=transactions,
+        branches=idnes.AREA_BRANCHES if scope == SCOPE_AREA else None,
     )
     # A scope that finished its pass this run gets judged against the day its
     # pass began, and then starts a new pass from today.
@@ -713,8 +735,11 @@ def run(
     max_new_details: Optional[int] = None,
     transactions: Optional[list] = None,
     now: Optional[datetime] = None,
+    scope: str = SCOPE_CITY,
 ) -> int:
     transactions = list(transactions or DEFAULT_TRANSACTIONS)
+    if scope not in (SCOPE_CITY, SCOPE_AREA):
+        raise ValueError(f"unknown scope {scope!r}")
     raw_dir = data_dir / "raw"
     listings_path = data_dir / "listings.csv"
     observations_dir = data_dir / "observations"
@@ -763,11 +788,12 @@ def run(
                 # These return one extra value: over what window absence may
                 # be judged, because their sweep spans several runs.
                 normalized, raw_pages, errors, completed_scopes, absence_since = fetcher(
-                    session, listings, budget, now, transactions, progress
+                    session, listings, budget, now, transactions, progress,
+                    scope=scope,
                 )
             else:
                 normalized, raw_pages, errors, completed_scopes = fetcher(
-                    session, listings, budget, now, transactions
+                    session, listings, budget, now, transactions, scope=scope,
                 )
         except Exception:
             # Last-resort safety net: even a bug we didn't anticipate in a
@@ -944,6 +970,20 @@ def main() -> int:
             "rent runs weekly and covers the whole of Prague."
         ),
     )
+    parser.add_argument(
+        "--scope",
+        choices=(SCOPE_CITY, SCOPE_AREA),
+        default=SCOPE_CITY,
+        help=(
+            "how much of Prague to walk. 'city' is every listing the sources "
+            "publish and is the only scope in which absence marking is "
+            "meaningful - it concludes that what was not seen is gone. "
+            "'area' walks only the districts holding the watched belt "
+            "(Praha 4 and Praha 10 on both sreality and iDNES), which is "
+            "cheap enough to run hourly; the nightly city pass is what keeps "
+            "it honest."
+        ),
+    )
     parser.add_argument("--data-dir", default=str(storage.DATA_DIR), help="override data/ directory (mainly for tests)")
     parser.add_argument("--logs-dir", default=str(storage.LOGS_DIR), help="override logs/ directory (mainly for tests)")
     parser.add_argument(
@@ -975,6 +1015,7 @@ def main() -> int:
         max_seconds=args.max_seconds,
         max_new_details=args.max_new_details,
         transactions=parse_transactions(args.transactions),
+        scope=args.scope,
     )
 
 

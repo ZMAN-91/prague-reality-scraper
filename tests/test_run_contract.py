@@ -73,7 +73,8 @@ def test_the_resumable_dispatch_actually_passes_progress_through(stubbed_scraper
 
     seen = {}
 
-    def spy(session, listings, budget, now=None, transactions=None, progress=None):
+    def spy(session, listings, budget, now=None, transactions=None,
+            progress=None, scope=None):
         seen["progress"] = progress
         seen["transactions"] = transactions
         return [], [], [], set(), None
@@ -122,3 +123,102 @@ def test_a_crashing_source_does_not_take_the_others_down(tmp_path):
 
     assert exit_code == 1, "a crash must still be reported as a failure"
     assert (tmp_path / "data" / "listings.csv").exists(), "whatever was collected must still be written"
+
+
+def test_the_dispatch_passes_the_scope_to_every_fetcher(stubbed_scrapers, tmp_path):
+    """Same failure mode as the progress cursor, one level worse.
+
+    A scope that never reaches the fetcher means the hourly pass silently
+    walks the whole of Prague - no error, no log line, just twenty times the
+    requests and a city-wide walk that then reports its scopes complete.
+    """
+    seen = {}
+
+    def spy(session, listings, budget, now=None, transactions=None, scope=None):
+        seen["scope"] = scope
+        return [], [], [], set()
+
+    original = dict(run_module.SOURCE_FETCHERS)
+    run_module.SOURCE_FETCHERS["sreality"] = spy
+    try:
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        run_module.run(["sreality"], data_dir, tmp_path / "logs",
+                       scope=run_module.SCOPE_AREA)
+    finally:
+        run_module.SOURCE_FETCHERS.clear()
+        run_module.SOURCE_FETCHERS.update(original)
+
+    assert seen["scope"] == run_module.SCOPE_AREA
+
+
+def test_an_unknown_scope_is_refused_rather_than_ignored(tmp_path):
+    """Silently falling back to "city" would turn a typo in a workflow into
+    twenty city-wide walks a day."""
+    import pytest
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    with pytest.raises(ValueError):
+        run_module.run([], data_dir, tmp_path / "logs", scope="oblast")
+
+
+def test_an_area_run_actually_narrows_both_index_walks(stubbed_scrapers, tmp_path, monkeypatch):
+    """Passing the scope down is not the same as acting on it.
+
+    A mutation that dropped `branches=` from the iDNES call passed every
+    other test in this file: the scope still reached the fetcher, it was just
+    never used. What the hourly pass would have done is walk the whole city
+    while reporting itself as an area run - and then, because a whole-city
+    walk marks its scopes complete, start absence-marking from a narrowed
+    population.
+    """
+    from scrapers import idnes, sreality
+
+    asked = {}
+
+    def idnes_spy(session, budget=None, **kwargs):
+        asked["branches"] = kwargs.get("branches")
+        return [], [], [], set(), 0, {}
+
+    def sreality_spy(session, budget=None, **kwargs):
+        asked["districts"] = kwargs.get("districts")
+        return [], [], [], set()
+
+    monkeypatch.setattr(idnes, "fetch_all", idnes_spy)
+    monkeypatch.setattr(sreality, "fetch_all", sreality_spy)
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    run_module.run(["sreality", "idnes"], data_dir, tmp_path / "logs",
+                   scope=run_module.SCOPE_AREA)
+
+    assert asked["branches"] == idnes.AREA_BRANCHES, asked
+    assert asked["districts"] == sreality.AREA_DISTRICT_IDS, asked
+
+
+def test_a_city_run_narrows_neither(stubbed_scrapers, tmp_path, monkeypatch):
+    """And the nightly pass must ask for everything, or nothing outside the
+    two districts is ever seen again."""
+    from scrapers import idnes, sreality
+
+    asked = {}
+
+    def idnes_spy(session, budget=None, **kwargs):
+        asked["branches"] = kwargs.get("branches")
+        return [], [], [], set(), 0, {}
+
+    def sreality_spy(session, budget=None, **kwargs):
+        asked["districts"] = kwargs.get("districts")
+        return [], [], [], set()
+
+    monkeypatch.setattr(idnes, "fetch_all", idnes_spy)
+    monkeypatch.setattr(sreality, "fetch_all", sreality_spy)
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    run_module.run(["sreality", "idnes"], data_dir, tmp_path / "logs",
+                   scope=run_module.SCOPE_CITY)
+
+    assert asked["branches"] is None, asked
+    assert asked["districts"] is None, asked
