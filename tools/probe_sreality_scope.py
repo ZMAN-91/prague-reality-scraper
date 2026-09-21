@@ -151,8 +151,6 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
-    sys.exit(main())
 
 
 # --- round three: ask the website what IT sends ------------------------------
@@ -207,3 +205,7 @@ def probe_site(session) -> None:
             for call in calls[:5]:
                 print(f"       {call}")
         net.polite_sleep()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

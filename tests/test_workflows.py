@@ -697,3 +697,23 @@ def test_the_rent_detail_cap_fits_inside_the_fetching_budget():
         f"{cap} details plus a {sweep_seconds}s sweep leaves nothing spare "
         f"in a {budget}s budget"
     )
+
+
+def test_probe_entry_points_come_after_everything_they_call():
+    """A probe that appends a helper after `if __name__ == "__main__"` runs
+    main() before the helper exists, and dies with NameError halfway through
+    a run that has already spent its requests. Happened once."""
+    import ast
+    from pathlib import Path
+
+    tools = Path(__file__).resolve().parent.parent / "tools"
+    for path in sorted(tools.glob("probe_*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        guards = [i for i, node in enumerate(tree.body)
+                  if isinstance(node, ast.If) and ast.unparse(node.test).startswith("__name__")]
+        if not guards:
+            continue
+        assert guards[0] == len(tree.body) - 1, (
+            f"{path.name}: code follows the __main__ guard, so it is not "
+            "defined when main() runs"
+        )
