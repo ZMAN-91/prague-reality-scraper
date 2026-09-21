@@ -289,6 +289,18 @@ jobs:
           DATA_ROOT: store
         run: bash tools/commit_data.sh "claude/real-estate-market-scraper-1tgiei" "Nightly city scrape"
 
+      - name: Check the dataset's quality has not collapsed
+        # AFTER the commit, deliberately. A quality fault is a reason to look
+        # at the data, never a reason to lose the night's collection - and a
+        # step that fails before the commit takes the data with it.
+        #
+        # The district cross-check is the one that matters here: a broken
+        # coordinate conversion would still produce matches, still with
+        # plausible distances, and would look entirely normal everywhere
+        # else. It used to report into this log and be read by nobody.
+        run: |
+          python -m tools.quality --data-dir store/data --record
+
       - name: Check the collection's health
         # Runs even when the scrape failed: a failed run still has something
         # to say about how long the silence before it was. Its own exit code

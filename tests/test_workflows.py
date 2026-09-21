@@ -889,3 +889,39 @@ def test_the_archive_is_taken_after_the_re_examination():
     assert max(report_hours) < min(backup_hours), (
         f"report at {report_hours} does not finish before backup at "
         f"{backup_hours}")
+
+
+def test_the_quality_check_runs_and_can_fail_the_job():
+    """The district cross-check reported into a log nobody read. It exists to
+    catch a broken coordinate conversion, which would still produce matches
+    with plausible distances and look normal everywhere else."""
+    for path in (NIGHT, REPORT):
+        steps = load(path)["jobs"]["report" if path is REPORT else "scrape"]["steps"]
+        checks = [s for s in steps if "tools.quality" in s.get("run", "")]
+        assert checks, f"{path.name} does not check quality"
+        assert checks[0].get("continue-on-error") is not True, (
+            f"{path.name}: a quality fault that cannot fail the job is a "
+            "number printed into a log again")
+
+
+def test_the_quality_check_comes_after_the_data_is_committed():
+    """A fault is a reason to look at the data, never a reason to lose the
+    night's collection."""
+    steps = load(NIGHT)["jobs"]["scrape"]["steps"]
+    runs = [s.get("run", "") for s in steps]
+    commit_at = next(i for i, r in enumerate(runs) if "commit_data.sh" in r)
+    check_at = next(i for i, r in enumerate(runs) if "tools.quality" in r)
+    assert commit_at < check_at, (
+        "the quality check runs before the commit, so a fault would discard "
+        "the data it is complaining about")
+
+
+def test_only_the_daily_run_records_a_quality_point():
+    """Two points for one day would make the median it is compared against
+    depend on how many workflows happened to run."""
+    night = " ".join(s.get("run", "")
+                     for s in load(NIGHT)["jobs"]["scrape"]["steps"])
+    weekly = " ".join(s.get("run", "")
+                      for s in load(REPORT)["jobs"]["report"]["steps"])
+    assert "tools.quality --data-dir store/data --record" in night
+    assert "--record" not in weekly.split("tools.quality")[1][:60]
