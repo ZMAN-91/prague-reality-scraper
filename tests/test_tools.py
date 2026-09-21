@@ -369,3 +369,44 @@ def test_registrable_domain_lets_the_crawl_reach_a_portals_sibling_host():
     assert _registrable_domain("https://www.bezrealitky.cz/informace") == "bezrealitky.cz"
     assert _registrable_domain("https://o-seznam.cz/napoveda") == "o-seznam.cz"
     assert _registrable_domain("https://www.sreality.cz/") != _registrable_domain("https://o-seznam.cz/")
+
+
+# --- what the browsing views show ------------------------------------------
+
+def test_the_views_do_not_carry_the_raw_address():
+    """`address` is whichever shape the portal used - "Ke Slatinam, Dolni
+    Mecholupy, Praha" next to "Rohacova, Praha 3 - Zizkov" - so a column of
+    them sorts by the portal rather than by the street. The parsed fields are
+    what a person reads."""
+    from tools.export_csv import VIEW_FIELDS
+    assert "address" not in VIEW_FIELDS
+    for field in ("ulice", "cislo_popisne", "mestska_cast"):
+        assert field in VIEW_FIELDS, field
+
+
+def test_the_raw_address_is_still_kept_in_the_record():
+    """Removing it from the record would break cross-source matching:
+    dedup.py reads it through street_key() and locality_tokens(), and it is
+    the evidence ulice / mestska_cast / obec are parsed from. A view is a
+    view; the record has to keep its evidence."""
+    from common.schema import LISTING_FIELDS
+    assert "address" in LISTING_FIELDS
+
+    import inspect
+    from common import dedup
+    source = inspect.getsource(dedup)
+    assert 'get("address")' in source, (
+        "dedup no longer reads the raw address; if that is deliberate this "
+        "test should go, but it must be deliberate")
+
+
+def test_a_house_number_never_appears_in_a_view_without_its_caveats():
+    """The number is inferred from the address register, not published by any
+    portal. Shown alone it reads as something the advert said."""
+    from tools.export_csv import VIEW_FIELDS
+    from common import ruian
+    assert "cislo_popisne" in VIEW_FIELDS
+    for field in ruian.MATCH_FIELDS:
+        assert field in VIEW_FIELDS, (
+            f"{field} is missing from the view, so the house number is shown "
+            "with less than it needs to be read honestly")

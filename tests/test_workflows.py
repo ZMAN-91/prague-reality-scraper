@@ -743,12 +743,56 @@ def test_the_nightly_pass_collects_both_transactions():
     assert set(default.split(",")) == {"prodej", "pronajem"}
 
 
-def test_the_nightly_pass_leaves_sreality_alone():
-    """sreality's robots.txt disallows everything, so this project's traffic
-    there stays as small as the question allows: the hourly pass reads it
-    narrowed to two districts, and nothing walks it city-wide."""
+def test_the_nightly_pass_does_not_collect_sreality():
+    """sreality's robots.txt disallows everything, so the traffic sent there
+    stays as small as the question allows. This pass collects iDNES and
+    bezrealitky city-wide and does not collect sreality at all.
+
+    It does now READ sreality's index once, as a coordinate donor - see the
+    test below. That is a deliberate change from the original rule that
+    nothing walks it city-wide, and it is a change of about 25 requests a day
+    against the ~840 the hourly area passes already make, on the cheapest
+    path the API offers. What has not changed is that no sreality advert is
+    stored by this pass."""
     default = inputs_of(load(NIGHT))["sources"]["default"]
     assert "sreality" not in default, default
+
+
+def test_the_nightly_pass_borrows_coordinates_and_then_uses_them():
+    """iDNES publishes no coordinates and is 64% of the dataset. Borrowing
+    one and not filling the house number would leave the work half done, and
+    the workflow green either way."""
+    steps = load(NIGHT)["jobs"]["scrape"]["steps"]
+    runs = [s.get("run", "") for s in steps]
+    joined = " ".join(runs)
+    assert "tools.lend_gps_from_sreality" in joined
+    assert "tools.backfill_cislo" in joined
+
+    lend_at = next(i for i, r in enumerate(runs)
+                   if "lend_gps_from_sreality" in r)
+    fill_at = next(i for i, r in enumerate(runs) if "backfill_cislo" in r)
+    scrape_at = next(i for i, s in enumerate(steps) if s.get("id") == "scrape")
+    assert scrape_at < lend_at < fill_at, (
+        "the order has to be collect, then borrow, then number: reversed, a "
+        "listing found tonight waits a day for its coordinate and another "
+        "for its number")
+
+    # Both tools default to a dry run. Without --apply each prints a report,
+    # writes nothing, exits zero, and the workflow stays green while doing
+    # precisely nothing - which is the most expensive kind of success.
+    assert "--apply" in runs[lend_at], runs[lend_at]
+    assert "--apply" in runs[fill_at], runs[fill_at]
+
+
+def test_borrowing_coordinates_overrides_robots_for_the_same_one_host():
+    """The step reaches sreality, so it needs the project's single override -
+    and must not widen it."""
+    steps = load(NIGHT)["jobs"]["scrape"]["steps"]
+    step = next(s for s in steps
+                if "lend_gps_from_sreality" in s.get("run", ""))
+    hosts = (step.get("env") or {}).get("SCRAPER_ROBOTS_OVERRIDE_HOSTS")
+    assert hosts == "www.sreality.cz", (
+        f"the donor step's robots override is {hosts!r}")
 
 
 def test_a_nightly_pass_finishes_before_the_morning():

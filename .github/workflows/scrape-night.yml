@@ -236,6 +236,40 @@ jobs:
             --data-dir store/data \
             --logs-dir store/logs
 
+      - name: Borrow coordinates for iDNES listings from sreality
+        # iDNES publishes no coordinates anywhere, and it is 64% of
+        # everything collected. Without one a listing gets no house number,
+        # no priority zone and no place on a map.
+        #
+        # sreality's search index carries them on every row, so this walks
+        # Prague's index - about 25 requests at 500 rows a page, no detail
+        # pages at all - and lends a coordinate to any iDNES row it can match
+        # to the same flat. The adverts it reads are used and dropped, never
+        # stored: sreality is collected for the watched area deliberately,
+        # and storing a city's worth here would hand absence-marking a
+        # population nothing ever walked.
+        #
+        # Daily, here, because this is the pass that has just collected the
+        # night's new iDNES listings - so they are given coordinates in the
+        # same morning rather than waiting for the next one.
+        continue-on-error: true
+        env:
+          # Same single override as the scrape step above, for the same
+          # single host, and for a smaller footprint than one hourly pass:
+          # ~25 requests a day against the ~840 the hourly area passes
+          # already make. See tools/lend_gps_from_sreality.py.
+          SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
+        run: |
+          python -m tools.lend_gps_from_sreality \
+            --data-dir store/data --apply
+
+      - name: Fill house numbers for whatever just gained coordinates
+        # A borrowed coordinate is only worth having if it is used. The
+        # matcher is local and re-runnable, so this costs a second.
+        continue-on-error: true
+        run: |
+          python -m tools.backfill_cislo --data-dir store/data --apply
+
       - name: Export human-readable CSV views
         # Cheap, offline, and makes the dataset browsable straight from the
         # repo without loading the full listings.csv.

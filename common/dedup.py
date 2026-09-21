@@ -654,3 +654,42 @@ def find_relist_candidate(
             best_id = row.get("internal_id")
 
     return best_id
+
+
+# --- matching against adverts that are not in the dataset -------------------
+
+#: Confidence tiers, weakest first, for ranking candidate matches.
+CONFIDENCE_ORDER = ("medium", "high", "exact")
+
+
+def best_match(row: dict, candidates, require_time_overlap: bool = True):
+    """The single best candidate for `row`, or None.
+
+    Public on purpose. tools/lend_gps_from_sreality.py matches listings
+    against sreality adverts that are NOT stored in the dataset, and it has
+    to decide "same flat" exactly the way clustering does. A second notion of
+    sameness living in a tool is how two answers to one question appear, and
+    the weaker one always wins by being newer.
+
+    Returns (candidate, confidence) for the strongest match. When several
+    candidates tie at the top tier it returns None instead of picking one:
+    the whole point of the caller is to copy a coordinate across, and
+    choosing arbitrarily between two equally good flats would copy the wrong
+    one silently. An ambiguous answer is not a weak answer, it is no answer.
+    """
+    scored = []
+    for candidate in candidates:
+        confidence = _match_confidence(
+            row, candidate, require_time_overlap=require_time_overlap)
+        if confidence:
+            scored.append((CONFIDENCE_ORDER.index(confidence), confidence,
+                           candidate))
+    if not scored:
+        return None
+
+    best_rank = max(rank for rank, _, _ in scored)
+    top = [(conf, cand) for rank, conf, cand in scored if rank == best_rank]
+    if len(top) > 1:
+        return None
+    confidence, candidate = top[0]
+    return candidate, confidence

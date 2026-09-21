@@ -47,9 +47,21 @@ VIEW_FIELDS = [
     "price",
     "price_per_m2",
     "floor",
-    "address",
+    # No `address` here on purpose. It stays in listings.csv - dedup.py
+    # matches on it in four places, and it is the evidence ulice /
+    # mestska_cast / obec are parsed from - but it is not what a person
+    # reads: it is whichever shape the portal happened to use, so a column
+    # of them sorts by the portal rather than by the street.
     "ulice",
     "cislo_popisne",
+    # These travel WITH the number, always. cislo_popisne is inferred from
+    # the address register, not published by any portal, and a column of
+    # house numbers with nothing beside it reads as fact. See common/ruian.py.
+    "cislo_orientacni",
+    "cislo_typ",
+    "cislo_zdroj",
+    "cislo_vzdalenost_m",
+    "cislo_kandidatu",
     "mestska_cast",
     "obec",
     "priority_zone",
