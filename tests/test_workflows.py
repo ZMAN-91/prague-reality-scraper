@@ -358,23 +358,26 @@ def worst_finish(spec, job, weekday):
     return window(spec, weekday)[1] + 0.75 + spec["jobs"][job]["timeout-minutes"] / 60
 
 
-def test_the_backup_only_ever_attempts_on_sunday():
-    """How MANY times it runs is the due job's business now - it asks the
-    releases whether the week is already archived. What the schedule still
-    owns is which day the attempts land on."""
-    days = {d for d in range(7) for h in range(24) if fires_at(load(BACKUP), d, h)}
-    assert days == {0}, days
+def test_the_backup_only_attempts_on_monday_and_its_retry_day():
+    """How MANY times it runs is the due job's business - it asks whether the
+    week's tag already holds an archive. What the schedule owns is which days
+    the attempts land on: Monday, and Tuesday when Monday produced nothing.
 
-def test_the_backup_waits_for_the_rent_pass_to_be_over():
-    """Derived from rent's own budget rather than asserted as a magic hour:
-    if someone lengthens the rent window, this fails instead of quietly
-    archiving a week that is missing its rent data."""
-    rent_latest_end = worst_finish(load(RENT), "scrape", 0) * 60
-    backup_starts = window(load(BACKUP), 0)[0] * 60
-    assert backup_starts > rent_latest_end, (
-        "the backup can start before the rent run's worst case has finished, "
-        "so a week's rent data could miss the archive"
-    )
+    Never Sunday. The archive is named for the week it holds, so taken on a
+    Sunday it would hold a week with hours left in it and never revisit the
+    tag.
+    """
+    days = {d for d in range(7) for h in range(24) if fires_at(load(BACKUP), d, h)}
+    assert days == {1, 2}, days
+
+def test_the_backup_runs_after_the_report_that_week():
+    """The archive carries reports/, so one taken before the report holds
+    every week's page except the one it is named after - and that is the week
+    a restore of it would most want.
+    """
+    report_hours = [h for h in range(24) if fires_at(load(REPORT), 1, h)]
+    backup_hours = [h for h in range(24) if fires_at(load(BACKUP), 1, h)]
+    assert min(backup_hours) > max(report_hours), (report_hours, backup_hours)
 
 
 def test_the_backup_does_not_queue_behind_the_scrapers():
@@ -535,16 +538,16 @@ def test_the_report_rebuilds_the_whole_chain():
         assert step in body, f"{step} missing from the weekly rebuild"
 
 
-def test_the_report_runs_after_the_rent_pass_and_its_backup():
-    """Sunday's rent run and the backup that follows it are what make the
-    week complete; a report before them is a report about six days."""
+def test_the_report_waits_for_the_week_to_be_over():
+    """The dataset's days are Prague days, so a report at midnight Prague
+    would find Sunday still open and cover a week ending Saturday. 00:00 UTC
+    is 01:00 or 02:00 there - past the boundary in both halves of the year.
+    """
     days = {d for d in range(7) for h in range(24) if fires_at(load(REPORT), d, h)}
-    assert days == {1}, f"Monday, so Sunday's rent pass is already in it: {days}"
-    # The backup is Sunday and the report Monday, so the only way they could
-    # collide is a backup running past midnight.
-    assert worst_finish(load(BACKUP), "backup", 0) < 24, (
-        "the Sunday backup could still be running on Monday morning"
-    )
+    assert days == {1, 2}, days
+    hours = [h for h in range(24) if fires_at(load(REPORT), 1, h)]
+    for offset in (1, 2):
+        assert all((h + offset) % 24 >= 1 for h in hours), (offset, hours)
 
 
 def test_the_report_uses_the_dataset_checkout():

@@ -8,29 +8,23 @@ name: Weekly data backup
 
 on:
   schedule:
-    # Sunday 05:30 UTC = 07:30 Prague. Deliberately placed after the weekly
-    # rent pass, so the week's archive contains it: rent starts at 00:00 UTC
-    # with a four-hour budget and a 4h40m job timeout, so 05:30 is clear of
-    # even its worst case plus the commit.
+    # Monday, with Tuesday as the retry - and both in the small hours, when
+    # the nightly city-wide pass has just finished and the dataset for the
+    # week is complete.
     #
-    # The hourly sale run resumes at 05:00 UTC and may well be running at the
-    # same moment. That is fine and is why this workflow does NOT join the
-    # scrape-data concurrency group: it only ever reads, from a checkout at
-    # one commit, so there is no file to race over. The archive records which
-    # commit it was taken from.
-    # Attempts across a window, not one shot: GitHub delivered 4 of ~150
-    # scheduled attempts over two days, and a weekly archive that depends
-    # on one of them is no archive at all. The due job below lets one
-    # through. Twenty-four attempts, because on 2026-09-20 the eight it had
-    # then got nothing at all - GitHub delivered none of them, and the only
-    # archive of the week was one run by hand.
+    # GitHub cron is UTC-only. 00:00 Monday UTC is 02:00 Prague in summer and
+    # 01:00 in winter, and either way it is the first moment the week is
+    # actually over: the dataset's days are Prague days, so a report at
+    # midnight Prague would find Sunday still open and cover a week ending
+    # Saturday. Two hours later costs nothing and gets the whole week.
     #
-    # 15:00, not 07:00: rent now has a fallback window at 10:00 for the
-    # Sunday its first one comes up empty, and a pass starting at 11:45 runs
-    # its 160-minute timeout to 14:25. An archive taken before that is an
-    # archive missing the week's rent data. The test below derives the bound
-    # from rent's own schedule rather than trusting this comment.
-    - cron: "*/15 15-20 * * 0"
+    # Tuesday is not a second edition. Both days ask for the week that ended
+    # on Sunday and write the same file, so Tuesday finishes Monday's job if
+    # Monday produced nothing and stops in seconds if it did.
+    #
+    # An hour after the report, because the archive carries reports/ - taken
+    # first it would hold every week's page except the one it is named after.
+    - cron: "*/15 1 * * 1,2"
   workflow_dispatch:
 
 # Only reads the repository; writes nothing back to the branch. The release

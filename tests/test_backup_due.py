@@ -15,78 +15,60 @@ import pytest
 SCRIPT = Path(__file__).resolve().parent.parent / "tools" / "backup_due.sh"
 
 
-def run(uploaded, today="2026-09-20", tag=None):
-    args = [str(SCRIPT), "--uploaded", uploaded, "--today", today]
-    if tag:
-        args += ["--tag", tag]
-    done = subprocess.run(args, capture_output=True, text=True,
-                          env={"PATH": "/usr/bin:/bin", "NOW": f"{today}T07:15:00Z"})
+def run(uploaded, now="2026-09-21T00:30:00Z"):
+    """The script, with the release's asset date supplied instead of fetched.
+
+    `now` is a Monday by default: the week that has ended is 2026-W38.
+    """
+    done = subprocess.run([str(SCRIPT), "--uploaded", uploaded],
+                          capture_output=True, text=True,
+                          env={"PATH": "/usr/bin:/bin", "NOW": now})
     assert done.returncode == 0, done.stderr
     return done.stdout.strip(), done.stderr.strip()
 
 
-def test_no_release_at_all_is_due():
+def test_no_archive_at_all_is_due():
     out, why = run("")
     assert out == "go=true"
     assert "holds no archive" in why
+
+
+def test_the_tag_names_the_week_that_ended_not_the_one_running():
+    """Monday starts a new ISO week. Tagging with it would name a week six
+    days of which have not happened, and the archive would claim to hold a
+    week it cannot have seen."""
+    _, why = run("")
+    assert "backup-2026-W38" in why, why
+
+
+def test_tuesday_names_the_same_week_as_monday():
+    """The retry has to finish Monday's job, not start a second archive one
+    week over."""
+    _, monday = run("")
+    _, tuesday = run("", now="2026-09-22T00:30:00Z")
+    assert "backup-2026-W38" in tuesday, tuesday
+    assert monday.split()[0] == tuesday.split()[0]
+
+
+def test_an_archive_under_this_weeks_tag_is_this_weeks_archive():
+    out, why = run("2026-09-21T00:45:00Z")
+    assert out == "go=false"
+    assert "already holds an archive" in why
+
+
+def test_tuesday_finds_mondays_archive_and_stops():
+    out, _ = run("2026-09-21T00:45:00Z", now="2026-09-22T00:30:00Z")
+    assert out == "go=false"
 
 
 def test_a_release_whose_upload_failed_is_due():
     """`gh release view --json assets` comes back empty for a release with no
     assets, which reads the same as no release - and should. A tag with no
     archive under it is not a backup."""
-    out, why = run("")
+    out, _ = run("")
     assert out == "go=true"
 
 
-def test_an_archive_uploaded_today_is_not_due():
-    out, why = run("2026-09-20T07:15:00Z")
-    assert out == "go=false"
-    assert "archived today" in why
-
-
-def test_a_refreshed_archive_counts_from_its_upload_not_the_tag():
-    """The bug in the first version of this check.
-
-    Re-running for a week that already has a release uploads over its assets,
-    and neither `gh release upload` nor `gh release edit` moves the release's
-    publishedAt - the real backup-2026-W38 was refreshed at 07:19:31 on the
-    20th and still reported publishedAt 2026-09-16T06:07:37Z. Read there,
-    every one of the window's sixteen attempts would have rebuilt the archive
-    it had just rebuilt.
-    """
-    out, _ = run("2026-09-20T07:19:31Z")
-    assert out == "go=false"
-
-
-def test_a_release_from_earlier_in_the_same_week_is_still_due():
-    """The bug, stated directly: a Wednesday test release for this week's tag
-    is not this week's closing snapshot."""
-    out, why = run("2026-09-16T06:07:36Z")
-    assert out == "go=true"
-    assert "not this week's snapshot" in why
-
-
-def test_a_release_from_yesterday_is_due():
-    """The window runs on one day. Anything older is a different dataset."""
-    out, _ = run("2026-09-19T07:15:00Z")
-    assert out == "go=true"
-
-
-def test_a_second_attempt_in_the_same_window_is_stopped():
-    """Sixteen attempts arrive across the window; the first one to publish
-    must stop the other fifteen, or the archive is built and thrown away
-    fifteen times."""
-    out, _ = run("2026-09-20T07:02:00Z", today="2026-09-20")
-    assert out == "go=false"
-
-
-def test_the_day_is_read_in_utc_not_local_time():
-    """A release published at 23:50 UTC is not the next day's."""
-    out, _ = run("2026-09-19T23:50:00Z", today="2026-09-20")
-    assert out == "go=true"
-
-
-def test_the_tag_names_the_iso_week():
-    _, why = run("")
-    assert "backup-2026-W38" in why
+def test_the_following_monday_asks_for_the_next_week():
+    _, why = run("", now="2026-09-28T00:30:00Z")
+    assert "backup-2026-W39" in why, why

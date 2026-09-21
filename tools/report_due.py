@@ -1,72 +1,54 @@
-"""Has the weekly report already been written this week?
+"""Has the report for the week that just ended been written?
 
     python -m tools.report_due --data-dir store/data   -> go=true / go=false
 
-The scrape guard tells a real run from a stopped one by DURATION: a sweep
-takes half an hour, a refusal takes seconds. That does not work here. Writing
-the report takes about thirty seconds and refusing takes about fifteen, and a
-rule with that little daylight in it will one day call a real run a refusal
-and stop the report for good.
+Attempts arrive across a window on Monday, and again on Tuesday when Monday
+produced nothing. This lets one of them through.
 
-So this asks the report itself. REPORT.md carries the moment it was
-generated, which is the one thing that cannot be wrong about when the report
-last ran.
+It asks for the week's own file. reports/2026-W38.md is the report on the
+week to Sunday 20 September whether it was rendered on the Monday or on the
+Tuesday after a failure, so the retry finds Monday's work if there was any
+and does it if there was not - without a floor, a clock or a stored marker.
+
+That is a change from measuring the age of REPORT.md. The age worked while
+the report ran once a week at a fixed hour; with a retry a day later it
+cannot tell "yesterday's attempt succeeded" from "yesterday's attempt was
+the failure I am retrying".
+
+Every unreadable case returns due=true. A missing report costs a week's
+page, which the next run cannot recover because the series has moved on; a
+duplicate costs thirty seconds and overwrites itself.
 """
 
 from __future__ import annotations
 
 import argparse
-import re
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from common import storage
-
-# Six days, not seven: attempts land in a window on Monday morning, and a
-# seven-day floor would push each week's report later than the last until it
-# fell out of the window.
-MIN_AGE_DAYS = 6.0
-
-GENERATED_RE = re.compile(r"vygenerov[áa]no\s+(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})")
+from common import cas, storage
 
 
-def generated_at(text: str) -> Optional[datetime]:
-    match = GENERATED_RE.search(text)
-    if match is None:
-        return None
+def due(root: Path, today: Optional[date] = None) -> tuple[bool, str]:
+    week = cas.closed_week(today)
+    path = root / "reports" / f"{week}.md"
     try:
-        stamp = datetime.strptime(f"{match.group(1)} {match.group(2)}", "%Y-%m-%d %H:%M")
-    except ValueError:
-        return None
-    return stamp.replace(tzinfo=timezone.utc)
-
-
-def due(path: Path, now: Optional[datetime] = None,
-        min_age_days: float = MIN_AGE_DAYS) -> tuple[bool, str]:
-    now = now or datetime.now(timezone.utc)
-    if not path.exists():
-        return True, "No report has ever been written."
-    written = generated_at(path.read_text(encoding="utf-8"))
-    if written is None:
-        # An unreadable header is not evidence that the report is fresh, and
-        # refusing on it would stop the report for good.
-        return True, "Could not read when the report was generated."
-    age = (now - written).total_seconds() / 86400
-    if age >= min_age_days:
-        return True, f"Last report {written:%Y-%m-%d %H:%M} UTC, {age:.1f} days ago."
-    return False, f"Last report {written:%Y-%m-%d %H:%M} UTC, only {age:.1f} days ago."
+        exists = path.is_file() and path.stat().st_size > 0
+    except OSError as exc:
+        return True, f"Could not look for {path.name} ({exc})."
+    if exists:
+        return False, f"The report on {week} is already written."
+    return True, f"No report on {week} yet."
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-dir", default=str(storage.DATA_DIR))
-    parser.add_argument("--min-age-days", type=float, default=MIN_AGE_DAYS)
     args = parser.parse_args()
 
-    go, reason = due(Path(args.data_dir).parent / "REPORT.md",
-                     min_age_days=args.min_age_days)
+    go, reason = due(Path(args.data_dir).parent)
     print(reason, file=sys.stderr)
     print(f"go={'true' if go else 'false'}")
     return 0
