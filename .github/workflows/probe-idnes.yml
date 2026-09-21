@@ -1,0 +1,24 @@
+name: Probe iDNES locality URLs (diagnostic)
+
+# Manual only, and read-only. This project is developed without network
+# access to the portals, so answering "does the site accept a locality in
+# the search path" means asking a runner that has internet.
+#
+# Fetches six pages, writes nothing, commits nothing, is never scheduled.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m tools.probe_idnes_scope
