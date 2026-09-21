@@ -18,9 +18,16 @@ Confirmed live:
 - Enum fields arrive as `{"name", "value"}` objects with `value == 0`
   meaning "unspecified"; the estate's id field is `hash_id`.
 
-**Index rows are rich.** They carry `locality`, `category_sub_cb`,
-`advert_name`, `usable_area` and the price - not merely an id and a price,
-as this module first assumed. That assumption cost one detail request per
+**Index rows are rich, but not in the obvious fields.** They carry
+`locality` (with GPS), `category_sub_cb`, `advert_name`, `price_czk` and
+`price_czk_m2` - not merely an id and a price, as this module first assumed.
+
+They do NOT carry `usable_area`: a live row on 2026-09-21 had 36 keys and
+that was not among them. The floor area is in the title ("Prodej bytu 2+kk
+80 m2") and implied by price / price-per-m2, and `_area` reads both. This
+paragraph claimed `usable_area` for a long time and the claim was never
+true; believing it cost a city-wide pairing run that matched nothing,
+because every candidate was compared against an area of None. That assumption cost one detail request per
 listing (~12,000 to cover Prague); `parse_estate` now reads the index row
 directly and `run.py` only falls back to the detail endpoint for rows that
 are genuinely missing GPS/area/disposition. Same data, roughly three orders
@@ -240,6 +247,62 @@ def _extract_index_price(raw: dict) -> Optional[int]:
     return None
 
 
+_AREA_IN_NAME_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*m(?:²|2|\^2)")
+
+
+def _area_from_name(raw: dict) -> Optional[float]:
+    """The floor area out of "Prodej bytu 2+kk 80 m\u00b2".
+
+    Index rows have no `usable_area` at all - confirmed against the live API
+    on 2026-09-21, whose row carried 36 keys and not that one - but the title
+    states it, exactly as it states the disposition that `_disposition`
+    already recovers the same way.
+
+    The FIRST figure, because a house advert reads "Prodej domu 180 m\u00b2,
+    pozemek 600 m\u00b2" and the building is what this project compares. For
+    a flat there is only one.
+    """
+    name = raw.get("advert_name")
+    if not isinstance(name, str):
+        return None
+    match = _AREA_IN_NAME_RE.search(name)
+    if not match:
+        return None
+    return safe_float(match.group(1).replace(",", "."))
+
+
+def _area_from_unit_price(raw: dict) -> Optional[float]:
+    """Area implied by price / price-per-square-metre.
+
+    A second, independent route, used when the title does not state one. Less
+    exact - the unit price is rounded, so this lands within a few tenths -
+    which is why it is the fallback and not the primary.
+    """
+    total = safe_float(raw.get("price_czk")) or safe_float(raw.get("price"))
+    per_m2 = safe_float(raw.get("price_czk_m2"))
+    if not total or not per_m2:
+        return None
+    area = total / per_m2
+    # Outside this range the two numbers are not what they were taken for.
+    if not 5.0 <= area <= 2000.0:
+        return None
+    return round(area, 1)
+
+
+def _area(raw: dict) -> Optional[float]:
+    """Floor area, from whichever of the three sources has it.
+
+    `usable_area` first because detail rows do carry it and it is the
+    register's own figure; then the title; then the unit price.
+    """
+    for source in (safe_float(raw.get("usable_area")),
+                   _area_from_name(raw),
+                   _area_from_unit_price(raw)):
+        if source:
+            return source
+    return None
+
+
 def parse_estate(raw: dict) -> dict:
     """Pull every field this project wants out of one estate object.
 
@@ -278,7 +341,7 @@ def parse_estate(raw: dict) -> dict:
 
     return {
         "price": _extract_index_price(raw),
-        "area_m2": safe_float(raw.get("usable_area")),
+        "area_m2": _area(raw),
         "floor": safe_int(raw.get("floor_number")),
         "disposition": _disposition(raw),
         "description": description,

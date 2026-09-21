@@ -170,3 +170,74 @@ def test_the_two_portals_narrow_to_the_same_two_districts():
     idnes_numbers = sorted(b.removeprefix("praha-") for b in idnes.AREA_BRANCHES)
     assert sreality_numbers == idnes_numbers == ["10", "4"], (
         sreality_numbers, idnes_numbers)
+
+
+# --- the floor area an index row really carries -----------------------------
+
+def test_the_area_comes_out_of_the_advert_title():
+    """Index rows have no `usable_area` - confirmed against the live API on
+    2026-09-21, whose row carried 36 keys and not that one. The title states
+    it, exactly as it states the disposition _disposition already recovers.
+
+    Missing it made a city-wide donor walk collect 10,246 adverts and pair
+    none of them: every candidate failed the size test against None, at every
+    tolerance, so ten different rules all returned the same zero."""
+    from scrapers import sreality
+    assert sreality._area({"advert_name": "Prodej bytu 2+kk 80 m²"}) == 80.0
+    assert sreality._area({"advert_name": "Pronájem bytu 3+1 75,5 m²"}) == 75.5
+
+
+def test_a_house_gives_its_building_area_not_its_plot():
+    """"Prodej domu 180 m², pozemek 600 m²" - the first figure is the house.
+    Taking the last would compare a building against a garden."""
+    from scrapers import sreality
+    assert sreality._area(
+        {"advert_name": "Prodej domu 180 m², pozemek 600 m²"}) == 180.0
+
+
+def test_the_unit_price_is_a_second_independent_route():
+    """price_czk / price_czk_m2, for a row whose title omits the size. The
+    real Jirankova advert: 6,470,000 at 150,465/m2 is the 43 m2 iDNES
+    states."""
+    from scrapers import sreality
+    assert sreality._area({"price_czk": 6470000,
+                           "price_czk_m2": 150465}) == 43.0
+
+
+def test_the_registers_own_figure_wins_over_the_title():
+    """Detail rows do carry usable_area. Where both exist the field is the
+    source and the title is the derivation."""
+    from scrapers import sreality
+    assert sreality._area({"usable_area": 43,
+                           "advert_name": "Prodej bytu 2+kk 99 m²"}) == 43.0
+
+
+def test_nonsense_from_the_unit_price_is_refused():
+    """If the two numbers are not what they were taken for, the ratio is not
+    an area. Silently accepting 0.4 m2 would pair nothing and look fine."""
+    from scrapers import sreality
+    assert sreality._area({"price_czk": 100, "price_czk_m2": 250}) is None
+    assert sreality._area({"price_czk": 6470000, "price_czk_m2": 1}) is None
+    assert sreality._area({"price_czk": 6470000, "price_czk_m2": 0}) is None
+
+
+def test_a_title_without_a_size_yields_nothing():
+    from scrapers import sreality
+    assert sreality._area({"advert_name": "Prodej bytu 2+kk"}) is None
+    assert sreality._area({}) is None
+    assert sreality._area({"advert_name": None}) is None
+
+
+def test_parse_estate_puts_the_recovered_area_on_the_row():
+    """The wiring. _area can be perfect and unused."""
+    from scrapers import sreality
+    parsed = sreality.parse_estate({
+        "hash_id": 1,
+        "advert_name": "Prodej bytu 2+kk 43 m²",
+        "category_main_cb": {"name": "Byt", "value": 1},
+        "category_type_cb": {"name": "Prodej", "value": 1},
+        "category_sub_cb": {"name": "2+kk", "value": 4},
+        "locality": {"gps_lat": 50.03, "gps_lon": 14.51},
+        "price_czk": 6470000,
+    })
+    assert parsed["area_m2"] == 43.0
