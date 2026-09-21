@@ -10,6 +10,7 @@ What these still cannot prove is that the live API has not changed since.
 That is what the empty-result alarm in run.merge_source is for.
 """
 
+from scrapers import sreality
 from scrapers.sreality import (
     _build_source_url,
     _cb_value,
@@ -124,3 +125,48 @@ def test_fallback_url_is_well_formed_and_never_raises():
     # No address text at all - still produces something usable.
     url_no_address = _fallback_url("dum", "pronajem", None, "1")
     assert "pronajem/dum" in url_no_address
+
+
+# --- narrowing the sreality walk to the watched area ------------------------
+
+
+def test_no_area_district_is_the_whole_of_prague():
+    """47 is all of Prague. Left in a list meant to narrow, it would make the
+    narrowing a no-op that still looked configured."""
+    assert sreality.DISTRICT_PRAHA not in sreality.AREA_DISTRICT_IDS
+
+
+def test_zero_is_never_an_area_district():
+    """locality_district_id=0 is not refused by this API - it answers with all
+    20,135 listings in the country. A zero here would silently turn an hourly
+    area sweep into a national one, and nothing in the response would say so.
+    """
+    assert 0 not in sreality.AREA_DISTRICT_IDS
+
+
+def test_the_area_ids_are_a_finer_space_than_the_walked_districts():
+    """47/56/57 are okresy; the area ids are the 50xx postal districts inside
+    Prague. Mixing the two numbering systems in one tuple would send a walk
+    to whichever the API happened to match."""
+    assert all(d >= 5000 for d in sreality.AREA_DISTRICT_IDS), \
+        sreality.AREA_DISTRICT_IDS
+
+
+def test_the_two_portals_narrow_to_the_same_two_districts():
+    """Both use POSTAL districts, so the watched area is Praha 4 and Praha 10
+    on each. Confirmed by what they return, not by their labels: sreality's
+    5004 answers with Chodov (city district Praha 11) and 5010 with Horni
+    Mecholupy and Petrovice (Praha 15), exactly as iDNES's praha-4 and
+    praha-10 branches do.
+
+    If one side is ever narrowed differently from the other, the hourly pass
+    collects a different area from each portal and the cross-source dedup
+    starts comparing two populations that do not overlap.
+    """
+    from scrapers import idnes
+
+    sreality_numbers = sorted(str(d)[-2:].lstrip("0")
+                              for d in sreality.AREA_DISTRICT_IDS)
+    idnes_numbers = sorted(b.removeprefix("praha-") for b in idnes.AREA_BRANCHES)
+    assert sreality_numbers == idnes_numbers == ["10", "4"], (
+        sreality_numbers, idnes_numbers)

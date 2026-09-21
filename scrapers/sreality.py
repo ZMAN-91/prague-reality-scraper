@@ -81,6 +81,38 @@ DISTRICT_PRAHA_VYCHOD = 56
 DISTRICT_PRAHA_ZAPAD = 57
 DISTRICT_IDS: tuple[int, ...] = (DISTRICT_PRAHA, DISTRICT_PRAHA_VYCHOD, DISTRICT_PRAHA_ZAPAD)
 
+# The watched area, as the postal districts that hold it.
+#
+# 50xx is a second, finer id space in the same locality_district_id
+# parameter: 47 is the okres Praha, 5004 and 5010 are the postal districts
+# Praha 4 and Praha 10 inside it. Both confirmed by the localities they
+# return, not by the request succeeding:
+#
+#   5004 -> 986 listings: Nusle, Chodov, Branik, Modrany, Krc, Zabehlice
+#   5010 -> 793 listings: Vrsovice, Horni Mecholupy, Strasnice, Petrovice
+#   (unfiltered: 5554)
+#
+# These are POSTAL districts, the same division iDNES uses - 5004 returns
+# Chodov, which is city district Praha 11, and 5010 returns Horni Mecholupy
+# and Petrovice, which are Praha 15. So the watched area needs the same two
+# numbers on both portals, and scrapers/idnes.AREA_BRANCHES holds the other
+# half of the pair. sreality's autocomplete calls Praha 10 a "mestska cast",
+# which is true of its `quarter` entity and not of this space; taking that
+# label at face value would have split the two sources apart for no reason.
+#
+# Praha 11 and Praha 15 have no id here at all, which is the same fact from
+# the other side: they are city districts, not postal ones.
+#
+# The id had to be read off sreality's own search page. locality_district_id
+# is the parameter this scraper already sends for Prague; five rounds of
+# guessing its value failed silently, because this API answers a wrong id
+# rather than refusing it - locality_district_id=0 returned all 20,135
+# listings in the country. A wrong value and a missing feature look
+# identical here.
+DISTRICT_PRAHA_4 = 5004
+DISTRICT_PRAHA_10 = 5010
+AREA_DISTRICT_IDS: tuple[int, ...] = (DISTRICT_PRAHA_4, DISTRICT_PRAHA_10)
+
 PER_PAGE = 500
 # 500 * 200 = 100k rows per (category, district) combo - Praha alone is
 # ~5k per category per the reference source's own comment, so this is a
