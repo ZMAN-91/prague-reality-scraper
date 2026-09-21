@@ -830,3 +830,19 @@ def test_the_rent_guard_is_gone_with_the_workflow_it_guarded():
     still answers a meaningless question is a trap for the next reader."""
     root = Path(__file__).resolve().parent.parent
     assert not (root / "tools" / "rent_due.py").exists()
+
+
+def test_the_read_only_probe_does_not_take_the_data_lock():
+    """It writes nothing. Behind the scrape lock it waits out a
+    twenty-five-minute scrape to print a report, which is how a diagnostic
+    stops being worth running - and the first time it was needed, it did."""
+    workflow = load(WORKFLOWS / "lend-gps.yml")
+    group = workflow["jobs"]["lend"]["concurrency"]["group"]
+    assert "probe_rules" in group and "scrape-data" in group, group
+
+
+def test_borrowing_still_takes_the_data_lock():
+    """The counterpart. It rewrites listings.csv, and outside the lock it
+    would race an hourly scrape doing the same."""
+    workflow = load(WORKFLOWS / "lend-gps.yml")
+    assert "scrape-data" in workflow["jobs"]["lend"]["concurrency"]["group"]

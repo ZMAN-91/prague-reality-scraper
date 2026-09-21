@@ -27,9 +27,13 @@ jobs:
   lend:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Writes listings.csv, so it takes the same lock as the scrapes.
+    # Borrowing writes listings.csv, so it takes the same lock as the
+    # scrapes. Probing does not write at all, and behind that lock it waits
+    # out a twenty-five-minute scrape to print a report - which is how a
+    # diagnostic stops being worth running.
     concurrency:
-      group: scrape-data
+      group: ${{ github.event.inputs.probe_rules == 'true'
+                 && 'gps-donor-probe' || 'scrape-data' }}
       cancel-in-progress: false
     steps:
       - name: Checkout the code
