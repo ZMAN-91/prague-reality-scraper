@@ -107,6 +107,43 @@ def collect_donors(session, budget=None, districts=None) -> list:
     return donors, errors
 
 
+def _why_not(row: dict, candidates: list) -> str:
+    """Which requirement the closest candidate fell at.
+
+    Diagnostic only, and it deliberately re-checks rather than asking dedup:
+    dedup answers one question - same flat or not - and does not rank its
+    reasons. Without this the report says "no confident match" 4,899 times
+    and cannot tell "these flats are not advertised on sreality" from "the
+    test is too strict", which are opposite conclusions with opposite fixes.
+
+    Reported for the candidate that gets FURTHEST, so the answer is the last
+    hurdle rather than the first one some unrelated flat on the street
+    tripped over.
+    """
+    order = ["property_type", "transaction_type", "disposition", "price",
+             "area", "locality"]
+    best = -1
+    for candidate in candidates:
+        if row.get("property_type") != candidate.get("property_type"):
+            reached = 0
+        elif row.get("transaction_type") != candidate.get("transaction_type"):
+            reached = 1
+        elif not ((row.get("disposition") or "").strip()
+                  and (row.get("disposition") or "").strip()
+                  == (candidate.get("disposition") or "").strip()):
+            reached = 2
+        elif not dedup._prices_agree(row, candidate):
+            reached = 3
+        elif not dedup._area_close(dedup._to_float(row.get("area_m2")),
+                                   dedup._to_float(candidate.get("area_m2")),
+                                   dedup.AREA_MEDIUM_REL):
+            reached = 4
+        else:
+            reached = 5
+        best = max(best, reached)
+    return order[best] if best >= 0 else order[0]
+
+
 def lend(listings: dict, donors: list, prices: dict = None) -> tuple:
     """Fill blank coordinates from a matching donor. Returns (filled, stats)."""
     stats: Counter = Counter()
@@ -154,6 +191,7 @@ def lend(listings: dict, donors: list, prices: dict = None) -> tuple:
         found = dedup.best_match(probe, candidates)
         if not found:
             stats["no confident match"] += 1
+            stats[f"  why: {_why_not(probe, candidates)}"] += 1
             continue
 
         donor, confidence = found
