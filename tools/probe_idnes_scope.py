@@ -44,7 +44,17 @@ CANDIDATES = [
     ("obvod (Praha 9)", f"{BASE}/s/prodej/byty/praha-9/"),
     ("obvod, druha strana", f"{BASE}/s/prodej/byty/praha-10/?page=2"),
     ("obvod, pronajmy", f"{BASE}/s/pronajem/byty/praha-10/"),
+    # The watched area's iDNES listings carry slugs praha-11 (34%),
+    # praha-15 (31%), praha-10 (17%) and praha-4 (12%). Search praha-10 is
+    # known to cover 15; whether search praha-4 covers 11 decides whether two
+    # branches are enough for the hourly pass or four are needed.
+    ("obvod (Praha 4)", f"{BASE}/s/prodej/byty/praha-4/"),
+    ("obvod (Praha 11)", f"{BASE}/s/prodej/byty/praha-11/"),
 ]
+
+# How many listings the search says it found, so the cost of a branch can be
+# compared with the 322 pages the whole-city walk takes.
+TOTAL_RE = re.compile(r"(\d[\d\s\u00a0]*)\s*(?:nemovitost|inzer|nab[ií]d)", re.I)
 
 DETAIL_LOCALITY_RE = re.compile(
     r"reality\.idnes\.cz/detail/(?:prodej|pronajem)/(?:byt|dum)/([^/]+)/")
@@ -101,6 +111,8 @@ def probe(session, label: str, url: str) -> dict:
     boroughs = Counter(borough_of(slug) for slug in slugs.elements())
     print(f"    podle obvodu: "
           + ", ".join(f"{b}={n}" for b, n in boroughs.most_common()))
+    totals = {m.group(0).strip() for m in TOTAL_RE.finditer(html)}
+    print(f"    pocty na strance: {sorted(totals)[:6] if totals else 'nenalezeno'}")
     net.polite_sleep()
     return {"label": label, "url": url, "status": response.status_code,
             "final_url": response.url, "listings": listings, "slugs": slugs}
