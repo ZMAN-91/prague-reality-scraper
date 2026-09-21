@@ -305,6 +305,7 @@ def fetch_all(
     session: requests.Session,
     budget: Optional[Budget] = None,
     transactions: Optional[Iterable[str]] = None,
+    districts: Optional[Iterable[int]] = None,
 ) -> tuple[list[NormalizedListing], list[dict], list[str], set[tuple[str, str]]]:
     """Walk the /search index for every (byt/dum) x (prodej/pronajem) x
     DISTRICT_IDS combo, returning one NormalizedListing per result with only
@@ -342,7 +343,7 @@ def fetch_all(
             if transaction_type not in wanted:
                 continue
             scope_ok = True
-            for district_id in DISTRICT_IDS:
+            for district_id in (tuple(districts) if districts else DISTRICT_IDS):
                 offset = 0
                 walked_to_end = False
                 for _ in range(MAX_PAGES_SAFETY):

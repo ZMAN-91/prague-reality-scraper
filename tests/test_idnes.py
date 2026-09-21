@@ -588,3 +588,50 @@ def test_a_branch_never_leaves_the_city_it_narrows():
         assert branch.startswith("praha-")
         assert idnes.search_url("byt", "prodej", branch).startswith(
             "https://reality.idnes.cz/s/prodej/byty/praha-")
+
+
+def test_an_area_pass_never_marks_a_scope_complete(fake_idnes):
+    """The most dangerous thing a narrowed walk could do.
+
+    `completed_scopes` tells run.py "this scope was walked to the end", and
+    run.py then treats every listing it did not see in that scope as absent -
+    on the way to `removed`. A branch walk reaches the end of a BRANCH. If it
+    reported the scope complete, every iDNES listing outside Praha 4 and
+    Praha 10 would start counting towards removal within the hour, and the
+    supply figure for the rest of the city would collapse.
+    """
+    # The cursors start near the end so the walk actually reaches it. Without
+    # that this test passed against a build with the guard removed: the walk
+    # never got far enough to mark anything, and an empty set was read as
+    # proof of a guard that was not there.
+    cursors = {f"byt/{t}@{b}": 5
+               for t in ("prodej", "pronajem")
+               for b in ("praha-4", "praha-10")}
+    _, _, _, completed, _, _ = fetch_all(
+        None, Budget(max_seconds=600, max_new_details=None), known={},
+        page_cursor=cursors, max_pages=8, branches=("praha-4", "praha-10"),
+    )
+    assert completed == set(), completed
+
+
+def test_a_city_pass_still_marks_scopes_complete(fake_idnes):
+    """And the nightly pass must keep doing so, or nothing is ever found to
+    have gone."""
+    _, _, _, completed, _, _ = fetch_all(
+        None, Budget(max_seconds=600, max_new_details=None), known={},
+        page_cursor={"byt/prodej": 5, "byt/pronajem": 5}, max_pages=8,
+    )
+    assert ("byt", "prodej") in completed
+
+
+def test_branch_walks_keep_their_own_page_cursors(fake_idnes):
+    """A city walk and an area walk that shared a cursor would each resume
+    where the other stopped, and both would cover a fraction of what they
+    meant to."""
+    _, _, _, _, _, cursors = fetch_all(
+        None, Budget(max_seconds=600, max_new_details=None), known={},
+        page_cursor={}, max_pages=8, branches=("praha-4", "praha-10"),
+    )
+    assert any("@praha-4" in key for key in cursors), cursors
+    assert any("@praha-10" in key for key in cursors), cursors
+    assert not any(key in ("byt/prodej", "byt/pronajem") for key in cursors), cursors

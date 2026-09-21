@@ -266,9 +266,10 @@ class EndOfIndex(Exception):
     """
 
 
-def fetch_search_page(session, property_type: str, transaction_type: str, page: int):
+def fetch_search_page(session, property_type: str, transaction_type: str,
+                      page: int, branch: str = ""):
     """(listings, raw page record, error). Never raises except EndOfIndex."""
-    url = page_url(property_type, transaction_type, page)
+    url = page_url(property_type, transaction_type, page, branch)
     try:
         html = net.fetch_text(session, url)
     except net.RequestFailed as exc:
@@ -433,6 +434,7 @@ def fetch_all(
     max_pages: Optional[int] = None,
     max_watched: int = MAX_WATCHED_PER_RUN,
     transactions: Optional[Iterable[str]] = None,
+    branches: Optional[Iterable[str]] = None,
 ):
     """One run's worth of iDNES, in priority order.
 
@@ -448,7 +450,24 @@ def fetch_all(
     rotation that only saw a twelfth of the city.
     """
     wanted = set(transactions) if transactions else {t for _, t in SEARCH_URLS}
-    scopes = [scope for scope in SEARCH_URLS if scope[1] in wanted]
+    # (property type, transaction, branch). One branch per scope, and the
+    # empty branch is the whole city - which is what every caller got before
+    # branches existed and what the nightly pass still asks for.
+    #
+    # The branch is part of the scope, not a setting around it, because the
+    # page cursor is keyed per scope: a city walk and an area walk that
+    # shared a cursor would each resume where the other stopped, and both
+    # would walk a fraction of what they meant to.
+    branch_list = tuple(branches) if branches else ("",)
+    # Absence marking asks "was this scope walked to the end?" and then treats
+    # everything it did not see as gone. A branch walk reaches the end of a
+    # BRANCH, which is a different and much smaller population - so on an area
+    # pass no scope may ever be reported complete, or every listing outside
+    # Praha 4 and Praha 10 would be marked missing within the hour.
+    walked_whole_city = branch_list == ("",)
+    scopes = [(ptype, transaction, branch)
+              for ptype, transaction in SEARCH_URLS if transaction in wanted
+              for branch in branch_list]
     known = known or {}
     listings: list = []
     raw_pages: list = []
@@ -476,7 +495,8 @@ def fetch_all(
                 break
             net.polite_sleep()
             try:
-                batch, raw, error = fetch_search_page(session, scope[0], scope[1], page)
+                batch, raw, error = fetch_search_page(session, scope[0], scope[1], page,
+                                                      scope[2])
             except EndOfIndex:
                 # Fewer pages than NEWEST_PAGES_PER_RUN in this category -
                 # a small one, not a fault. Nothing more to read here.
@@ -556,7 +576,7 @@ def fetch_all(
     per_scope = max(1, (max_pages or MAX_PAGES_SAFETY) // max(1, len(scopes)))
     new_cursors = dict(page_cursor) if isinstance(page_cursor, dict) else {}
     for scope in scopes:
-        key = f"{scope[0]}/{scope[1]}"
+        key = f"{scope[0]}/{scope[1]}" + (f"@{scope[2]}" if scope[2] else "")
         page = max(1, int(new_cursors.get(key, 1) or 1))
         walked = 0
         while walked < per_scope and page <= MAX_PAGES_SAFETY:
@@ -566,11 +586,13 @@ def fetch_all(
                 break
             net.polite_sleep()
             try:
-                batch, raw, error = fetch_search_page(session, scope[0], scope[1], page)
+                batch, raw, error = fetch_search_page(session, scope[0], scope[1], page,
+                                                      scope[2])
             except EndOfIndex:
                 # The same thing an empty page means, said with a status code.
                 pages_consumed += 1
-                completed.add(scope)
+                if walked_whole_city:
+                    completed.add(scope[:2])
                 page = 1
                 break
             pages_consumed += 1
@@ -582,7 +604,8 @@ def fetch_all(
             if raw is not None:
                 raw_pages.append(raw)
             if not batch:
-                completed.add(scope)
+                if walked_whole_city:
+                    completed.add(scope[:2])
                 page = 1  # wrap: the next run starts the pass again
                 break
             take(batch)
