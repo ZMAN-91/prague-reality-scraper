@@ -65,6 +65,11 @@ def _f(value):
         return None
 
 
+def _fold(text: str) -> str:
+    from common import address as address_mod
+    return address_mod.strip_diacritics(text or "").lower().strip()
+
+
 def disposition_of(row) -> str:
     value = (row.get("disposition") or "").strip()
     return "" if value.lower() in NOT_A_DISPOSITION else value
@@ -104,6 +109,7 @@ def run_stages(rows, by_street, stages):
     confident ones an exact rule already found.
     """
     paired = {}
+    stage_of = {}
     remaining = list(rows)
     per_stage = []
     crowded = set()
@@ -119,6 +125,7 @@ def run_stages(rows, by_street, stages):
             places = {(h.get("lat"), h.get("lon")) for h in hits}
             if hits and len(places) == 1:
                 paired[row["source_id"]] = hits[0]
+                stage_of[row["source_id"]] = len(per_stage)
                 found_here += 1
                 crowded.discard(row["source_id"])
             else:
@@ -129,7 +136,7 @@ def run_stages(rows, by_street, stages):
         remaining = still
     # Counted once per row at the end, not once per stage: a row that stays
     # crowded through three stages is one unresolved row, not three.
-    return paired, len(crowded), remaining, per_stage
+    return paired, len(crowded), remaining, per_stage, stage_of
 
 
 def as_row(item, source):
@@ -217,18 +224,26 @@ def main(argv=None) -> int:
     print(f"\n== strategies, area fixed at ±{AREA_TOLERANCE_M} m2, "
           f"over {len(idnes_rows)} iDNES rows")
     header = (f"  {'donors':22s} {'price':14s} {'paired':>7s} {'ambig':>6s} "
-              f"{'reused':>7s} {'gps':>6s} {'number':>7s} {'psc':>6s}")
+              f"{'reused':>7s} {'gps':>6s} {'number':>7s} {'psc':>6s}  district agreement by stage")
     print(header)
     for donor_name, donors in donor_sets:
         by_street = bucket(donors)
         for stage_name, stages in stage_sets:
-            paired, ambiguous, _rest, per_stage = run_stages(
+            paired, ambiguous, _rest, per_stage, stage_of = run_stages(
                 idnes_rows, by_street, stages)
             reuse = Counter(id(t) for t in paired.values())
             reused = sum(1 for n in reuse.values() if n > 1)
 
             gps = sum(1 for t in paired.values() if t.get("lat") and t.get("lon"))
             number = psc = 0
+            # Agreement between the district the register puts the lent
+            # coordinate in and the one the portal stated, split by the stage
+            # that found the pair. Nothing in the pairing uses that field, so
+            # a stage whose pairs are wrong shows up as its agreement falling
+            # away from the first stage's - which no count of pairs would
+            # reveal, because a wrong pair is still a pair.
+            agree = Counter()
+            total = Counter()
             if index:
                 for source_id, twin in paired.items():
                     if not (twin.get("lat") and twin.get("lon")):
@@ -245,8 +260,23 @@ def main(argv=None) -> int:
                         number += 1
                     if point.get("psc"):
                         psc += 1
+                    stated = _fold(row.get("address", "").split(",")[-2]
+                                   if row.get("address", "").count(",") >= 1
+                                   else "")
+                    if stated:
+                        st = stage_of.get(source_id, 0)
+                        total[st] += 1
+                        known = {_fold(point.get("cast_obce") or ""),
+                                 _fold(point.get("obvod") or ""),
+                                 _fold(point.get("mestska_cast") or "")}
+                        if stated in known:
+                            agree[st] += 1
+            shares = " ".join(
+                f"s{st}:{100.0 * agree[st] / total[st]:.0f}%({total[st]})"
+                for st in sorted(total))
             print(f"  {donor_name:22s} {stage_name:14s} {len(paired):7d} "
-                  f"{ambiguous:6d} {reused:7d} {gps:6d} {number:7d} {psc:6d}")
+                  f"{ambiguous:6d} {reused:7d} {gps:6d} {number:7d} "
+                  f"{psc:6d}  {shares}")
     return 0
 
 
