@@ -22,6 +22,11 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -m tools.probe_idnes_scope
+      - name: sreality - what an index row actually contains
+        env:
+          SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
+        run: python -m tools.probe_sreality_index_fields
+
       - name: sreality - the API filter, not the URL path
         env:
           # sreality's robots.txt disallows everything; this project's single
