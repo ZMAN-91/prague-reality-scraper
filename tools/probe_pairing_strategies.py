@@ -46,6 +46,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from common import address as address_mod
 from common import dedup, net, ruian, storage
 from common.budget import Budget
 from scrapers import idnes, sreality
@@ -66,7 +67,6 @@ def _f(value):
 
 
 def _fold(text: str) -> str:
-    from common import address as address_mod
     return address_mod.strip_diacritics(text or "").lower().strip()
 
 
@@ -260,9 +260,14 @@ def main(argv=None) -> int:
                         number += 1
                     if point.get("psc"):
                         psc += 1
-                    stated = _fold(row.get("address", "").split(",")[-2]
-                                   if row.get("address", "").count(",") >= 1
-                                   else "")
+                    # common/address.py already knows how each portal
+                    # shapes this. Splitting on commas by hand here took
+                    # "Douchova, Praha 10 - Uhrineves" and returned the
+                    # STREET, so every stage scored 0% - which was visibly
+                    # broken rather than a finding, stage 0 being known to
+                    # agree 98.4%.
+                    stated = _fold(address_mod.parse(
+                        row.get("address"))["mestska_cast"])
                     if stated:
                         st = stage_of.get(source_id, 0)
                         total[st] += 1
