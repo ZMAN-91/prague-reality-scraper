@@ -23,6 +23,10 @@ on:
         description: "Instead of borrowing, pair Praha 10 across both portals and count"
         required: false
         default: "false"
+      probe_strategies:
+        description: "Instead of borrowing, score every pairing strategy side by side"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -37,7 +41,8 @@ jobs:
     # diagnostic stops being worth running.
     concurrency:
       group: ${{ (github.event.inputs.probe_rules == 'true'
-                  || github.event.inputs.probe_praha10 == 'true')
+                  || github.event.inputs.probe_praha10 == 'true'
+                  || github.event.inputs.probe_strategies == 'true')
                  && 'gps-donor-probe' || 'scrape-data' }}
       cancel-in-progress: false
     steps:
@@ -76,9 +81,16 @@ jobs:
           SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
         run: python -m tools.probe_praha10_pairing --data-dir store/data
 
+      - name: Score every pairing strategy side by side
+        if: ${{ github.event.inputs.probe_strategies == 'true' }}
+        env:
+          SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
+        run: python -m tools.probe_pairing_strategies --data-dir store/data
+
       - name: Borrow coordinates
         if: ${{ github.event.inputs.probe_rules != 'true'
-                && github.event.inputs.probe_praha10 != 'true' }}
+                && github.event.inputs.probe_praha10 != 'true'
+                && github.event.inputs.probe_strategies != 'true' }}
         env:
           # The project's single robots override, for the single host it was
           # decided for. See tools/lend_gps_from_sreality.py on why an index
@@ -95,13 +107,15 @@ jobs:
       - name: Fill house numbers for whatever gained coordinates
         if: ${{ (github.event.inputs.apply || 'true') == 'true'
                 && github.event.inputs.probe_rules != 'true'
-                && github.event.inputs.probe_praha10 != 'true' }}
+                && github.event.inputs.probe_praha10 != 'true'
+                && github.event.inputs.probe_strategies != 'true' }}
         run: python -m tools.backfill_cislo --data-dir store/data --apply
 
       - name: Export human-readable CSV views
         if: ${{ (github.event.inputs.apply || 'true') == 'true'
                 && github.event.inputs.probe_rules != 'true'
-                && github.event.inputs.probe_praha10 != 'true' }}
+                && github.event.inputs.probe_praha10 != 'true'
+                && github.event.inputs.probe_strategies != 'true' }}
         continue-on-error: true
         run: |
           python -m tools.export_csv --data-dir store/data
@@ -111,7 +125,8 @@ jobs:
       - name: Commit and push data changes
         if: ${{ (github.event.inputs.apply || 'true') == 'true'
                 && github.event.inputs.probe_rules != 'true'
-                && github.event.inputs.probe_praha10 != 'true' }}
+                && github.event.inputs.probe_praha10 != 'true'
+                && github.event.inputs.probe_strategies != 'true' }}
         run: bash tools/commit_data.sh "claude/real-estate-market-scraper-1tgiei" "Borrowed coordinates from sreality"
         env:
           DATA_ROOT: store
