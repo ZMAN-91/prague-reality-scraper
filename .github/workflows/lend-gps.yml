@@ -1,0 +1,84 @@
+name: Borrow coordinates from sreality (on demand)
+
+# The same step the nightly pass runs, on its own, for when it is wanted now
+# rather than tomorrow morning.
+#
+# Deliberately not scheduled: the daily occurrence lives in scrape-night.yml,
+# right after the pass that collects the night's new iDNES listings, so the
+# listings found tonight get their coordinates the same morning. A second
+# schedule here would walk sreality twice a day for one day's worth of new
+# adverts.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write the result (false = report only)"
+        required: false
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  lend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Writes listings.csv, so it takes the same lock as the scrapes.
+    concurrency:
+      group: scrape-data
+      cancel-in-progress: false
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Checkout the dataset
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague_reality_sector_analysis
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: claude/real-estate-market-scraper-1tgiei
+          path: store
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Borrow coordinates
+        env:
+          # The project's single robots override, for the single host it was
+          # decided for. See tools/lend_gps_from_sreality.py on why an index
+          # walk is a smaller footprint than one hourly pass.
+          SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
+          APPLY: ${{ github.event.inputs.apply || 'true' }}
+        run: |
+          if [ "$APPLY" = "true" ]; then
+            python -m tools.lend_gps_from_sreality --data-dir store/data --apply
+          else
+            python -m tools.lend_gps_from_sreality --data-dir store/data
+          fi
+
+      - name: Fill house numbers for whatever gained coordinates
+        if: ${{ (github.event.inputs.apply || 'true') == 'true' }}
+        run: python -m tools.backfill_cislo --data-dir store/data --apply
+
+      - name: Export human-readable CSV views
+        if: ${{ (github.event.inputs.apply || 'true') == 'true' }}
+        continue-on-error: true
+        run: |
+          python -m tools.export_csv --data-dir store/data
+          python -m tools.episodes --data-dir store/data
+          python -m tools.market --data-dir store/data
+
+      - name: Commit and push data changes
+        if: ${{ (github.event.inputs.apply || 'true') == 'true' }}
+        run: bash tools/commit_data.sh "claude/real-estate-market-scraper-1tgiei" "Borrowed coordinates from sreality"
+        env:
+          DATA_ROOT: store
