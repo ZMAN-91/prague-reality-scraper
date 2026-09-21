@@ -74,6 +74,22 @@ FROM_SREALITY = "sreality"
 #: 18 m2, which is a different flat, while 15% of a 25 m2 studio is under 4.
 AREA_TOLERANCE_M = 1.0
 
+#: Price rules tried in order. Exact first, then a wider one for rows exact
+#: found nothing for.
+#:
+#: Widening it for EVERY row measured worse than exact - 633 pairs against
+#: 653, and crowding from 13 up to 36 - because a looser rule turns confident
+#: pairs into crowded ones. Applied only to the leftovers it cannot: the
+#: pairs already found are never re-examined. Measured on Praha 10 this adds
+#: 11 pairs in 787 and moves crowding by one.
+#:
+#: Ten per cent is a lot of money, and the check that it is not buying wrong
+#: answers is the register's own district: over the 11 rows the second stage
+#: found, it agreed 100% - no worse than the first stage's 99%. Eleven rows
+#: is thin evidence, so the city-wide district agreement printed by
+#: tools/backfill_cislo.py (98.4% before this) is what keeps watching it.
+PRICE_STAGES = (None, 10.0)
+
 
 def collect_donors(session, budget=None, districts=None) -> list:
     """sreality's Prague index, as rows shaped like listings.csv.
@@ -199,8 +215,14 @@ def lend(listings: dict, donors: list, prices: dict = None) -> tuple:
         if row["internal_id"] in prices:
             probe["price"] = prices[row["internal_id"]]
 
-        found = dedup.best_match(probe, candidates,
-                                 area_abs_m=AREA_TOLERANCE_M)
+        found = None
+        for stage, price_rel in enumerate(PRICE_STAGES):
+            found = dedup.best_match(probe, candidates,
+                                     area_abs_m=AREA_TOLERANCE_M,
+                                     price_rel_pct=price_rel)
+            if found:
+                stats[f"matched at stage {stage}"] += 1
+                break
         if not found:
             stats["no confident match"] += 1
             stats[f"  why: {_why_not(probe, candidates)}"] += 1

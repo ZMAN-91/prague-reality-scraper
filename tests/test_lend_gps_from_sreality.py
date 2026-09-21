@@ -155,3 +155,55 @@ def test_a_donor_without_coordinates_is_not_a_donor():
     blind["lon"] = None
     filled, _ = lender.lend(listings, [blind], PRICES)
     assert filled == 0 or listings["i1"]["lat"] in ("", None)
+
+
+# --- what the strategy harness settled --------------------------------------
+
+def test_a_price_that_moved_is_found_by_the_second_stage():
+    """Exact price alone misses a flat whose two adverts were updated a day
+    apart. The second stage catches it, and cannot disturb what the first
+    already matched."""
+    listings = {"i1": idnes_row()}
+    moved = donor(price=5_200_000)          # 4% apart
+    filled, stats = lender.lend(listings, [moved], PRICES)
+    assert filled == 1
+    assert stats["matched at stage 1"] == 1
+    assert listings["i1"]["gps_zdroj"] == lender.FROM_SREALITY
+
+
+def test_the_first_stage_still_wins_when_it_can():
+    listings = {"i1": idnes_row()}
+    filled, stats = lender.lend(listings, [donor()], PRICES)
+    assert filled == 1
+    assert stats["matched at stage 0"] == 1
+    assert "matched at stage 1" not in stats
+
+
+def test_two_adverts_for_one_flat_are_one_answer():
+    """Two agencies listing the same place is the normal case, not an
+    ambiguity: both sit at one coordinate and lend the same answer. Refusing
+    them cost 11 pairs in 787 on its own."""
+    listings = {"i1": idnes_row()}
+    same_place = [donor(source_id="a", lat=50.03, lon=14.51),
+                  donor(source_id="b", lat=50.03, lon=14.51)]
+    filled, _ = lender.lend(listings, same_place, PRICES)
+    assert filled == 1
+    assert listings["i1"]["lat"] == 50.03
+
+
+def test_two_different_places_are_still_refused():
+    """The counterpart. Same street, same size, same price, two coordinates -
+    picking either would be silently wrong half the time."""
+    listings = {"i1": idnes_row()}
+    two_places = [donor(source_id="a", lat=50.03, lon=14.51),
+                  donor(source_id="b", lat=50.09, lon=14.40)]
+    filled, _ = lender.lend(listings, two_places, PRICES)
+    assert filled == 0
+
+
+def test_undefined_is_not_a_disposition():
+    """bezrealitky writes it 245 times. Two of them are not a match - it
+    would pair a flat with any other whose size and price lined up."""
+    listings = {"i1": idnes_row(disposition="undefined")}
+    filled, _ = lender.lend(listings, [donor(disposition="undefined")], PRICES)
+    assert filled == 0

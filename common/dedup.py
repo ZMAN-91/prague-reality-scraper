@@ -225,6 +225,17 @@ def street_key(address: Optional[str]) -> str:
     return folded
 
 
+#: What a portal writes when it means "not stated". bezrealitky writes
+#: "undefined" 245 times and "ostatni" 15 more, and two of those are not a
+#: match - it would pair a flat with any other whose size and price lined up.
+NOT_A_DISPOSITION = frozenset({"undefined", "ostatni", "ostatní", "other", "-"})
+
+
+def _disposition(row: dict) -> str:
+    value = (row.get("disposition") or "").strip()
+    return "" if value.lower() in NOT_A_DISPOSITION else value
+
+
 def _prices_contradict(a: dict, b: dict) -> bool:
     """True when both rows have a price and the two are too far apart.
 
@@ -237,17 +248,27 @@ def _prices_contradict(a: dict, b: dict) -> bool:
     return abs(price_a - price_b) > PRICE_MATCH_ABS_CZK
 
 
-def _prices_agree(a: dict, b: dict) -> bool:
-    """True only when both prices are known and equal. Unknown is not agreement."""
+def _prices_agree(a: dict, b: dict,
+                  rel_pct: Optional[float] = None) -> bool:
+    """True only when both prices are known and equal. Unknown is not agreement.
+
+    `rel_pct` widens equality to a percentage, for a caller running a second
+    pass over rows an exact comparison found nothing for. Measured, widening
+    it for EVERY row is worse than exact - it turns confident pairs into
+    crowded ones - so this is never the first thing tried.
+    """
     price_a, price_b = _to_float(a.get("price")), _to_float(b.get("price"))
     if not price_a or not price_b:
         return False
+    if rel_pct is not None:
+        return abs(price_a - price_b) <= rel_pct / 100.0 * max(price_a, price_b)
     return abs(price_a - price_b) <= PRICE_MATCH_ABS_CZK
 
 
 def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
                       require_price_agreement: bool = True,
-                      area_abs_m: Optional[float] = None) -> Optional[str]:
+                      area_abs_m: Optional[float] = None,
+                      price_rel_pct: Optional[float] = None) -> Optional[str]:
     """Return "exact" | "high" | "medium" | None for a pair of listing rows.
 
     Rows are plain dicts using the listings.csv column names (works for
@@ -271,7 +292,7 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
         return None
     if require_time_overlap and not _windows_overlap(a, b):
         return None
-    disp_a, disp_b = (a.get("disposition") or "").strip(), (b.get("disposition") or "").strip()
+    disp_a, disp_b = _disposition(a), _disposition(b)
     if not disp_a or not disp_b or disp_a != disp_b:
         return None
     # The price has to AGREE, on both sides, at every tier - not merely fail
@@ -285,7 +306,7 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
     # flats that directly contradict each other into one cluster, which is
     # precisely what the clique rule was added to prevent. Requiring
     # agreement removes the bridge rather than patching around it.
-    if require_price_agreement and not _prices_agree(a, b):
+    if require_price_agreement and not _prices_agree(a, b, price_rel_pct):
         return None
 
     area_a = _to_float(a.get("area_m2"))
@@ -677,7 +698,8 @@ CONFIDENCE_ORDER = ("medium", "high", "exact")
 
 
 def best_match(row: dict, candidates, require_time_overlap: bool = True,
-               area_abs_m: Optional[float] = None):
+               area_abs_m: Optional[float] = None,
+               price_rel_pct: Optional[float] = None):
     """The single best candidate for `row`, or None.
 
     Public on purpose. tools/lend_gps_from_sreality.py matches listings
@@ -696,7 +718,7 @@ def best_match(row: dict, candidates, require_time_overlap: bool = True,
     for candidate in candidates:
         confidence = _match_confidence(
             row, candidate, require_time_overlap=require_time_overlap,
-            area_abs_m=area_abs_m)
+            area_abs_m=area_abs_m, price_rel_pct=price_rel_pct)
         if confidence:
             scored.append((CONFIDENCE_ORDER.index(confidence), confidence,
                            candidate))
@@ -705,7 +727,11 @@ def best_match(row: dict, candidates, require_time_overlap: bool = True,
 
     best_rank = max(rank for rank, _, _ in scored)
     top = [(conf, cand) for rank, conf, cand in scored if rank == best_rank]
-    if len(top) > 1:
+    # Several adverts for ONE flat sit at one coordinate and would lend the
+    # same answer, so they are not an ambiguity - two agencies listing the
+    # same place is the normal case. Several PLACES are. Treating every
+    # multiple hit as unresolvable cost 11 pairs in 787 on its own.
+    if len({(c.get("lat"), c.get("lon")) for _conf, c in top}) > 1:
         return None
     confidence, candidate = top[0]
     return candidate, confidence
