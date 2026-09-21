@@ -292,3 +292,60 @@ def test_a_partial_day_is_used_when_there_is_nothing_else_yet():
 def test_a_completed_day_carries_no_partial_warning():
     series = [complete_day("2026-01-09", nabidka=100)]
     assert "Den ještě neskončil" not in render(series)
+
+
+# --- the report that is not this week's -------------------------------------
+
+
+def write_series(tmp_path, rows):
+    import csv
+    data = tmp_path / "data" / "csv"
+    data.mkdir(parents=True)
+    for name, content in (("trh_denne.csv", rows),
+                          ("historie_nemovitosti.csv", [])):
+        path = data / name
+        fields = list(rows[0].keys()) if (rows and name == "trh_denne.csv") else ["x"]
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            if name == "trh_denne.csv":
+                writer.writerows(content)
+    return tmp_path / "data"
+
+
+def at(stamp):
+    return datetime.fromisoformat(stamp).replace(tzinfo=timezone.utc)
+
+
+def test_every_report_is_kept_under_the_week_it_was_published_in(tmp_path):
+    """REPORT.md is this week's by definition, so every week it replaces the
+    one before it. Restore last week's archive into an empty tree and the
+    only report that ever existed was the current one."""
+    data = write_series(tmp_path, days(3))
+    report.export(data, generated=at("2026-09-21T07:39"))
+    assert (tmp_path / "reports" / "2026-W39.md").exists()
+    assert (tmp_path / "REPORT.md").exists()
+
+
+def test_the_kept_copy_is_the_report_itself(tmp_path):
+    data = write_series(tmp_path, days(3))
+    report.export(data, generated=at("2026-09-21T07:39"))
+    assert ((tmp_path / "reports" / "2026-W39.md").read_text(encoding="utf-8")
+            == (tmp_path / "REPORT.md").read_text(encoding="utf-8"))
+
+
+def test_running_twice_in_one_week_does_not_leave_two_reports(tmp_path):
+    """Keyed by the edition, not by the newest day in the data - a re-run
+    after a failed Monday must correct that edition, not sit beside it."""
+    data = write_series(tmp_path, days(3))
+    report.export(data, generated=at("2026-09-21T07:39"))
+    report.export(data, generated=at("2026-09-21T09:05"))
+    assert [p.name for p in (tmp_path / "reports").iterdir()] == ["2026-W39.md"]
+
+
+def test_two_different_weeks_are_two_files(tmp_path):
+    data = write_series(tmp_path, days(3))
+    report.export(data, generated=at("2026-09-21T07:39"))
+    report.export(data, generated=at("2026-09-28T07:39"))
+    assert sorted(p.name for p in (tmp_path / "reports").iterdir()) == [
+        "2026-W39.md", "2026-W40.md"]

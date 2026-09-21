@@ -57,6 +57,12 @@ def repo(tmp_path):
                                                   encoding="utf-8")
     (tmp_path / "logs/2026-09-16.jsonl").write_text('{"run": 1}\n', encoding="utf-8")
 
+    (tmp_path / "REPORT.md").write_text("# Report trhu\n\nData k **2026-09-20**\n",
+                                        encoding="utf-8")
+    (tmp_path / "reports").mkdir()
+    (tmp_path / "reports/2026-W37.md").write_text("# Report trhu\n\nminuly tyden\n",
+                                                  encoding="utf-8")
+
     # 200 KB of gzip that must not be copied into the archive every week.
     with gzip.open(tmp_path / "data/raw/sreality/2026-09-15/index-10.json.gz", "wb") as f:
         f.write(json.dumps({"pages": ["x" * 200_000]}).encode("utf-8"))
@@ -244,3 +250,32 @@ def test_the_cli_builds_and_verifies_in_one_go(repo):
     assert backup.main(["--root", str(repo), "--out", str(repo / "backup")]) == 0
     assert (repo / "backup/prague-reality-2026-W38.tar.gz").exists() or \
         list((repo / "backup").glob("*.tar.gz")), "no archive was written"
+
+
+# --- the reports ------------------------------------------------------------
+
+
+def test_the_archive_holds_the_current_report(repo):
+    """Not data - recomputable from the CSVs - but what a week's report SAID
+    stops being recoverable as soon as the renderer changes."""
+    _, manifest = build(repo)
+    paths = {e["path"] for e in manifest["files"]}
+    assert "REPORT.md" in paths
+
+
+def test_the_archive_holds_every_past_report(repo):
+    """The point of the whole change: restore into an empty tree and last
+    week's report is there too, not only this week's."""
+    _, manifest = build(repo)
+    paths = {e["path"] for e in manifest["files"]}
+    assert "reports/2026-W37.md" in paths
+
+
+def test_a_tree_with_no_reports_yet_still_backs_up(repo):
+    """A fresh repository has none, and that is not an error."""
+    (repo / "REPORT.md").unlink()
+    for stale in (repo / "reports").iterdir():
+        stale.unlink()
+    (repo / "reports").rmdir()
+    _, manifest = build(repo)
+    assert manifest["counts"]["listings"] == 2

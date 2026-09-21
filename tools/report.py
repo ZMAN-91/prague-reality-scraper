@@ -378,9 +378,37 @@ def export(data_dir: Path = storage.DATA_DIR,
               encoding="utf-8", newline="") as f:
         episodes_rows = list(csv.DictReader(f))
 
-    path = data_dir.parent / "REPORT.md"
-    path.write_text(render(series, episodes_rows, generated), encoding="utf-8")
-    return {"path": str(path), "days": len({r["den"] for r in series}),
+    text = render(series, episodes_rows, generated)
+    root = data_dir.parent
+
+    path = root / "REPORT.md"
+    path.write_text(text, encoding="utf-8")
+
+    # And a copy that nothing ever overwrites. REPORT.md is the current
+    # week's, by definition, so every week it replaces the one before it -
+    # and the only trace of what last week said was a commit in the data
+    # repository's history. That is recoverable but not browsable, and it is
+    # not in the weekly archive at all: restore the archive into an empty
+    # tree and every report ever written is gone.
+    #
+    # Named for the ISO week it was PUBLISHED in - the edition, not the
+    # period it covers. Monday's report is about the week that just ended, so
+    # reports/2026-W39.md holds the report written on Monday the 21st about
+    # the week to Sunday the 20th; the day its figures are as of is line 3 of
+    # the file itself ("Data k ..."), which is the only place it cannot drift
+    # out of step.
+    #
+    # Publication week rather than data date because it is stable: a re-run
+    # after a failed Monday corrects that edition instead of filing a second
+    # report beside it, which naming by the newest complete day would do.
+    stamp = (generated or datetime.now(timezone.utc))
+    archive = root / "reports"
+    archive.mkdir(parents=True, exist_ok=True)
+    weekly = archive / f"{stamp.strftime('%G-W%V')}.md"
+    weekly.write_text(text, encoding="utf-8")
+
+    return {"path": str(path), "archived": str(weekly),
+            "days": len({r["den"] for r in series}),
             "segments": len({r["segment"] for r in series})}
 
 
@@ -390,7 +418,7 @@ def main() -> int:
     args = parser.parse_args()
     stats = export(Path(args.data_dir))
     print(f"[report] {stats['path']}: {stats['days']} days, "
-          f"{stats['segments']} segments")
+          f"{stats['segments']} segments (kept as {stats['archived']})")
     return 0
 
 

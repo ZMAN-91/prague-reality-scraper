@@ -71,6 +71,13 @@ DATASET = (
     "data/progress.json",
     "data/csv",
     "logs",
+    # The reports are not data - they are recomputed from the CSVs above and
+    # could be rebuilt from a restore. They are in here anyway, because what
+    # a week's report SAID is not recoverable from data alone once the code
+    # that renders it has moved on, and a few kilobytes a week is not a
+    # reason to lose that.
+    "REPORT.md",
+    "reports",
 )
 
 # Excluded, with the reason carried into the manifest so a restore does not
