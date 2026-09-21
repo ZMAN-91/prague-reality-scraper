@@ -150,6 +150,23 @@ def main() -> int:
     probe_site(session)
 
     print("\n" + "=" * 72)
+    print("6. Cely prostor id, 5001-5010")
+    print("=" * 72)
+    # praha-10 is 5010 and the pages for praha-11 and praha-15 carry no
+    # district id at all, which fits one hypothesis: this id space is the ten
+    # POSTAL districts, Praha 1 to Praha 10, and the higher-numbered city
+    # districts are not in it. If so the watched area needs 5004 and 5010 -
+    # the same two postal districts iDNES needs, which would make the two
+    # sources agree after all.
+    #
+    # Ten requests settles it, and the parts that come back say which is
+    # which without trusting the numbering.
+    for district_id in range(5001, 5011):
+        params = base_params()
+        params["locality_district_id"] = district_id
+        ask(session, f"locality_district_id={district_id}", params)
+
+    print("\n" + "=" * 72)
     print("5. locality_district_id s hodnotou z jejich stranky")
     print("=" * 72)
     # The parameter name was right all along - locality_district_id is what
