@@ -59,6 +59,15 @@ def borough_of(slug: str) -> str:
     return match.group(1) if match else (slug or "?")
 
 
+REQUESTED_RE = re.compile(r"/byty/(praha-\d+)")
+
+
+def requested_borough(url: str) -> str:
+    """The borough the URL asked for, or "" for the unfiltered control."""
+    match = REQUESTED_RE.search(url or "")
+    return match.group(1) if match else ""
+
+
 def localities(html: str) -> Counter:
     """Which locality slugs the listings on this page belong to."""
     return Counter(DETAIL_LOCALITY_RE.findall(html))
@@ -117,13 +126,17 @@ def main() -> int:
             continue
         boroughs = Counter(borough_of(s) for s in result["slugs"].elements())
         total = max(sum(boroughs.values()), 1)
-        # The verdict is the spread of BOROUGHS, against the control's. A
-        # filter that bit returns a handful of adjacent ones; one that was
-        # ignored returns as many as the unfiltered page did.
-        verdict = ("FILTRUJE" if len(boroughs) <= max(3, len(control_boroughs) // 2)
-                   else "ignoruje filtr")
-        print(f"  {label:<38} HTTP {result['status']}  "
-              f"obvodu={len(boroughs):<3} ({total} inzeratu)  {verdict}")
+        # No verdict word. Two rounds of this probe were summarised wrongly by
+        # a rule of thumb over the borough count - first "24 localities must
+        # be the whole city", then "6 boroughs must be the whole city" - while
+        # the list underneath said plainly that the filter had bitten. The
+        # share asked for, and the list, are the finding; the reader can see
+        # that the extra boroughs are the neighbours sharing a postal
+        # district, which no threshold was ever going to know.
+        asked = requested_borough(result["url"])
+        share = boroughs.get(asked, 0) / total
+        print(f"  {label:<38} HTTP {result['status']}  {total} inzeratu, "
+              f"{share:.0%} v {asked or '?'}")
         print(f"      {', '.join(f'{b}={n}' for b, n in boroughs.most_common())}")
     return 0
 
