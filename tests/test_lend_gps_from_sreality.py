@@ -207,3 +207,57 @@ def test_undefined_is_not_a_disposition():
     listings = {"i1": idnes_row(disposition="undefined")}
     filled, _ = lender.lend(listings, [donor(disposition="undefined")], PRICES)
     assert filled == 0
+
+
+# --- a discount that reaches one portal a day before the other --------------
+
+def test_a_flat_discounted_on_sreality_first_still_pairs_today():
+    """The case this was built for. sreality drops to 4.7M on Monday, iDNES
+    is still showing 5.0M. Today's figures disagree; the histories intersect
+    at 5.0M, which is a match to a specific past price rather than to a
+    loosened band."""
+    listings = {"i1": idnes_row()}
+    remembered = {"2026-09-20": {"9": 5_000_000.0}}
+    discounted = donor(price=4_700_000)
+    filled, stats = lender.lend(listings, [discounted],
+                                {"i1": [5_000_000]}, remembered)
+    assert filled == 1
+    assert stats["matched at stage 0"] == 1, stats
+    assert listings["i1"]["lat"] == 50.03
+
+
+def test_a_discount_deeper_than_the_loose_band_still_pairs_on_history():
+    """A 30% cut is far outside the second stage's 10%. History does not care
+    how big the move was, only that both adverts made it."""
+    listings = {"i1": idnes_row()}
+    remembered = {"2026-09-20": {"9": 5_000_000.0}}
+    filled, _ = lender.lend(listings, [donor(price=3_500_000)],
+                            {"i1": [5_000_000]}, remembered)
+    assert filled == 1
+
+
+def test_the_listings_own_earlier_price_counts_too():
+    """The other direction: iDNES discounted first, sreality has not yet.
+    The listing's history is what intersects."""
+    listings = {"i1": idnes_row()}
+    filled, _ = lender.lend(listings, [donor(price=5_000_000)],
+                            {"i1": [4_700_000, 5_000_000]}, {})
+    assert filled == 1
+
+
+def test_two_flats_that_were_never_the_same_price_do_not_pair():
+    """The point of matching a specific past price rather than a band: this
+    must stay refused however much history there is."""
+    listings = {"i1": idnes_row()}
+    remembered = {"2026-09-20": {"9": 8_100_000.0},
+                  "2026-09-19": {"9": 8_300_000.0}}
+    filled, _ = lender.lend(listings, [donor(price=7_900_000)],
+                            {"i1": [5_000_000, 5_100_000]}, remembered)
+    assert filled == 0
+
+
+def test_history_is_not_required():
+    """Most rows have one price and one donor price, and must still pair."""
+    listings = {"i1": idnes_row()}
+    filled, _ = lender.lend(listings, [donor()], {"i1": 5_000_000}, {})
+    assert filled == 1

@@ -58,7 +58,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from common import cas, dedup, net, storage
+from common import cas, dedup, net, price_memory, storage
 from common.budget import Budget
 from scrapers import sreality
 
@@ -130,6 +130,38 @@ def collect_donors(session, budget=None, districts=None) -> list:
     return donors, errors
 
 
+def _price_histories(data_dir) -> dict:
+    """{internal_id: [every price it was seen at]}, newest first.
+
+    From the observations this project already writes, so the listing side of
+    the comparison costs nothing to obtain. Its own latest price is included
+    by being the newest observation.
+    """
+    import csv
+    from pathlib import Path
+
+    histories = {}
+    folder = Path(data_dir) / "observations"
+    for path in sorted(folder.glob("*.csv"), reverse=True):
+        try:
+            handle = open(path, encoding="utf-8")
+        except OSError:
+            continue
+        with handle:
+            for row in csv.DictReader(handle):
+                price = (row.get("price") or "").strip()
+                if not price:
+                    continue
+                try:
+                    value = float(price)
+                except ValueError:
+                    continue
+                seen = histories.setdefault(row["internal_id"], [])
+                if value not in seen:
+                    seen.append(value)
+    return histories
+
+
 def _areas_agree(row: dict, candidate: dict) -> bool:
     a = dedup._to_float(row.get("area_m2"))
     b = dedup._to_float(candidate.get("area_m2"))
@@ -171,8 +203,17 @@ def _why_not(row: dict, candidates: list) -> str:
     return order[best] if best >= 0 else order[0]
 
 
-def lend(listings: dict, donors: list, prices: dict = None) -> tuple:
-    """Fill blank coordinates from a matching donor. Returns (filled, stats)."""
+def lend(listings: dict, donors: list, prices: dict = None,
+         remembered: dict = None) -> tuple:
+    """Fill blank coordinates from a matching donor. Returns (filled, stats).
+
+    `prices` maps a listing to every price it has been seen at; `remembered`
+    is common.price_memory's record of what the donors cost on recent days.
+    Both are histories rather than single figures, because a flat discounted
+    on one portal a day before the other has disagreeing prices today and an
+    intersecting history.
+    """
+    remembered = remembered or {}
     stats: Counter = Counter()
     prices = prices or {}
 
@@ -212,8 +253,26 @@ def lend(listings: dict, donors: list, prices: dict = None) -> tuple:
         # something to compare. listings.csv holds no price column; it lives
         # in the observations.
         probe = dict(row)
-        if row["internal_id"] in prices:
-            probe["price"] = prices[row["internal_id"]]
+        seen = prices.get(row["internal_id"])
+        if isinstance(seen, (list, tuple, set)):
+            probe["prices"] = list(seen)
+        elif seen is not None:
+            probe["price"] = seen
+
+        # Give each candidate the prices it was seen at on recent days, so
+        # an exact match to yesterday's figure counts as the evidence it is.
+        dated = []
+        for candidate in candidates:
+            history = price_memory.history_for(
+                remembered, candidate.get("source_id"))
+            if history:
+                candidate = dict(candidate)
+                candidate["prices"] = (
+                    [candidate["price"]] + history
+                    if candidate.get("price") not in (None, "")
+                    else history)
+            dated.append(candidate)
+        candidates = dated
 
         found = None
         for stage, price_rel in enumerate(PRICE_STAGES):
@@ -258,11 +317,14 @@ def main(argv=None) -> int:
     for error in errors:
         print(f"  ! {error}")
 
-    prices = storage.read_last_observation_state(data_dir / "state" /
-                                                 "last_observation.json")
-    price_by_id = {i: s.get("price") for i, s in (prices or {}).items()}
+    price_by_id = _price_histories(data_dir)
 
-    filled, stats = lend(listings, donors, price_by_id)
+    remembered = price_memory.prune(price_memory.load(data_dir))
+    recorded = price_memory.remember(data_dir, donors)
+    print(f"remembered today's prices for {recorded} sreality adverts "
+          f"({len(remembered)} earlier days kept)")
+
+    filled, stats = lend(listings, donors, price_by_id, remembered)
     print(f"\n{len(listings)} listings")
     for reason, count in stats.most_common():
         print(f"  {count:6d}  {reason}")

@@ -248,21 +248,53 @@ def _prices_contradict(a: dict, b: dict) -> bool:
     return abs(price_a - price_b) > PRICE_MATCH_ABS_CZK
 
 
+def price_values(row: dict) -> list:
+    """Every price this advert has been seen at, not merely its latest.
+
+    Two adverts for one flat move together, but not on the same day: one
+    portal is updated before the other, and on the day between them their
+    current prices disagree while their histories still intersect. Comparing
+    only the latest figures loses exactly those pairs, and widening the
+    tolerance to recover them accepts flats that were never the same price at
+    all.
+
+    A row carries `prices` when the caller has its history; otherwise its
+    single `price` is the whole history it has.
+    """
+    history = row.get("prices")
+    if history:
+        values = [_to_float(p) for p in history]
+        return [v for v in values if v]
+    single = _to_float(row.get("price"))
+    return [single] if single else []
+
+
 def _prices_agree(a: dict, b: dict,
                   rel_pct: Optional[float] = None) -> bool:
-    """True only when both prices are known and equal. Unknown is not agreement.
+    """True when the two adverts were ever seen at the same price.
+
+    Unknown is not agreement. Where both carry a history, any figure one was
+    seen at may meet any figure the other was seen at - which is how a flat
+    discounted on one portal a day before the other still pairs, on a match
+    to a specific past price rather than on a loosened tolerance.
 
     `rel_pct` widens equality to a percentage, for a caller running a second
     pass over rows an exact comparison found nothing for. Measured, widening
     it for EVERY row is worse than exact - it turns confident pairs into
     crowded ones - so this is never the first thing tried.
     """
-    price_a, price_b = _to_float(a.get("price")), _to_float(b.get("price"))
-    if not price_a or not price_b:
+    values_a, values_b = price_values(a), price_values(b)
+    if not values_a or not values_b:
         return False
-    if rel_pct is not None:
-        return abs(price_a - price_b) <= rel_pct / 100.0 * max(price_a, price_b)
-    return abs(price_a - price_b) <= PRICE_MATCH_ABS_CZK
+    for price_a in values_a:
+        for price_b in values_b:
+            if rel_pct is not None:
+                if abs(price_a - price_b) <= rel_pct / 100.0 * max(price_a,
+                                                                   price_b):
+                    return True
+            elif abs(price_a - price_b) <= PRICE_MATCH_ABS_CZK:
+                return True
+    return False
 
 
 def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
