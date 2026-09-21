@@ -150,6 +150,11 @@ def main() -> int:
     probe_site(session)
 
     print("\n" + "=" * 72)
+    print("7. Co kazdy obvod obsahuje, a jestli pokryva cely pas")
+    print("=" * 72)
+    probe_contents(session)
+
+    print("\n" + "=" * 72)
     print("6. Cely prostor id, 5001-5010")
     print("=" * 72)
     # praha-10 is 5010 and the pages for praha-11 and praha-15 carry no
@@ -263,6 +268,69 @@ def probe_site(session) -> None:
             for call in calls[:5]:
                 print(f"       {call}")
         net.polite_sleep()
+
+
+# --- what each district actually contains ------------------------------------
+#
+# "Is the whole watched belt inside Praha 4 and Praha 10" cannot be answered
+# from one page of results, and it is not a question to answer from memory:
+# the belt runs Sporilov - Zabehlice - Hostivar - Horni and Dolni Mecholupy -
+# Petrovice - Chodov, and two of those (Hostivar 174 listings, Dolni
+# Mecholupy 69) had not been seen in any probe answer - a quarter of the
+# zone assumed rather than checked.
+#
+# So this walks each district properly and lists every locality in it.
+
+BELT = ("Sporilov", "Roztyly", "Zabehlice", "Zahradni Mesto", "Hostivar",
+        "Horni Mecholupy", "Dolni Mecholupy", "Petrovice", "Chodov",
+        "Michle", "Haje", "Krc")
+
+
+def contents_of(session, district_id: int, pages: int = 4) -> Counter:
+    """Every locality the district answers with, over several pages."""
+    found: Counter = Counter()
+    for page in range(pages):
+        params = base_params()
+        params["locality_district_id"] = district_id
+        params["per_page"] = 100
+        params["offset"] = page * 100
+        try:
+            payload = net.fetch_json(session, f"{INDEX_URL}?{urlencode(params)}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"    strana {page}: {str(exc)[:90]}")
+            break
+        results = payload.get("results") or []
+        if not results:
+            break
+        for row in results:
+            loc = row.get("locality") or {}
+            name = loc.get("citypart") or loc.get("city") or "?"
+            found[name] += 1
+        net.polite_sleep()
+    return found
+
+
+def probe_contents(session) -> None:
+    import unicodedata
+
+    def fold(text):
+        decomposed = unicodedata.normalize("NFKD", text or "")
+        return "".join(c for c in decomposed if not unicodedata.combining(c)).lower()
+
+    covered = {}
+    for district_id in (5004, 5010):
+        found = contents_of(session, district_id)
+        print(f"\n--- locality_district_id={district_id}: "
+              f"{sum(found.values())} inzeratu, {len(found)} lokalit")
+        for name, count in found.most_common():
+            print(f"       {name:<28} {count}")
+        for name in found:
+            covered.setdefault(fold(name), []).append(district_id)
+
+    print("\n--- pokryti sledovaneho pasu")
+    for place in BELT:
+        where = covered.get(fold(place))
+        print(f"    {place:<20} {where if where else 'NENALEZENO v 5004 ani 5010'}")
 
 
 if __name__ == "__main__":
