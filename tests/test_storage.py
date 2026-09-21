@@ -74,6 +74,7 @@ def test_listings_roundtrip(tmp_path):
         "floor": "3",
         "lat": "50.0755",
         "lon": "14.4378",
+        "gps_zdroj": "",
         "address": "Praha 10",
         "ulice": "",
         "cislo_popisne": "",

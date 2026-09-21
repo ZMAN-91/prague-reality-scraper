@@ -54,6 +54,10 @@ LISTING_FIELDS = [
     "floor",
     "lat",
     "lon",
+    # Where lat/lon came from: "" when the portal published them, "cluster"
+    # when another advert for the same flat did. Borrowed coordinates are a
+    # weaker claim than observed ones and must not read as the same thing.
+    "gps_zdroj",
     "address",
     # The same address broken up and folded to ASCII, so a column of them
     # sorts and filters. `address` stays exactly as the portal said it -

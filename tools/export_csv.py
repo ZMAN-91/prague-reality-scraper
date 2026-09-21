@@ -62,6 +62,7 @@ VIEW_FIELDS = [
     "relisted_from",
     "lat",
     "lon",
+    "gps_zdroj",
     "url",
 ]
 

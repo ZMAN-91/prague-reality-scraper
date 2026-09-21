@@ -34,7 +34,7 @@ from typing import Optional
 
 from common import dedup, interruptions, net, storage
 from common.budget import Budget
-from common import address, collection_area, progress as progress_state
+from common import address, collection_area, coords, progress as progress_state
 from common.geo import is_in_target_area, is_priority_zone
 from common.schema import (
     TRANSACTION_TYPES,
@@ -557,6 +557,7 @@ def merge_source(
                 "floor": listing.floor if listing.floor is not None else "",
                 "lat": listing.lat if listing.lat is not None else "",
                 "lon": listing.lon if listing.lon is not None else "",
+                "gps_zdroj": coords.OWN if listing.lat is not None else "",
                 "address": listing.address or "",
                 **address.parse(listing.address),
                 "priority_zone": listing.priority_zone,
@@ -627,8 +628,10 @@ def merge_source(
             row.update(address.parse(row.get("address")))
             update("description", listing.description)
             if listing.lat is not None and listing.lon is not None:
+                # The portal's own figure supersedes anything borrowed.
                 row["lat"] = listing.lat
                 row["lon"] = listing.lon
+                row["gps_zdroj"] = coords.OWN
                 update("priority_zone", listing.priority_zone)
             row["url"] = listing.url or row["url"]
             # Day-granular on purpose: a second-granular value here would
@@ -857,6 +860,11 @@ def run(
         listings,
         prices={i: state.get("price") for i, state in last_obs.items()},
     )
+
+    # After clustering, because that is what knows which adverts are the same
+    # flat: an iDNES row with no coordinates can take them from the sreality
+    # row beside it.
+    run_stats["gps_lent_within_clusters"] = coords.lend_within_clusters(listings)
 
     storage.write_listings(listings, listings_path)
     progress_state.write(listings_path.parent, progress)
