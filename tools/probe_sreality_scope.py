@@ -37,12 +37,18 @@ PRAHA_DISTRICT_ID = 47
 # north-west to Horni Mecholupy in the south-east, with slack.
 AREA_BOX = {"north": 50.075, "south": 50.010, "west": 14.440, "east": 14.600}
 
-SUGGEST_URLS = [
-    "https://www.sreality.cz/api/v1/localities/suggest?phrase=Praha%2010",
-    "https://www.sreality.cz/api/cs/v2/suggest?phrase=Praha%2010",
-    "https://www.sreality.cz/api/v1/suggest?phrase=Praha%2010",
-    "https://www.sreality.cz/api/v1/localities?phrase=Hostiva%C5%99",
-]
+SUGGEST_BASE = "https://www.sreality.cz/api/v1/localities/suggest?phrase="
+
+# The watched area, named the way a person would type it. Round one guessed
+# the ids and every guess was ignored, which looked exactly like "the API
+# cannot do this" - so the ids come from sreality's own autocomplete now.
+PHRASES = ["Praha 4", "Praha 10", "Praha 11", "Praha 15",
+           "Hostivar", "Chodov", "Zabehlice", "Sporilov"]
+
+# Parameter names to try with a real id. The autocomplete calls Praha 10 an
+# entityType "quarter" under category "quarter_cz", so quarter_id is the
+# first guess - but the name is still a guess and the totals decide.
+PARAM_NAMES = ("locality_quarter_id", "locality_ward_id", "locality_region_id")
 
 
 def base_params() -> dict:
@@ -74,49 +80,69 @@ def ask(session, label: str, params: dict) -> None:
     net.polite_sleep()
 
 
+def suggest(session, phrase: str) -> list[dict]:
+    """What sreality's own autocomplete knows about a place name."""
+    from urllib.parse import quote
+    try:
+        payload = net.fetch_json(session, SUGGEST_BASE + quote(phrase))
+    except Exception as exc:  # noqa: BLE001
+        print(f"    {phrase:<12} selhalo: {str(exc)[:90]}")
+        return []
+    found = []
+    for row in (payload.get("results") or [])[:3]:
+        data = row.get("userData") or {}
+        found.append({"phrase": phrase, "id": data.get("id"),
+                      "entityType": data.get("entityType"),
+                      "category": row.get("category"),
+                      "label": data.get("suggestFirstRow"),
+                      "second": data.get("suggestSecondRow"),
+                      "lat": data.get("latitude"), "lon": data.get("longitude")})
+    for row in found:
+        print(f"    {phrase:<12} id={row['id']:<6} {row['entityType']:<10} "
+              f"{row['label']}  |  {row['second']}")
+    net.polite_sleep()
+    return found
+
+
 def main() -> int:
     session = net.build_session()
 
     print("=" * 72)
     print("1. Co zna sreality vlastni naseptavac")
     print("=" * 72)
-    for url in SUGGEST_URLS:
-        print(f"\n--- {url}")
-        try:
-            payload = net.fetch_json(session, url)
-        except Exception as exc:  # noqa: BLE001
-            print(f"    selhalo: {str(exc)[:120]}")
-            continue
-        text = json.dumps(payload, ensure_ascii=False)
-        print(f"    odpoved ({len(text)} znaku): {text[:700]}")
-        net.polite_sleep()
+    known = []
+    for phrase in PHRASES:
+        known.extend(suggest(session, phrase))
 
     print("\n" + "=" * 72)
-    print("2. Filtry, kontrola vs kandidati")
+    print("2. Filtr se skutecnym id")
     print("=" * 72)
-    ask(session, "kontrola: cela Praha", base_params())
+    control = base_params()
+    ask(session, "kontrola: cela Praha", control)
 
-    # Candidate parameter names, each with a plausible Praha 10 value. A name
-    # the API does not know is normally ignored, so the tell is `total`: a
-    # filter that bit returns fewer than the control, one that was ignored
-    # returns exactly the control's number.
-    for name, value in (("locality_ward_id", 5087),
-                        ("locality_quarter_id", 5087),
-                        ("locality_municipality_id", 5087),
-                        ("locality_region_id", 10)):
+    # One place, every candidate parameter name: the name is what is unknown
+    # now, not the value.
+    praha10 = next((r for r in known
+                    if r["phrase"] == "Praha 10" and r["id"]), None)
+    if praha10:
+        for name in PARAM_NAMES:
+            params = base_params()
+            params[name] = praha10["id"]
+            ask(session, f"{name}={praha10['id']} (Praha 10)", params)
+    else:
+        print("  naseptavac nevratil id pro Prahu 10 - nelze zkusit")
+
+    # Then, with whatever name worked, the rest of the watched area. Printed
+    # even if the name is still wrong: four identical totals say so plainly.
+    print("\n" + "=" * 72)
+    print("3. Sledovana oblast po mestskych castech")
+    print("=" * 72)
+    for row in known:
+        if row["entityType"] != "quarter" or not row["id"]:
+            continue
         params = base_params()
-        params[name] = value
-        ask(session, f"kandidat {name}={value}", params)
-
-    box = base_params()
-    box.update({"map_bounds_north": AREA_BOX["north"], "map_bounds_south": AREA_BOX["south"],
-                "map_bounds_west": AREA_BOX["west"], "map_bounds_east": AREA_BOX["east"]})
-    ask(session, "bounding box (map_bounds_*)", box)
-
-    tiles = base_params()
-    tiles["map"] = (f"{AREA_BOX['west']},{AREA_BOX['south']}|"
-                    f"{AREA_BOX['east']},{AREA_BOX['north']}")
-    ask(session, "bounding box (map=w,s|e,n)", tiles)
+        params["locality_quarter_id"] = row["id"]
+        ask(session, f"{row['label']} (id={row['id']})", params)
     return 0
 
 
