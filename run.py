@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 """Main orchestration for one scrape run.
 
-Sale runs hourly (.github/workflows/scrape.yml); rent runs weekly and
-city-wide (.github/workflows/scrape-rent.yml). Also runnable locally:
+Two passes, both carrying sale and rent together:
 
-    python run.py                             # sale, the hourly default
-    python run.py --transactions pronajem     # rent, the weekly pass
+  - hourly, the watched boroughs (.github/workflows/scrape.yml, --scope area)
+  - nightly, the whole city (.github/workflows/scrape-night.yml, --scope city)
+
+Rent used to be a third, weekly, city-wide pass. It is not any more: the
+hourly pass walks two boroughs rather than all of Prague, which is small
+enough that sale and rent fit in one run - so rent is seen every hour instead
+of once a week. Absence is still decided from the nightly city pass, which is
+the only one that sees the whole population.
+
+Also runnable locally:
+
+    python run.py                             # the hourly default
+    python run.py --scope city                # the nightly pass
     python run.py --sources sreality          # one source, e.g. while debugging
     python run.py --data-dir /tmp/testdata --logs-dir /tmp/testlogs
 

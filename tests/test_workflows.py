@@ -15,7 +15,10 @@ import yaml
 
 WORKFLOWS = Path(__file__).resolve().parent.parent / ".github" / "workflows"
 SALE = WORKFLOWS / "scrape.yml"
-RENT = WORKFLOWS / "scrape-rent.yml"
+# The second scrape workflow. It used to be the weekly rent pass; rent now
+# rides the hourly area pass and this nightly city-wide one, so the tests that
+# say "both scrapes" mean these two.
+RENT = WORKFLOWS / "scrape-night.yml"
 
 
 def load(path):
@@ -87,35 +90,8 @@ def rent_window_start():
     return rent_windows()[0][0]
 
 
-def test_rent_attempts_only_ever_land_on_sunday_night():
-    """The cron does not decide how OFTEN rent runs - tools/rent_due.py does,
-    from the dataset. What the cron decides is WHERE the attempts land and
-    how many there are, and both matter for a different reason: these hours
-    are the ones the external waker sleeps through, so GitHub's own scheduler
-    is all rent has, and it drops most of what it is asked for. Every extra
-    attempt is another chance at the week; the due check makes the extras
-    free."""
-    rent = load(RENT)
-    days = {d for d in range(7) for h in range(24) if fires_at(rent, d, h)}
-    assert days == {0}, f"rent must only attempt on Sunday, got {days}"
-    assert rent_windows()[0] == (0, 3), rent_windows()
 
 
-def test_a_late_rent_start_does_not_eat_sunday_morning():
-    """Attempts land across a window, so the pass can start at the END of it
-    and still run its full budget. With a four-hour window that put the worst
-    case at 07:45 - sale resumes at 05:00, and the guard would have stood it
-    down for nearly three hours. More attempts is better for rent, but not at
-    that price."""
-    rent = load(RENT)
-    budget_h = int(inputs_of(rent)["max_seconds"]["default"]) / 3600
-    # Last attempt of the window is at :45 of its final hour.
-    worst_finish = rent_windows()[0][1] + 0.75 + budget_h
-    sale_resumes = min(h for h in range(24) if fires_at(load(SALE), 0, h))
-    assert worst_finish - sale_resumes <= 1, (
-        f"a pass starting at the end of the window runs to {worst_finish:.2f}h, "
-        f"and sale resumes at {sale_resumes}:00"
-    )
 
 
 def rent_guard_step(step_id):
@@ -123,48 +99,10 @@ def rent_guard_step(step_id):
             if s.get("id") == step_id][0]
 
 
-def test_rent_may_only_start_one_pass_a_week():
-    """And it asks the dataset, not the run history.
-
-    This was a six-day floor on the Actions run history, and it lost the first
-    Sunday it was asked to work: it measured from a manual test run on the
-    Wednesday - inside the floor - and stopped the pass in ten seconds. The
-    run it deferred to had left no rent in the dataset at all.
-    """
-    assert "tools.rent_due" in rent_guard_step("week")["run"], (
-        "what makes the pass weekly is whether the dataset already holds "
-        "this week's rent - nothing else answers that"
-    )
-    go = load(RENT)["jobs"]["guard"]["outputs"]["go"]
-    assert "steps.week.outputs.go" in go and "steps.decide.outputs.go" in go, (
-        "both questions gate the pass; either one alone lets it through"
-    )
 
 
-def test_the_rent_floor_is_a_retry_brake_and_not_the_weekly_schedule():
-    """A floor long enough to span a week is the bug described above."""
-    env = rent_guard_step("decide")["env"]
-    assert env["MEASURE_WORKFLOW"] == "scrape-rent.yml", (
-        "measured against the hourly sale sweep, rent would never run"
-    )
-    floor_minutes = int(env["MIN_GAP_MINUTES"])
-    assert 45 <= floor_minutes <= 120, (
-        "long enough that a pass which died before committing is not retried "
-        "at every attempt for the rest of the window, short enough that it "
-        "cannot silently become the thing that decides the week"
-    )
 
 
-def test_the_rent_guard_can_read_the_dataset_it_asks_about():
-    """The due check needs listings.csv present, and only that."""
-    checkout = [s for s in load(RENT)["jobs"]["guard"]["steps"]
-                if "checkout" in str(s.get("uses", "")) and "with" in s
-                and s["with"].get("path") == "store"][0]["with"]
-    assert checkout["sparse-checkout"] == "data/listings.csv"
-    assert checkout["sparse-checkout-cone-mode"] is False, (
-        "cone mode matches directories, not a single file"
-    )
-    assert "DATA_REPO_KEY" in checkout["ssh-key"]
 
 
 def test_sale_runs_every_hour_outside_the_rent_window():
@@ -200,56 +138,12 @@ def test_no_schedule_sits_on_the_top_of_the_hour():
             assert minute != "0", f"{workflow.name}: {entry['cron']}"
 
 
-def test_sale_stays_out_of_the_window_rent_owns():
-    """Kept out rather than queued: the two share a concurrency group, so
-    queueing would pile four hours of sale runs into a heap that all fire at
-    once the moment rent finishes, collecting the same hour four times.
-
-    This is about rent's FIRST window, the one that exists so a normal week's
-    pass disturbs nothing. The fallback window is the opposite trade and has
-    its own test below.
-    """
-    sale, rent = load(SALE), load(RENT)
-    rent_budget_hours = int(inputs_of(rent)["max_seconds"]["default"]) / 3600
-    rent_start = rent_window_start()
-
-    for offset in range(int(rent_budget_hours) + 1):
-        hour = (rent_start + offset) % 24
-        assert not fires_at(sale, 0, hour), (
-            f"a sale run is scheduled in the {hour}:00 UTC hour on Sunday, "
-            "inside rent's window"
-        )
 
 
-def test_rent_has_a_fallback_window_for_the_sunday_the_first_one_is_dropped():
-    """On 2026-09-20 GitHub delivered one of sixteen attempts into rent's
-    first window, and none of eight into the backup's. A weekly pass whose
-    only window comes up empty loses the week, so there is a second one."""
-    windows = rent_windows()
-    assert len(windows) == 2, f"expected a fallback window, got {windows}"
 
 
-def test_the_fallback_cannot_collide_with_a_pass_from_the_first_window():
-    """Both windows feed one concurrency group. An attempt arriving while the
-    first window's pass still holds it is stopped by the guard as busy - so
-    the fallback would be spent on nothing. It has to open after the first
-    window's worst case is over."""
-    rent = load(RENT)
-    first, fallback = rent_windows()
-    worst_finish = first[1] + 0.75 + rent["jobs"]["scrape"]["timeout-minutes"] / 60
-    assert fallback[0] > worst_finish, (
-        f"the fallback opens at {fallback[0]}:00 but a pass from the first "
-        f"window can still be running at {worst_finish:.2f}h"
-    )
 
 
-def test_the_fallback_leaves_the_rest_of_sunday_alone():
-    """It is a hedge, not a second schedule: a handful of attempts, and over
-    before the evening."""
-    _, fallback = rent_windows()
-    assert fallback[1] - fallback[0] <= 3, "a fallback, not a whole afternoon"
-    budget_h = int(inputs_of(load(RENT))["max_seconds"]["default"]) / 3600
-    assert fallback[1] + 0.75 + budget_h < 20, "must finish well inside Sunday"
 
 
 def test_sale_resumes_the_same_sunday():
@@ -258,18 +152,28 @@ def test_sale_resumes_the_same_sunday():
     assert any(fires_at(sale, 0, hour) for hour in range(5, 24))
 
 
-def test_each_workflow_collects_its_own_half():
-    assert inputs_of(load(SALE))["transactions"]["default"] == "prodej"
-    assert inputs_of(load(RENT))["transactions"]["default"] == "pronajem"
+def test_both_scrapes_collect_both_transactions():
+    """They no longer split sale from rent.
+
+    Rent had its own weekly workflow because it walked the whole city and
+    needed four hours. The hourly pass now walks two boroughs, which is small
+    enough that sale and rent fit in one run together - so rent is seen every
+    hour instead of once a week, and the nightly city pass carries both as
+    well."""
+    for path in (SALE, RENT):
+        default = inputs_of(load(path))["transactions"]["default"]
+        assert set(default.split(",")) == {"prodej", "pronajem"}, (
+            f"{path.name}: {default}")
 
 
 def test_the_default_is_passed_through_to_run_py():
     """An input nobody reads is worse than no input: the default would look
     right in the UI while the run collected something else."""
-    for path, expected in ((SALE, "prodej"), (RENT, "pronajem")):
+    for path in (SALE, RENT):
         scrape = step(load(path), "Run scraper")
         assert "--transactions" in scrape["run"]
-        assert f"|| '{expected}'" in scrape["env"]["TRANSACTIONS"]
+        assert "|| 'prodej,pronajem'" in scrape["env"]["TRANSACTIONS"], (
+            f"{path.name}: {scrape['env']['TRANSACTIONS']}")
 
 
 def test_both_workflows_share_one_concurrency_group():
@@ -684,22 +588,6 @@ def test_the_health_check_comes_before_the_success_announcement(workflow):
     assert health_at < announce_at
 
 
-def test_the_rent_detail_cap_fits_inside_the_fetching_budget():
-    """Both are numbers in the same YAML and neither knows about the other.
-
-    Measured on the first real pass (2026-09-20): 4254s elapsed of which
-    ~1500 were detail fetches at one a second, so the sweep itself is about
-    2750s. Raise the cap without raising the budget and the pass gets cut
-    short - and a rent pass cut short waits a week for the rest.
-    """
-    rent_inputs = inputs_of(load(RENT))
-    cap = int(rent_inputs["max_new_details"]["default"])
-    budget = int(rent_inputs["max_seconds"]["default"])
-    sweep_seconds = 2750
-    assert sweep_seconds + cap <= budget * 0.85, (
-        f"{cap} details plus a {sweep_seconds}s sweep leaves nothing spare "
-        f"in a {budget}s budget"
-    )
 
 
 def test_probe_entry_points_come_after_everything_they_call():
@@ -897,3 +785,48 @@ def test_the_index_build_commits_what_it_produced():
     steps = _ruian_steps()
     assert any("commit_data.sh" in s.get("run", "") for s in steps), (
         "the index would be rebuilt every month and thrown away every month")
+
+
+# --- the hourly pass, now scoped to the watched boroughs --------------------
+
+def test_the_hourly_pass_walks_the_watched_boroughs_not_the_city():
+    """The whole point of the change: the hourly pass used to pull all of
+    Prague and throw ~92% of it away - 8,341 rows fetched, 7,658 discarded,
+    every hour. Two boroughs is what the watched belt actually sits in."""
+    scrape = step(load(SALE), "Run scraper")
+    assert "--scope area" in scrape["run"], scrape["run"]
+
+
+def test_the_nightly_pass_is_still_the_one_that_walks_everything():
+    """Area scope is only safe because something else still covers the city.
+    Absence is decided from the nightly pass; if both narrowed, every listing
+    outside two boroughs would look gone."""
+    assert "--scope city" in step(load(RENT), "Run scraper")["run"]
+
+
+def test_the_hourly_pass_runs_every_hour_all_week():
+    """The Sunday hole existed solely to leave the weekly rent window clear.
+    There is no weekly rent window any more, so a hole there would just be
+    five hours a week of nothing collected."""
+    night = load(SALE)
+    for weekday in range(7):
+        hours = [h for h in range(24) if fires_at(night, weekday, h)]
+        assert len(hours) == 24, (
+            f"weekday {weekday} is only covered for {len(hours)} hours")
+
+
+def test_nothing_schedules_a_weekly_rent_pass_any_more():
+    """Left behind, it would walk the whole city for rent once a week on top
+    of the hourly pass that already has it - the same adverts, twice."""
+    assert not (WORKFLOWS / "scrape-rent.yml").exists()
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        assert "scrape-rent" not in text, f"{path.name} still refers to it"
+
+
+def test_the_rent_guard_is_gone_with_the_workflow_it_guarded():
+    """tools/rent_due.py answered "is this week's rent already collected".
+    With rent collected hourly the question has no meaning, and a guard that
+    still answers a meaningless question is a trap for the next reader."""
+    root = Path(__file__).resolve().parent.parent
+    assert not (root / "tools" / "rent_due.py").exists()

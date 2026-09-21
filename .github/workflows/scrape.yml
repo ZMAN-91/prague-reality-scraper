@@ -2,16 +2,14 @@ name: Hourly sale scrape
 
 on:
   schedule:
-    # Every hour, except the window the weekly rent pass owns.
+    # Every hour, all week.
     #
-    # Rent runs Sundays 00:00-04:00 UTC (02:00-06:00 Prague) and needs the
-    # whole of it. Sale runs are kept out rather than queued behind it: the
-    # two share a concurrency group, so queueing would pile four hours of
-    # sale runs into a heap that all fire at once the moment rent finishes,
-    # collecting the same hour four times over.
-    #
-    # Sunday resumes at 05:37 UTC - well after rent's budget ends - so a
-    # rent pass that uses every minute it has still finishes first.
+    # There is no weekly rent window to keep out of any more. Rent was a
+    # separate Sunday workflow because it walked the whole city and needed
+    # four hours; this pass walks two boroughs, which is small enough that
+    # sale and rent fit in one hourly run together. Rent is therefore seen
+    # every hour rather than once a week, and the Sunday hole in this
+    # schedule - which existed only to leave that window clear - is gone.
     #
     # Four attempts an hour, for one run an hour.
     #
@@ -25,16 +23,17 @@ on:
     #
     # The portals see the same one sweep an hour either way. What changes is
     # only how many chances GitHub has to deliver it.
-    - cron: "*/15 * * * 1-6"
-    - cron: "*/15 5-23 * * 0"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       transactions:
-        # Sale only. Rent has its own weekly workflow (scrape-rent.yml) and a
-        # different scope, so the two never share a run.
+        # Both. Rent used to have its own weekly workflow with a different
+        # scope; it does not any more - it rides this hourly area pass and
+        # the nightly city pass, so it is seen every hour instead of once a
+        # week. See the schedule note above.
         description: "Transaction types (prodej / pronajem)"
         required: false
-        default: "prodej"
+        default: "prodej,pronajem"
       sources:
         # Order matters and is deliberate: sreality first (the watched area,
         # ~35 requests), then iDNES (a few hundred), then bezrealitky, which
@@ -183,7 +182,7 @@ jobs:
           SOURCES: ${{ github.event.inputs.sources || 'sreality,idnes,bezrealitky' }}
           MAX_SECONDS: ${{ github.event.inputs.max_seconds || '2400' }}
           MAX_NEW_DETAILS: ${{ github.event.inputs.max_new_details || '400' }}
-          TRANSACTIONS: ${{ github.event.inputs.transactions || 'prodej' }}
+          TRANSACTIONS: ${{ github.event.inputs.transactions || 'prodej,pronajem' }}
           # ------------------------------------------------------------------
           # THE ONE PLACE where this project stops treating a robots.txt as
           # binding. Delete this line and strict compliance returns everywhere.
@@ -215,6 +214,7 @@ jobs:
         run: |
           python run.py \
             --sources "$SOURCES" \
+            --scope area \
             --max-seconds "$MAX_SECONDS" \
             --max-new-details "$MAX_NEW_DETAILS" \
             --transactions "$TRANSACTIONS" \

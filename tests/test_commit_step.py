@@ -198,7 +198,7 @@ def test_the_workflows_both_use_this_script(tmp_path):
     import yaml
 
     workflows = REPO_ROOT / ".github" / "workflows"
-    for name in ("scrape.yml", "scrape-rent.yml"):
+    for name in ("scrape.yml", "scrape-night.yml"):
         spec = yaml.safe_load((workflows / name).read_text(encoding="utf-8"))
         body = " ".join(str(s.get("run", ""))
                         for s in spec["jobs"]["scrape"]["steps"])

@@ -194,43 +194,24 @@ Kurzor se **v pondělí vrací na stránku jedna** (ISO týden v
 `data/progress.json`). Týden, který kompletní průjezd nestihl, prostě
 skončí; další začne odpředu, ne tam, kde se náhodou zastavil.
 
-### Pronájem — jednou týdně v neděli ráno (`.github/workflows/scrape-rent.yml`)
+### Nájem — každou hodinu, spolu s prodejem
 
-**Celá Praha ze všech tří zdrojů**, včetně sreality — omezení na sledovanou
-oblast existuje proto, aby byl *hodinový* sken sreality malý, a ten důvod
-neplatí pro něco, co se děje jednou za sedm dní.
+Samostatný týdenní průchod nájmů **už neexistuje** (`scrape-rent.yml` byl
+zrušen). Existoval proto, že procházel celou Prahu a potřeboval na to čtyři
+hodiny. Hodinový sken dnes prochází jen Prahu 4 a 10, což se vejde do jedné
+hodiny i s nájmy — takže **nájem se sbírá každou hodinu místo jednou týdně**.
 
-Okno je **neděle 2:00–6:00 pražského času** (cron `0 0 * * 0` je UTC),
-rozpočet 4 hodiny. Prodej v té době **neběží vůbec**: jeho cron je
-`0 * * * 1-6` plus `0 5-23 * * 0`, takže nedělní hodiny 0–4 UTC prostě
-vynechá. Spoléhat se jen na `concurrency` by nestačilo — zařazený běh by
-čekal a pak vystřelil čtyři hodiny staré zadání. První prodejní běh
-v neděli je až v 5:00 UTC (7:00 pražského), tedy po skončení pronájmů.
+Nájem jede ve dvou průchodech, stejně jako prodej:
 
-Obě větve píšou do jednoho `listings.csv`; rozlišuje je sloupec
-`transaction_type`. Sdílí jednu `concurrency` skupinu, takže se nikdy
-nepřekrývají — hodinový běh prodeje a nedělní běh pronájmu se zařadí za sebe.
+- **hodinový**, Praha 4 + 10 (`--scope area`)
+- **noční**, celá Praha (`--scope city`)
 
-Běh prodeje nikdy neoznačí pronájmy za zmizelé a naopak: mazání se
-vyhodnocuje po dvojicích (typ, transakce), takže se obě poloviny nevidí.
+Zmizení se pořád vyhodnocuje **jen z nočního celoměstského** průchodu — ten
+jediný vidí celou populaci. Kdyby se počítalo z hodinového skenu, všechno
+mimo Prahu 4 a 10 by vypadalo jako zmizelé.
 
-Zdroje běží v pořadí **sreality → iDNES → bezrealitky** a to pořadí je
-rozpočtová politika: kdo běží poslední, toho hodina usekne. Bezrealitky
-ztrácí useknutím nejmíň — sitemapa už potvrdila, co na trhu je, a odkládá se
-jen znovupřečtení obsahu.
-
-**Běh se nemá stihnout.** `common/progress.py` drží kurzor (dvě čísla
-v `data/progress.json`), takže nedokončený průjezd další běh navazuje, ne
-restartuje.
-
-**Nesbírá se:** Realingo (jeho podmínky zakazují roboty a scraping jmenovitě)
-ani ČeskéReality (robots.txt `Disallow: /`). Viz `docs/podminky.md`.
-
-## Datový model (tři vrstvy)
-
-> **Jak číst výstupní soubory a jak se zapisuje změna ceny:
-> [`docs/data.md`](docs/data.md).** Nejčastější omyl: `listings.csv`
-> neobsahuje cenu — ta je v `observations/`, a spojená v `data/csv/`.
+S průchodem odešel i `tools/rent_due.py`: odpovídal na otázku „je už nájem za
+tenhle týden posbíraný", a ta při hodinovém sběru nedává smysl.
 
 ### 1. Raw archiv — `data/raw/<source>/<YYYY-MM-DD>/<kind>-<HH>.json.gz`
 
@@ -429,7 +410,7 @@ pro ruční spuštění s vlastním rozpočtem. Kroky:
 4. Teprve pak: pokud `run.py` skončil s nenulovým exit kódem, job se
    záměrně shodí (`exit 1`). GitHub sám pošle e-mail o selhání běhu — to je
    zvolený notifikační mechanismus (žádný vlastní Telegram/email zatím).
-5. `concurrency: group: scrape-data` (sdílená s `scrape-rent.yml`)
+5. `concurrency: group: scrape-data` (sdílená s `scrape-night.yml`)
    zajišťuje, že se nikdy nepřekryjí dva běhy — ani dva prodejní, ani
    prodej s pronájmem. Oba zapisují do stejného `listings.csv`.
    `cancel-in-progress: false`, protože rozdělaný běh má data, která
@@ -605,20 +586,22 @@ attempt 35 minutes after a sweep is stopped in eight seconds.
 The waker holds a fine-grained token scoped to this repository with
 `Actions: write` and no expiry. It cannot reach the private dataset.
 
-### Co waker zatím nebudí
+### Co waker budí
 
-Na neděli 20. 9. jeho dispatche skončily v 23:45 a vrátily se v 05:00:32 -
-přesně to okno, které patří nájmům - a žádný z nich nikdy nemíří na
-`scrape-rent.yml`. Týdenní průchod nájmů tedy jako jediný pořád stojí na
-plánovači GitHubu, tedy na tom, co waker nahrazuje. Do okna toho rána
-doručil jeden pokus.
+Od nasazení pražské verze budí waker všechna okna sám:
 
-Než se to spraví na straně workeru, drží nájmy nad vodou dvě věci v tomhle
-repozitáři: okno má šestnáct pokusů místo osmi a `tools/rent_due.py` z nich
-pustí nejvýš jeden. Doplnit to znamená jeden `POST` navíc, nedělní ráno:
+| pražský čas | workflow |
+|---|---|
+| 02:00–04:59 denně | `scrape-night.yml` (celá Praha) |
+| zbytek dne, každou hodinu | `scrape.yml` (Praha 4 + 10) |
+| Po a Út 05:00 | `report.yml` |
+| Po a Út 06:00 | `backup.yml` (datový repozitář) |
+| 1.–7. den v měsíci, 07:00 | `build-ruian-index.yml` |
 
-    POST /repos/ZMAN-91/prague-reality-scraper/actions/workflows/scrape-rent.yml/dispatches
-    {"ref":"main","inputs":{"as_schedule":"true"}}
+Dřív tu stálo, že waker nebudí týdenní průchod nájmů a ten proto jako jediný
+stojí na plánovači GitHubu. Obojí je překonané: nájem se sbírá každou hodinu
+spolu s prodejem a samostatný workflow byl zrušen.
 
-Stejný token, stejný repozitář, žádné nové oprávnění. `as_schedule` je i tady
-to nosné: bez něj by každé zazvonění spustilo celopražský průchod.
+Crony ve workflow souborech zůstávají jako záloha pro případ, že waker
+nedoručí. Jsou UTC-only, a tedy půl roku o hodinu vedle — což je přesně ten
+důvod, proč okna počítá waker v `Europe/Prague`.
