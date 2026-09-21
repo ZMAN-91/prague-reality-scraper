@@ -65,7 +65,8 @@ GAP_DAYS = 14
 FIELDS = [
     "property_key", "episode",
     "property_type", "transaction_type", "disposition", "area_m2",
-    "address", "priority_zone",
+    "address", "ulice", "cislo_popisne", "mestska_cast", "obec",
+    "priority_zone",
     "sources", "listing_count", "internal_ids",
     "first_seen", "last_seen", "days_on_market", "gap_before_days",
     "outcome",
@@ -276,6 +277,8 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
                 "area_m2": area if area is not None else "",
                 "address": next((r.get("address") for r in rows
                                  if r.get("address")), ""),
+                **{field: next((r.get(field) for r in rows if r.get(field)), "")
+                   for field in ("ulice", "cislo_popisne", "mestska_cast", "obec")},
                 "priority_zone": any(str(r.get("priority_zone")).lower() == "true"
                                      for r in rows),
                 "sources": "|".join(sorted({r.get("source", "") for r in rows})),

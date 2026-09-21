@@ -55,6 +55,14 @@ LISTING_FIELDS = [
     "lat",
     "lon",
     "address",
+    # The same address broken up and folded to ASCII, so a column of them
+    # sorts and filters. `address` stays exactly as the portal said it -
+    # dedup matches on it, and it is the evidence these four are derived
+    # from. See common/address.py, including why cislo_popisne is empty.
+    "ulice",
+    "cislo_popisne",
+    "mestska_cast",
+    "obec",
     "priority_zone",
     "description",
     "first_seen_at",

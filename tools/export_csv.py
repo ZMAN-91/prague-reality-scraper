@@ -48,6 +48,10 @@ VIEW_FIELDS = [
     "price_per_m2",
     "floor",
     "address",
+    "ulice",
+    "cislo_popisne",
+    "mestska_cast",
+    "obec",
     "priority_zone",
     "status",
     "first_seen_at",
@@ -71,7 +75,12 @@ def export(data_dir: Path = storage.DATA_DIR) -> dict[str, int]:
     priority = [r for r in live if as_bool(r.get("priority_zone"))]
 
     def sort_key(row: dict) -> tuple:
-        return (row.get("property_type", ""), row.get("transaction_type", ""), row.get("address", ""))
+        # By the parsed fields, not the raw address: the raw one sorts by
+        # whichever shape the portal happened to use, so the same street
+        # lands in three places depending on who advertised it.
+        return (row.get("property_type", ""), row.get("transaction_type", ""),
+                row.get("obec", ""), row.get("mestska_cast", ""),
+                row.get("ulice", ""), row.get("address", ""))
 
     write_csv(sorted(live, key=sort_key), out_dir / "aktivni_inzeraty.csv", VIEW_FIELDS)
     write_csv(sorted(priority, key=sort_key), out_dir / "priority_zona.csv", VIEW_FIELDS)

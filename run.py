@@ -34,7 +34,7 @@ from typing import Optional
 
 from common import dedup, interruptions, net, storage
 from common.budget import Budget
-from common import collection_area, progress as progress_state
+from common import address, collection_area, progress as progress_state
 from common.geo import is_in_target_area, is_priority_zone
 from common.schema import (
     TRANSACTION_TYPES,
@@ -558,6 +558,7 @@ def merge_source(
                 "lat": listing.lat if listing.lat is not None else "",
                 "lon": listing.lon if listing.lon is not None else "",
                 "address": listing.address or "",
+                **address.parse(listing.address),
                 "priority_zone": listing.priority_zone,
                 "description": listing.description or "",
                 "first_seen_at": now_iso,
@@ -619,6 +620,11 @@ def merge_source(
             update("area_m2", listing.area_m2)
             update("floor", listing.floor)
             update("address", listing.address)
+            # Derived, so they follow the address rather than being compared
+            # against it: a re-parse is not an edit the listing made, and
+            # logging one as a change would fill the log the first time this
+            # parser improves.
+            row.update(address.parse(row.get("address")))
             update("description", listing.description)
             if listing.lat is not None and listing.lon is not None:
                 row["lat"] = listing.lat
