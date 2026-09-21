@@ -271,3 +271,53 @@ def test_a_pin_dead_on_a_point_does_not_claim_infinite_precision():
     got = pair.match(*at(0, 0.2), "Belohorska")
     assert float(got["cislo_vzdalenost_m"]) < 1
     assert int(got["cislo_kandidatu"]) == 2, got
+
+
+def test_rebuilding_an_unchanged_index_produces_an_identical_file(tmp_path):
+    """The index is 2.5 MB and lives in a git repository. gzip.open stamps
+    the current time into the header, so a monthly rebuild committed a fresh
+    copy every time while the backfill reported "0 rows would change" - which
+    is precisely the waste the day-granular last_seen_at exists to avoid.
+
+    The register really is unchanged most months, so identical content has to
+    mean an identical file."""
+    import time
+    from tools import build_ruian_index
+
+    rows = []
+    for entry in STREET.by_street["leopoldova"]:
+        row = dict(entry)
+        row["lat"] = f"{entry['lat']:.6f}"
+        row["lon"] = f"{entry['lon']:.6f}"
+        rows.append(row)
+
+    first = tmp_path / "a.csv.gz"
+    build_ruian_index.write_index(rows, str(first))
+    time.sleep(1.1)                      # a different second, on the clock
+    second = tmp_path / "b.csv.gz"
+    build_ruian_index.write_index(rows, str(second))
+
+    assert first.read_bytes() == second.read_bytes(), (
+        "two builds of the same data produced different bytes, so every "
+        "monthly rebuild commits a new 2.5 MB blob")
+
+
+def test_a_changed_index_does_produce_a_different_file(tmp_path):
+    """The counterpart: byte-stability must not come from writing a constant."""
+    from tools import build_ruian_index
+
+    def as_text(entries):
+        out = []
+        for entry in entries:
+            row = dict(entry)
+            row["lat"] = f"{entry['lat']:.6f}"
+            row["lon"] = f"{entry['lon']:.6f}"
+            out.append(row)
+        return out
+
+    base = STREET.by_street["leopoldova"]
+    first = tmp_path / "a.csv.gz"
+    second = tmp_path / "b.csv.gz"
+    build_ruian_index.write_index(as_text(base), str(first))
+    build_ruian_index.write_index(as_text(base[:-1]), str(second))
+    assert first.read_bytes() != second.read_bytes()

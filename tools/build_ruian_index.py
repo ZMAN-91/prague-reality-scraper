@@ -195,14 +195,28 @@ def write_meta(out_path: str, export_date, rows: int) -> str:
 
 
 def write_index(rows, out_path: str) -> int:
+    """Write the index, byte-identical for identical content.
+
+    Not gzip.open: it stamps the current time into the gzip header, so the
+    file differs on every rebuild even when nothing in the register changed -
+    and this is a 2.5 MB blob committed to a git repository. The first three
+    real builds each committed a fresh copy while reporting "0 rows would
+    change", which is the same waste the day-granular last_seen_at exists to
+    avoid, at monthly instead of hourly cadence.
+
+    With mtime=0 an unchanged register produces no diff at all and
+    commit_data.sh correctly finds nothing to commit.
+    """
     written = 0
-    with gzip.open(out_path, "wt", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=INDEX_FIELDS,
-                                extrasaction="ignore")
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
-            written += 1
+    with open(out_path, "wb") as raw:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as gz:
+            with io.TextIOWrapper(gz, encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=INDEX_FIELDS,
+                                        extrasaction="ignore")
+                writer.writeheader()
+                for row in rows:
+                    writer.writerow(row)
+                    written += 1
     return written
 
 
