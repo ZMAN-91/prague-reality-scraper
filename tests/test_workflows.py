@@ -717,3 +717,67 @@ def test_probe_entry_points_come_after_everything_they_call():
             f"{path.name}: code follows the __main__ guard, so it is not "
             "defined when main() runs"
         )
+
+
+# --- the nightly city-wide pass ---------------------------------------------
+
+NIGHT = WORKFLOWS / "scrape-night.yml"
+
+
+def test_the_nightly_pass_walks_the_whole_city():
+    """Its whole reason to exist. Narrowed, it would leave the rest of Prague
+    unseen and - worse - absence marking would run off a walk that never
+    covered the population it judges."""
+    step = [s for s in load(NIGHT)["jobs"]["scrape"]["steps"]
+            if s.get("id") == "scrape"][0]
+    assert "--scope city" in step["run"], step["run"]
+
+
+def test_the_nightly_pass_collects_both_transactions():
+    """Rent has no weekly workflow any more; it rides here and in the hourly
+    area pass."""
+    default = inputs_of(load(NIGHT))["transactions"]["default"]
+    assert set(default.split(",")) == {"prodej", "pronajem"}
+
+
+def test_the_nightly_pass_leaves_sreality_alone():
+    """sreality's robots.txt disallows everything, so this project's traffic
+    there stays as small as the question allows: the hourly pass reads it
+    narrowed to two districts, and nothing walks it city-wide."""
+    default = inputs_of(load(NIGHT))["sources"]["default"]
+    assert "sreality" not in default, default
+
+
+def test_a_nightly_pass_finishes_before_the_morning():
+    """An attempt lands at :45 of the window's last hour and then runs its
+    whole budget. Measured the pass is about an hour; the point of the bound
+    is that a late start still clears the morning."""
+    night = load(NIGHT)
+    hours = [h for h in range(24) if fires_at(night, 3, h)]
+    budget_h = int(inputs_of(night)["max_seconds"]["default"]) / 3600
+    worst_finish = hours[-1] + 0.75 + budget_h
+    assert worst_finish <= 5, f"a late pass runs to {worst_finish:.2f}h UTC"
+
+
+def test_the_nightly_window_is_night_in_both_halves_of_the_year():
+    """GitHub cron is UTC-only. Prague is +01:00 in winter and +02:00 in
+    summer, so a window that reads as night in one can be morning in the
+    other."""
+    hours = [h for h in range(24) if fires_at(load(NIGHT), 3, h)]
+    for offset in (1, 2):
+        local = [(h + offset) % 24 for h in hours]
+        assert all(0 <= h <= 5 for h in local), (offset, local)
+
+
+def test_the_nightly_pass_runs_every_day():
+    days = {d for d in range(7) for h in range(24) if fires_at(load(NIGHT), d, h)}
+    assert days == set(range(7)), days
+
+
+def test_the_nightly_guard_asks_the_run_log():
+    """What makes it daily. Measuring the Actions history instead would count
+    a guard-stopped attempt as a pass, the mistake that cost the rent pass a
+    week."""
+    step = [s for s in load(NIGHT)["jobs"]["guard"]["steps"]
+            if s.get("id") == "week"][0]
+    assert "tools.night_due" in step["run"]

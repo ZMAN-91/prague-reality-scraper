@@ -767,6 +767,9 @@ def run(
 
     run_stats: dict = {
         "started_at": now_iso,
+        # What this run covered, so a later run can ask whether the city has
+        # been walked today without re-deriving it from request counts.
+        "scope": scope,
         "transactions": transactions,
         "sreality_area_limited": sreality_is_area_limited(transactions),
         "sources": {},
