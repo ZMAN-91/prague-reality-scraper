@@ -1,0 +1,116 @@
+name: Build the RUIAN address index
+
+# The state address register publishes one file a month. This turns it into
+# the index that gives listings their house numbers, and commits it to the
+# data repository.
+#
+# Monthly, not hourly, and that is the whole design: this is the only part of
+# the project that needs pyproj, so the conversion happens here and the index
+# is written in WGS84. The hourly scrape reads it with the standard library
+# and never installs a projection library at all.
+on:
+  schedule:
+    # Early in the month, when the previous month's export appears. Several
+    # days because GitHub's scheduler drops most of what it is asked for -
+    # measured, 1 of 32 over two days - and the waker fires this too.
+    #
+    # Attempts are cheap and idempotent: the guard below allows at most one
+    # real build a day and stands the rest down in seconds.
+    - cron: "0 2 1-7 * *"
+    - cron: "0 14 1-7 * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Build even if the guard says the index is current"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.decide.outputs.go }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague_reality_sector_analysis
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: claude/real-estate-market-scraper-1tgiei
+          path: store
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Decide whether the index needs rebuilding
+        id: decide
+        run: |
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+            echo "forced" >&2
+          else
+            python -m tools.ruian_due \
+              --index store/data/ruian_praha.csv.gz >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: guard
+    if: needs.guard.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Shares the data branch with the scrape runs, so it takes the same lock.
+    concurrency:
+      group: scrape-data
+      cancel-in-progress: false
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Checkout the dataset
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague_reality_sector_analysis
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: claude/real-estate-market-scraper-1tgiei
+          path: store
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        # The one place pyproj is installed. See requirements-ruian.txt.
+        run: |
+          pip install -r requirements-ruian.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        # Here and nowhere else, tests/test_krovak.py actually runs: the
+        # hourly scrape installs requirements-dev.txt without pyproj and
+        # skips it. test_workflows.py asserts this step exists, so the skip
+        # cannot become permanent without something failing.
+        run: python -m pytest -q
+
+      - name: Build the index
+        run: |
+          python -m tools.build_ruian_index \
+            --out store/data/ruian_praha.csv.gz
+
+      - name: Fill in the house numbers across the whole history
+        # The index is only useful applied. Done here rather than in the
+        # hourly run because it touches every row, which is a whole-file
+        # rewrite of listings.csv - once a month, not once an hour.
+        run: |
+          python -m tools.backfill_cislo \
+            --data-dir store/data --apply
+
+      - name: Commit the index and the numbers
+        run: tools/commit_data.sh claude/real-estate-market-scraper-1tgiei "RUIAN address index"
+        env:
+          DATA_ROOT: store

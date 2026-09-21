@@ -784,3 +784,72 @@ def test_the_nightly_guard_asks_the_run_log():
     step = [s for s in load(NIGHT)["jobs"]["guard"]["steps"]
             if s.get("id") == "week"][0]
     assert "tools.night_due" in step["run"]
+
+
+# --- the monthly address index ----------------------------------------------
+
+RUIAN = WORKFLOWS / "build-ruian-index.yml"
+
+
+def _ruian_steps():
+    return load(RUIAN)["jobs"]["build"]["steps"]
+
+
+def test_the_index_build_is_the_one_place_the_krovak_tests_run():
+    """tests/test_krovak.py skips itself when pyproj is absent, which is
+    honest in the hourly scrape - that job has no use for a projection
+    library and installs requirements-dev.txt without one.
+
+    It stops being honest if there is nowhere left that does install it. This
+    job is that place, and the assertion is what keeps the skip from quietly
+    becoming permanent everywhere."""
+    steps = _ruian_steps()
+    installs = " ".join(s.get("run", "") for s in steps)
+    assert "requirements-ruian.txt" in installs, (
+        "nothing installs pyproj any more, so the coordinate conversion is "
+        "now untested everywhere")
+    assert any("pytest" in s.get("run", "") for s in steps), (
+        "pyproj is installed but the tests are not run, so installing it "
+        "proves nothing")
+
+
+def test_pyproj_is_not_in_the_hourly_scrape_s_dependencies():
+    """The reason the index build exists as a separate job. requirements.txt
+    is installed on every hourly run; a projection library there would be
+    downloaded twenty-four times a day to be used never."""
+    root = Path(__file__).resolve().parent.parent
+    for name in ("requirements.txt", "requirements-dev.txt"):
+        text = (root / name).read_text(encoding="utf-8")
+        assert "pyproj" not in text, f"{name} pulls in pyproj"
+
+
+def test_the_index_build_is_guarded_by_the_index_and_not_by_the_clock():
+    """Same rule as every other guard here: ask the artifact. A schedule-based
+    check answers "did the workflow fire", which came apart from "is the
+    output there" every single time it was trusted."""
+    guard = load(RUIAN)["jobs"]["guard"]["steps"]
+    decide = [s for s in guard if s.get("id") == "decide"][0]
+    assert "tools.ruian_due" in decide["run"]
+    assert "ruian_praha.csv.gz" in decide["run"]
+    assert load(RUIAN)["jobs"]["build"]["if"] == "needs.guard.outputs.go == 'true'"
+
+
+def test_the_index_build_shares_the_data_lock():
+    """It rewrites every row of listings.csv. Outside the lock it would race
+    an hourly scrape doing the same, and one of the two would lose its work."""
+    assert load(RUIAN)["jobs"]["build"]["concurrency"]["group"] == "scrape-data"
+
+
+def test_the_index_is_applied_and_not_merely_built():
+    """A built index that nothing reads leaves the column empty and the
+    workflow green, which is the most expensive kind of success."""
+    runs = " ".join(s.get("run", "") for s in _ruian_steps())
+    assert "tools.build_ruian_index" in runs
+    assert "tools.backfill_cislo" in runs
+    assert "--apply" in runs, "the backfill would run as a dry run and write nothing"
+
+
+def test_the_index_build_commits_what_it_produced():
+    steps = _ruian_steps()
+    assert any("commit_data.sh" in s.get("run", "") for s in steps), (
+        "the index would be rebuilt every month and thrown away every month")

@@ -45,13 +45,15 @@ import argparse
 import csv
 import gzip
 import io
+import json
+import os
 import sys
 import zipfile
 from datetime import date, timedelta
 from typing import Iterator, Optional
 
 from common import address as address_mod
-from common import krovak, net
+from common import cas, krovak, net
 
 PRAHA_OBEC_CODE = 554782
 BASE = "https://vdp.cuzk.cz/vymenny_format/csv"
@@ -163,6 +165,35 @@ def rows_from(text: str) -> Iterator[dict]:
         }
 
 
+def meta_path_for(out_path: str) -> str:
+    """The sidecar beside the index. Named from the index rather than fixed,
+    so a build to a different path cannot leave the two describing different
+    files."""
+    return out_path + ".json"
+
+
+def write_meta(out_path: str, export_date, rows: int) -> str:
+    """What this index was built from.
+
+    The index itself cannot say which month's export it came from - it is
+    just address points - so tools/ruian_due.py would have nothing to ask,
+    and "is the index current" would become "when did the workflow last run",
+    which is the question this project has repeatedly been wrong to trust.
+    """
+    path = meta_path_for(out_path)
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump({"export": f"{export_date:%Y-%m-%d}",
+                   "rows": rows,
+                   # The day the build ran, in Prague. Lets the due check
+                   # allow one attempt a day when the newest export has not
+                   # been published yet, instead of every attempt in the
+                   # window re-downloading the same file.
+                   "built_at": cas.today().isoformat()},
+                  handle, indent=2, sort_keys=True)
+        handle.write("\n")
+    return path
+
+
 def write_index(rows, out_path: str) -> int:
     written = 0
     with gzip.open(out_path, "wt", encoding="utf-8", newline="") as handle:
@@ -208,6 +239,8 @@ def main(argv=None) -> int:
 
     written = write_index(rows, args.out)
     print(f"wrote {written} rows to {args.out}")
+    meta = write_meta(args.out, when, written)
+    print(f"wrote {meta}")
 
     popisne = sum(1 for r in rows if r["typ_cisla"] == TYP_CISLO_POPISNE)
     orientacni = sum(1 for r in rows if r["cislo_orientacni"])
