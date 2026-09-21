@@ -308,16 +308,19 @@ def fetch_all(
     districts: Optional[Iterable[int]] = None,
 ) -> tuple[list[NormalizedListing], list[dict], list[str], set[tuple[str, str]]]:
     """Walk the /search index for every (byt/dum) x (prodej/pronajem) x
-    DISTRICT_IDS combo, returning one NormalizedListing per result with only
-    source_id/price/property_type/transaction_type populated.
+    DISTRICT_IDS combo, returning one NormalizedListing per result.
 
-    GPS, area, disposition, floor, description and the precise URL are all
-    detail-only fields (see module docstring) and are deliberately NOT
-    fetched here - `run.py` calls `fetch_detail` once per genuinely new
-    listing after this returns, and that is also where geographic
-    in-target-area filtering happens for a new listing: an already-known
-    listing keeps `in_target_area=True` here (the dataclass default) since
-    it was already validated with real GPS the first time it was seen.
+    Index rows are rich - see the module docstring. `parse_estate` reads GPS,
+    area, disposition, price and the locality straight out of them, and
+    `run.py` falls back to `fetch_detail` only for the rows where something
+    it needs is genuinely absent (`is_complete` decides).
+
+    This paragraph used to say the opposite - that GPS and area were
+    detail-only and deliberately not fetched here - which was true of the
+    first version and was left behind when the index turned out to carry
+    them. It cost real time: it is the reason a city-wide coordinate donor
+    walk was first believed to need 12,000 detail requests rather than the
+    ~25 index pages it actually takes.
 
     Never raises: a failure on one (property_type, transaction_type,
     district) slice is recorded in `errors` and that slice is abandoned,
