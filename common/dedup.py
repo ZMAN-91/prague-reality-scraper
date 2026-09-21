@@ -246,7 +246,8 @@ def _prices_agree(a: dict, b: dict) -> bool:
 
 
 def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
-                      require_price_agreement: bool = True) -> Optional[str]:
+                      require_price_agreement: bool = True,
+                      area_abs_m: Optional[float] = None) -> Optional[str]:
     """Return "exact" | "high" | "medium" | None for a pair of listing rows.
 
     Rows are plain dicts using the listings.csv column names (works for
@@ -255,6 +256,14 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
     `require_time_overlap` is True for clustering (concurrent duplicates)
     and False for re-listing detection, where the whole point is that the
     old ad ended before the new one began.
+
+    `area_abs_m` replaces the relative area tolerance with an absolute one in
+    metres, for callers pairing across portals where both sides state a real
+    size. Measured over 2,292 pairs already judged the same flat, the two
+    figures differ by 0.0 m2 at the median; 93.9% agree within 1 m2 and 95.5%
+    within 2. A tolerance in per cent is the wrong shape for that: 15% of a
+    120 m2 flat is 18 m2, which is another flat entirely, while 15% of a
+    25 m2 studio is under 4.
     """
     if a["property_type"] != b["property_type"]:
         return None
@@ -295,7 +304,12 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
         key_a, key_b = street_key(a.get("address")), street_key(b.get("address"))
         if not key_a or key_a != key_b:
             return None
-        if not _area_close(area_a, area_b, AREA_MEDIUM_REL):
+        if area_abs_m is not None:
+            if area_a is None or area_b is None:
+                return None
+            if abs(area_a - area_b) > area_abs_m:
+                return None
+        elif not _area_close(area_a, area_b, AREA_MEDIUM_REL):
             return None
         # The same street name in two different districts is a real thing in
         # Prague, and with no coordinates to contradict it the street alone
@@ -662,7 +676,8 @@ def find_relist_candidate(
 CONFIDENCE_ORDER = ("medium", "high", "exact")
 
 
-def best_match(row: dict, candidates, require_time_overlap: bool = True):
+def best_match(row: dict, candidates, require_time_overlap: bool = True,
+               area_abs_m: Optional[float] = None):
     """The single best candidate for `row`, or None.
 
     Public on purpose. tools/lend_gps_from_sreality.py matches listings
@@ -680,7 +695,8 @@ def best_match(row: dict, candidates, require_time_overlap: bool = True):
     scored = []
     for candidate in candidates:
         confidence = _match_confidence(
-            row, candidate, require_time_overlap=require_time_overlap)
+            row, candidate, require_time_overlap=require_time_overlap,
+            area_abs_m=area_abs_m)
         if confidence:
             scored.append((CONFIDENCE_ORDER.index(confidence), confidence,
                            candidate))

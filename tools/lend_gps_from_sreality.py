@@ -67,6 +67,13 @@ from scrapers import sreality
 #: at; this one was read from the index and dropped.
 FROM_SREALITY = "sreality"
 
+#: How far two stated floor areas may differ and still be one flat, in
+#: metres. Absolute, not relative: measured over 2,292 pairs already judged
+#: the same flat the difference is 0.0 m2 at the median, and 93.9% agree
+#: within a metre. A percentage is the wrong shape - 15% of a 120 m2 flat is
+#: 18 m2, which is a different flat, while 15% of a 25 m2 studio is under 4.
+AREA_TOLERANCE_M = 1.0
+
 
 def collect_donors(session, budget=None, districts=None) -> list:
     """sreality's Prague index, as rows shaped like listings.csv.
@@ -107,6 +114,12 @@ def collect_donors(session, budget=None, districts=None) -> list:
     return donors, errors
 
 
+def _areas_agree(row: dict, candidate: dict) -> bool:
+    a = dedup._to_float(row.get("area_m2"))
+    b = dedup._to_float(candidate.get("area_m2"))
+    return a is not None and b is not None and abs(a - b) <= AREA_TOLERANCE_M
+
+
 def _why_not(row: dict, candidates: list) -> str:
     """Which requirement the closest candidate fell at.
 
@@ -134,9 +147,7 @@ def _why_not(row: dict, candidates: list) -> str:
             reached = 2
         elif not dedup._prices_agree(row, candidate):
             reached = 3
-        elif not dedup._area_close(dedup._to_float(row.get("area_m2")),
-                                   dedup._to_float(candidate.get("area_m2")),
-                                   dedup.AREA_MEDIUM_REL):
+        elif not _areas_agree(row, candidate):
             reached = 4
         else:
             reached = 5
@@ -188,7 +199,8 @@ def lend(listings: dict, donors: list, prices: dict = None) -> tuple:
         if row["internal_id"] in prices:
             probe["price"] = prices[row["internal_id"]]
 
-        found = dedup.best_match(probe, candidates)
+        found = dedup.best_match(probe, candidates,
+                                 area_abs_m=AREA_TOLERANCE_M)
         if not found:
             stats["no confident match"] += 1
             stats[f"  why: {_why_not(probe, candidates)}"] += 1
