@@ -162,15 +162,13 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             print(f"  {slug}: stranka selhala: {str(exc)[:80]}")
             continue
-        found = DISTRICT_ID_RE.search(html)
+        ids = district_ids(html)
         net.polite_sleep()
-        if not found:
-            print(f"  {slug}: localityDistrictId na strance neni")
-            continue
-        district_id = int(found.group(1))
-        params = base_params()
-        params["locality_district_id"] = district_id
-        ask(session, f"{slug} -> locality_district_id={district_id}", params)
+        print(f"\n  {slug}: localityDistrictId na strance = {ids or 'zadne nenulove'}")
+        for district_id in ids[:2]:
+            params = base_params()
+            params["locality_district_id"] = district_id
+            ask(session, f"{slug} -> locality_district_id={district_id}", params)
     return 0
 
 
@@ -193,7 +191,24 @@ AREA_SLUGS = ("praha-4", "praha-10", "praha-11", "praha-15")
 
 SITE_SEARCH_URLS = [SITE_SEARCH_TMPL.format(slug=slug) for slug in AREA_SLUGS]
 
-DISTRICT_ID_RE = __import__("re").compile(r'"localityDistrictId"\s*:\s*\[?(\d+)')
+# Every occurrence, not the first. The page carries a default
+# "localityDistrictId":0 before the one that holds the filter, and taking the
+# first got 0 - which the API accepted and answered with all 20,135 listings
+# in the country. A wrong id is not refused here, it is answered, so the
+# extraction has to be right or the test measures nothing.
+DISTRICT_ID_RE = __import__("re").compile(r'"localityDistrictId"\s*:\s*(\[[^\]]*\]|\d+)')
+
+
+def district_ids(html: str) -> list[int]:
+    """Non-zero localityDistrictId values on the page, in order of appearance."""
+    import re as _re
+    found = []
+    for raw in DISTRICT_ID_RE.findall(html):
+        for number in _re.findall(r"\d+", raw):
+            value = int(number)
+            if value and value not in found:
+                found.append(value)
+    return found
 
 NEXT_DATA_RE = __import__("re").compile(
     r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
