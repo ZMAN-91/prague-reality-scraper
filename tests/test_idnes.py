@@ -543,3 +543,48 @@ def test_a_listing_with_no_price_sentence_still_parses():
 
 def test_text_in_another_shape_is_still_refused():
     assert idnes.parse_og_description("Neco uplne jineho", OG_URL) is None
+
+
+# --- asking for part of Prague ----------------------------------------------
+
+
+def test_the_whole_city_is_still_the_default():
+    """Every existing caller passes no branch and must keep the old URL."""
+    assert idnes.page_url("byt", "prodej", 1) == \
+        "https://reality.idnes.cz/s/prodej/byty/praha/"
+    assert idnes.page_url("byt", "prodej", 4) == \
+        "https://reality.idnes.cz/s/prodej/byty/praha/?page=4"
+
+
+def test_a_branch_narrows_the_search():
+    assert idnes.page_url("byt", "prodej", 1, "praha-10") == \
+        "https://reality.idnes.cz/s/prodej/byty/praha-10/"
+
+
+def test_paging_survives_the_branch():
+    """The page parameter goes after the branch, not after "praha"."""
+    assert idnes.page_url("byt", "pronajem", 3, "praha-4") == \
+        "https://reality.idnes.cz/s/pronajem/byty/praha-4/?page=3"
+
+
+def test_branches_apply_to_rent_as_well_as_sale():
+    """Probed: /s/pronajem/byty/praha-10/ filters the same way sale does."""
+    for transaction in ("prodej", "pronajem"):
+        url = idnes.page_url("byt", transaction, 1, "praha-10")
+        assert url.endswith("/praha-10/")
+        assert f"/s/{transaction}/" in url
+
+
+def test_the_watched_area_is_two_branches():
+    """praha-4 covers praha-11, praha-10 covers praha-15 - between them 94.5%
+    of the area's iDNES listings. Finer branches exist but four narrow ones
+    cost more requests than two wide ones for three points of coverage."""
+    assert idnes.AREA_BRANCHES == ("praha-4", "praha-10")
+
+
+def test_a_branch_never_leaves_the_city_it_narrows():
+    """A typo here would silently collect a different city."""
+    for branch in idnes.AREA_BRANCHES:
+        assert branch.startswith("praha-")
+        assert idnes.search_url("byt", "prodej", branch).startswith(
+            "https://reality.idnes.cz/s/prodej/byty/praha-")

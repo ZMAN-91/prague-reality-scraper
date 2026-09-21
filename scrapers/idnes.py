@@ -81,6 +81,39 @@ SEARCH_URLS = {
     ("byt", "pronajem"): f"{BASE}/s/pronajem/byty/praha/",
 }
 
+# The watched area, as the branches of the search tree that hold it.
+#
+# iDNES is the one source with no geography in its data at all - it publishes
+# no coordinates - so the only way to ask it for part of Prague is to ask a
+# narrower branch. Probed on 2026-09-21 (tools/probe_idnes_scope.py):
+#
+#   /s/prodej/byty/praha-4/    -> praha-4, praha-12, praha-11
+#   /s/prodej/byty/praha-10/   -> praha-10, praha-15, praha-22
+#   /s/prodej/byty/praha-11/   -> praha-11 (96%)
+#   anything finer (katastr, street, query filter) -> 404
+#
+# These are POSTAL districts, so each branch carries the neighbouring city
+# districts that share its post code - which is why two branches are enough:
+# the watched area's iDNES listings sit in praha-11 (34%), praha-15 (31%),
+# praha-10 (17%) and praha-4 (12%), and praha-4 covers 11 while praha-10
+# covers 15. 572 of 605, or 94.5%.
+#
+# The remaining 5.5% are listings whose zone was decided by coordinates
+# rather than by address, and they are not lost - the nightly city-wide pass
+# picks them up. That division is the whole design: the narrow branches keep
+# the hourly pass small, and the nightly pass is what keeps them honest.
+AREA_BRANCHES = ("praha-4", "praha-10")
+
+
+def search_url(property_type: str, transaction_type: str,
+               branch: str = "") -> str:
+    """The search root for a scope, optionally narrowed to one branch."""
+    base = SEARCH_URLS[(property_type, transaction_type)]
+    if not branch:
+        return base
+    # ".../byty/praha/" -> ".../byty/praha-10/"
+    return base.rsplit("praha/", 1)[0] + f"{branch}/"
+
 # Listing links are the only reliable anchor in the markup: a 24-character
 # hex id at the end of a /detail/<transaction>/<type>/<locality>/ path.
 LISTING_HREF_RE = re.compile(
@@ -215,8 +248,9 @@ def parse_search_page(html: str) -> list:
     return listings
 
 
-def page_url(property_type: str, transaction_type: str, page: int) -> str:
-    base = SEARCH_URLS[(property_type, transaction_type)]
+def page_url(property_type: str, transaction_type: str, page: int,
+             branch: str = "") -> str:
+    base = search_url(property_type, transaction_type, branch)
     return base if page <= 1 else f"{base}?page={page}"
 
 
