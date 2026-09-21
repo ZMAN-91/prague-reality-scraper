@@ -41,7 +41,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-from common import storage
+from common import cas, storage
 from tools import market
 
 WINDOWS = (1, 7, 30)
@@ -368,7 +368,8 @@ def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
 
 
 def export(data_dir: Path = storage.DATA_DIR,
-           generated: Optional[datetime] = None) -> dict:
+           generated: Optional[datetime] = None,
+           through: Optional[date] = None) -> dict:
     daily_path = data_dir / "csv" / "trh_denne.csv"
     if not daily_path.exists():
         market.export(data_dir)
@@ -377,6 +378,17 @@ def export(data_dir: Path = storage.DATA_DIR,
     with open(data_dir / "csv" / "historie_nemovitosti.csv",
               encoding="utf-8", newline="") as f:
         episodes_rows = list(csv.DictReader(f))
+
+    # The report is about a WEEK, not about everything up to yesterday, and
+    # the two only differ when it runs late. Monday they are the same; on the
+    # Tuesday retry "up to yesterday" quietly takes in Monday, so that week
+    # is a day long and the next one a day short - two wrong weeks, not one.
+    #
+    # So the series is cut at the last Sunday that has actually passed, and
+    # both Monday and its Tuesday retry produce the same report.
+    through = through or cas.closed_week_end(cas.to_prague(
+        generated).date() if generated else None)
+    series = [row for row in series if (row.get("den") or "") <= through.isoformat()]
 
     text = render(series, episodes_rows, generated)
     root = data_dir.parent
@@ -391,20 +403,13 @@ def export(data_dir: Path = storage.DATA_DIR,
     # not in the weekly archive at all: restore the archive into an empty
     # tree and every report ever written is gone.
     #
-    # Named for the ISO week it was PUBLISHED in - the edition, not the
-    # period it covers. Monday's report is about the week that just ended, so
-    # reports/2026-W39.md holds the report written on Monday the 21st about
-    # the week to Sunday the 20th; the day its figures are as of is line 3 of
-    # the file itself ("Data k ..."), which is the only place it cannot drift
-    # out of step.
-    #
-    # Publication week rather than data date because it is stable: a re-run
-    # after a failed Monday corrects that edition instead of filing a second
-    # report beside it, which naming by the newest complete day would do.
-    stamp = (generated or datetime.now(timezone.utc))
+    # Named for the week it is ABOUT. reports/2026-W38.md is the report on
+    # the week to Sunday 20 September, whether it was rendered on the Monday
+    # or on the Tuesday after a failure - which is what makes the retry
+    # produce the same file rather than a second one beside it.
     archive = root / "reports"
     archive.mkdir(parents=True, exist_ok=True)
-    weekly = archive / f"{stamp.strftime('%G-W%V')}.md"
+    weekly = archive / f"{cas.week_label(through)}.md"
     weekly.write_text(text, encoding="utf-8")
 
     return {"path": str(path), "archived": str(weekly),

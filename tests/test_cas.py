@@ -4,7 +4,7 @@ Under UTC days everything collected between 22:00 and midnight Prague time
 was filed under the day before - two hours of every evening, every day.
 """
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -66,3 +66,51 @@ def test_to_prague_keeps_the_moment_and_changes_the_clock():
     local = cas.to_prague(moment)
     assert local.hour == 0 and local.day == 22
     assert local == moment          # the same instant, differently written
+
+
+# --- the week a weekly job is about -----------------------------------------
+
+
+def test_monday_reports_the_week_that_just_ended():
+    assert cas.closed_week_end(date(2026, 9, 21)) == date(2026, 9, 20)
+    assert cas.closed_week(date(2026, 9, 21)) == "2026-W38"
+
+
+def test_tuesday_reports_the_same_week_monday_would_have():
+    """The retry when Monday failed. Without this it would report a week plus
+    a day, and leave the week after it one day short - the two errors would
+    not even cancel, they would both be wrong."""
+    assert cas.closed_week(date(2026, 9, 22)) == cas.closed_week(date(2026, 9, 21))
+
+
+def test_the_whole_week_answers_with_the_previous_one():
+    """Every day from Monday to Sunday is inside a week that has not ended,
+    so all of them name the week before."""
+    labels = {cas.closed_week(date(2026, 9, 21) + timedelta(days=n))
+              for n in range(7)}
+    assert labels == {"2026-W38"}
+
+
+def test_the_next_monday_moves_on():
+    assert cas.closed_week(date(2026, 9, 28)) == "2026-W39"
+    assert cas.closed_week_end(date(2026, 9, 28)) == date(2026, 9, 27)
+
+
+def test_a_sunday_is_not_its_own_closed_week():
+    """A week is not over until it is over. Run on Sunday, the last finished
+    week is still the one before."""
+    assert cas.closed_week(date(2026, 9, 27)) == "2026-W38"
+
+
+def test_the_label_crosses_the_year_correctly():
+    """ISO weeks do not respect January. 2027-01-04 is a Monday in 2027-W01,
+    and the week that just ended is 2026-W53."""
+    assert cas.closed_week(date(2027, 1, 4)) == "2026-W53"
+
+
+def test_week_label_names_its_own_week_not_the_one_before():
+    """closed_week steps back from today; week_label does not step at all.
+    Confusing the two filed a Monday report under the week before last."""
+    assert cas.week_label(date(2026, 9, 20)) == "2026-W38"
+    assert cas.closed_week(date(2026, 9, 21)) == "2026-W38"
+    assert cas.week_label(cas.closed_week_end(date(2026, 9, 21))) == "2026-W38"

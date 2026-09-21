@@ -22,7 +22,7 @@ months of the year.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -77,3 +77,40 @@ def date_of(value: Optional[str]) -> Optional[date]:
 def today() -> date:
     """Today in Prague."""
     return to_prague(now()).date()
+
+
+def closed_week_end(today: Optional[date] = None) -> date:
+    """The Sunday of the last week that has actually finished.
+
+    The weekly report and the weekly archive are about a week, not about
+    "everything up to yesterday", and the difference only shows when they run
+    late. On Monday those two are the same thing; on Tuesday - the retry when
+    Monday failed - "up to yesterday" quietly includes Monday, so the week
+    reported is a week plus a day, and the week after it is short one.
+
+    Anchored on the most recent Sunday strictly before today, so Monday and
+    Tuesday of the same week both answer with that same Sunday.
+    """
+    today = today or globals()["today"]()
+    # isoweekday(): Monday 1 ... Sunday 7.
+    return today - timedelta(days=today.isoweekday())
+
+
+def week_label(day: date) -> str:
+    """The ISO week a given day falls in, "2026-W38".
+
+    Separate from closed_week on purpose: that one takes TODAY and steps back
+    to the week before, this one takes a day and names its own week. Passing
+    a closed week's Sunday into closed_week applies the step twice and names
+    the week before that - which is how the first version of this filed a
+    Monday report under W37.
+    """
+    iso = day.isocalendar()
+    return f"{iso[0]}-W{iso[1]:02d}"
+
+
+def closed_week(today: Optional[date] = None) -> str:
+    """That week as an ISO label, "2026-W39" - what the report and the
+    archive are named after, so both say which week they are ABOUT rather
+    than which week they happened to be produced in."""
+    return week_label(closed_week_end(today))

@@ -317,30 +317,45 @@ def at(stamp):
     return datetime.fromisoformat(stamp).replace(tzinfo=timezone.utc)
 
 
-def test_every_report_is_kept_under_the_week_it_was_published_in(tmp_path):
+def test_every_report_is_kept_under_the_week_it_is_about(tmp_path):
     """REPORT.md is this week's by definition, so every week it replaces the
     one before it. Restore last week's archive into an empty tree and the
     only report that ever existed was the current one."""
     data = write_series(tmp_path, days(3))
     report.export(data, generated=at("2026-09-21T07:39"))
-    assert (tmp_path / "reports" / "2026-W39.md").exists()
+    # Rendered on Monday 21 September, about the week to Sunday the 20th.
+    assert (tmp_path / "reports" / "2026-W38.md").exists(), \
+        sorted(p.name for p in (tmp_path / "reports").iterdir())
     assert (tmp_path / "REPORT.md").exists()
 
 
 def test_the_kept_copy_is_the_report_itself(tmp_path):
     data = write_series(tmp_path, days(3))
     report.export(data, generated=at("2026-09-21T07:39"))
-    assert ((tmp_path / "reports" / "2026-W39.md").read_text(encoding="utf-8")
+    assert ((tmp_path / "reports" / "2026-W38.md").read_text(encoding="utf-8")
             == (tmp_path / "REPORT.md").read_text(encoding="utf-8"))
 
 
-def test_running_twice_in_one_week_does_not_leave_two_reports(tmp_path):
-    """Keyed by the edition, not by the newest day in the data - a re-run
-    after a failed Monday must correct that edition, not sit beside it."""
+def test_the_tuesday_retry_produces_the_same_report_not_a_second_one(tmp_path):
+    """The whole point of naming by the period rather than the run.
+
+    Monday's attempt failed, Tuesday's runs instead. Keyed by the run it
+    would file a 'W39' report covering a week plus Monday; keyed by the
+    period it corrects W38 and leaves the week boundaries alone.
+    """
     data = write_series(tmp_path, days(3))
+    def data_line(text):
+        return next(line for line in text.splitlines() if line.startswith("Data k"))
+
     report.export(data, generated=at("2026-09-21T07:39"))
-    report.export(data, generated=at("2026-09-21T09:05"))
-    assert [p.name for p in (tmp_path / "reports").iterdir()] == ["2026-W39.md"]
+    monday = (tmp_path / "reports" / "2026-W38.md").read_text(encoding="utf-8")
+
+    report.export(data, generated=at("2026-09-22T07:39"))
+    tuesday = (tmp_path / "reports" / "2026-W38.md").read_text(encoding="utf-8")
+    assert [p.name for p in (tmp_path / "reports").iterdir()] == ["2026-W38.md"]
+    # The generation stamp belongs to the run and legitimately differs; the
+    # day the figures are as of belongs to the week and must not.
+    assert data_line(tuesday).split("·")[0] == data_line(monday).split("·")[0]
 
 
 def test_two_different_weeks_are_two_files(tmp_path):
@@ -348,4 +363,24 @@ def test_two_different_weeks_are_two_files(tmp_path):
     report.export(data, generated=at("2026-09-21T07:39"))
     report.export(data, generated=at("2026-09-28T07:39"))
     assert sorted(p.name for p in (tmp_path / "reports").iterdir()) == [
-        "2026-W39.md", "2026-W40.md"]
+        "2026-W38.md", "2026-W39.md"]
+
+
+def test_the_series_is_cut_at_the_end_of_the_reported_week(tmp_path):
+    """A Tuesday retry must not quietly take Monday into last week's report.
+
+    Days run to 2026-01-10 here and the report is generated on Tuesday
+    2026-01-13, so the week it covers ends Sunday the 11th and every day
+    after that has to be absent from the rendered page.
+    """
+    data = write_series(tmp_path, days(20, start=1))
+    report.export(data, generated=at("2026-01-13T07:39"))
+    header = (tmp_path / "REPORT.md").read_text(encoding="utf-8").splitlines()[2]
+
+    # The header carries both halves of the claim: which day the figures are
+    # as of, and how many days went into them. Twenty days of series cut at
+    # Sunday the 11th is eleven. Checking the whole page for a date string
+    # instead catches the generation stamp, which is the run's and not the
+    # period's.
+    assert "Data k **2026-01-11**" in header, header
+    assert "11 dnů" in header, header
