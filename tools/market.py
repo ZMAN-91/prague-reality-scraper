@@ -94,7 +94,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
-from common import storage
+from common import cas, storage
 from tools import episodes
 
 # 1 is "today", 7 and 30 are what the report shows. A window of one day is
@@ -135,7 +135,7 @@ def as_date(value) -> Optional[date]:
     if not value:
         return None
     try:
-        return date.fromisoformat(str(value)[:10])
+        return cas.date_of(value)
     except ValueError:
         return None
 
@@ -341,7 +341,11 @@ def daily(rows: list[dict], today: Optional[date] = None,
     #
     # It is right for a day that is over and wrong for the one in progress,
     # and nothing in the numbers says which is which. So the row says.
-    complete_through = (today or datetime.now(timezone.utc).date()) - timedelta(days=1)
+    # Prague's today, matching the days the series is bucketed into. Under
+    # UTC, between 22:00 and midnight local time this said "yesterday" about
+    # a day that had already ended here, and marked the current day complete
+    # two hours early.
+    complete_through = (today or cas.today()) - timedelta(days=1)
 
     by_segment: dict[str, list[dict]] = defaultdict(list)
     for row in prepared:

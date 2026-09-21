@@ -43,8 +43,11 @@ def test_parse_iso_returns_none_for_junk_instead_of_raising():
         assert parse_iso(value) is None
 
 
-def test_day_of_truncates_to_the_date():
-    assert day_of("2026-03-01T23:59:59+00:00") == "2026-03-01"
+def test_day_of_gives_the_prague_day_not_the_utc_one():
+    """Since 2026-09-21 the day is Prague's. 23:59 UTC on the 1st is already
+    00:59 on the 2nd in Prague, and this dataset is about that city."""
+    assert day_of("2026-03-01T23:59:59+00:00") == "2026-03-02"
+    assert day_of("2026-03-01T22:59:59+00:00") == "2026-03-01"  # winter, +01:00
     assert day_of("2026-03-01") == "2026-03-01"
 
 

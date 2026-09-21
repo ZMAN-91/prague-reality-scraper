@@ -53,7 +53,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
-from common import storage
+from common import cas, storage
 from common.schema import STATUS_ACTIVE, STATUS_REMOVED, is_missing_status
 
 # A property re-advertised within two weeks is still the same attempt to
@@ -84,7 +84,7 @@ def as_date(value: Optional[str]) -> Optional[date]:
     if not value:
         return None
     try:
-        return date.fromisoformat(str(value)[:10])
+        return cas.date_of(value)
     except ValueError:
         return None
 

@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
+from common import cas
+
 # --- Enums -------------------------------------------------------------
 
 PROPERTY_TYPES = {"byt", "dum"}
@@ -127,15 +129,20 @@ def utcnow_iso() -> str:
 
 
 def day_of(iso_timestamp: str) -> str:
-    """The date part (YYYY-MM-DD) of an ISO timestamp.
+    """The PRAGUE calendar day of an ISO timestamp, as YYYY-MM-DD.
 
     Used for `last_seen_at`, which is deliberately stored day-granular - see
     README "Proč je last_seen_at jen datum". Second-granular here would
     rewrite every active row of listings.csv every hour, which makes git's
     delta compression useless and grows the repository by roughly the whole
     file every hour.
+
+    Prague and not UTC since 2026-09-21: this is a dataset about the Prague
+    market, so its days are the days a person in Prague lived through. Under
+    UTC everything after 22:00 local time was filed under the day before.
+    See common/cas.py.
     """
-    return iso_timestamp[:10]
+    return cas.day_of(iso_timestamp)
 
 
 def parse_iso(value: Optional[str]) -> Optional[datetime]:

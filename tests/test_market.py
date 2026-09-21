@@ -350,3 +350,24 @@ def test_every_earlier_day_is_complete():
     marks = {r["den"]: r["den_uplny"] for r in series if r["okno_dnu"] == 1}
     assert set(marks.values()) == {"ano", "ne"}
     assert [d for d, m in marks.items() if m == "ne"] == ["2026-02-10"]
+
+
+def test_the_day_in_progress_is_prague_s_not_greenwich_s():
+    """`den_uplny` is decided against today, and today is now Prague's.
+
+    Under UTC, a run between 22:00 and midnight Prague time still thought it
+    was the previous day - so it marked as complete a day that in Prague had
+    two hours left to run, and the report took its headline from a day still
+    being collected.
+    """
+    from common import cas
+
+    # The conversion this rests on: 23:30 UTC is already the next day here.
+    assert cas.date_of("2026-03-01T23:30:00+00:00") == date(2026, 3, 2)
+
+    rows = market.daily([episode("a", "2026-02-25", "2026-03-02",
+                                 outcome="active")],
+                        today=date(2026, 3, 2))
+    by_day = {r["den"]: r["den_uplny"] for r in rows if r["okno_dnu"] == 1}
+    assert by_day.get("2026-03-01") == "ano", by_day
+    assert by_day.get("2026-03-02") == "ne", by_day

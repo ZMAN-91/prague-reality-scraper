@@ -103,7 +103,9 @@ def test_same_day_reappearance_does_not_touch_the_row_at_all():
     merge([make_listing("1")], listings, last_obs, "2026-03-01T10:00:00+00:00")
     before = dict(next(iter(listings.values())))
 
-    merge([make_listing("1")], listings, last_obs, "2026-03-01T23:59:00+00:00")
+    # 22:00 UTC, not 23:59: in Prague that is still the 1st in winter, while
+    # 23:59 UTC is already the 2nd and would legitimately bump last_seen_at.
+    merge([make_listing("1")], listings, last_obs, "2026-03-01T22:00:00+00:00")
     after = next(iter(listings.values()))
     assert after == before
 
@@ -310,7 +312,9 @@ def test_new_internal_ids_are_tracked_for_relisting_pass():
 
 
 def test_day_of_matches_stored_last_seen_at():
-    assert day_of("2026-03-01T23:59:59+00:00") == "2026-03-01"
+    """Prague's day, so 23:59 UTC on the 1st is the 2nd - what a person here
+    would call it, and what listings.csv now stores."""
+    assert day_of("2026-03-01T23:59:59+00:00") == "2026-03-02"
 
 
 # --- the order sources run in --------------------------------------------
