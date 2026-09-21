@@ -79,6 +79,11 @@ LISTING_FIELDS = [
     # points are the latter and they are a different series - evidencni 163
     # is not house 163 - so the column cannot be assumed to hold one kind.
     "cislo_typ",
+    # The postcode of the matched address point. Inferred with the number and
+    # only as good as it - a pin on the wrong side of a boundary gives the
+    # neighbour's - but it is filled for 98.7% of matches and no portal here
+    # publishes one at all.
+    "psc",
     "cislo_zdroj",
     "cislo_vzdalenost_m",
     "cislo_kandidatu",

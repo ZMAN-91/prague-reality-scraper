@@ -59,6 +59,7 @@ VIEW_FIELDS = [
     # house numbers with nothing beside it reads as fact. See common/ruian.py.
     "cislo_orientacni",
     "cislo_typ",
+    "psc",
     "cislo_zdroj",
     "cislo_vzdalenost_m",
     "cislo_kandidatu",

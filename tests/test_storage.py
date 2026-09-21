@@ -80,6 +80,7 @@ def test_listings_roundtrip(tmp_path):
         "cislo_popisne": "",
         "cislo_orientacni": "",
         "cislo_typ": "",
+        "psc": "",
         "cislo_zdroj": "",
         "cislo_vzdalenost_m": "",
         "cislo_kandidatu": "",

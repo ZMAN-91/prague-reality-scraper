@@ -20,6 +20,9 @@ So the number is never stored on its own. Three fields travel with it:
                         equally close
     cislo_typ           which of the two Czech numbering series it belongs
                         to, in the register's own words
+    psc                 the postcode of that address point. It comes free
+                        with the match and is filled for 98.7% of them, and
+                        no portal here publishes one.
 
 A row with cislo_vzdalenost_m of 4 and cislo_kandidatu of 1 is a building the
 portal pinned exactly. A row with 90 and 6 is a street name and a shrug. Both
@@ -93,7 +96,7 @@ MAX_DISTANCE_M = 250.0
 AMBIGUITY_FLOOR_M = 5.0
 AMBIGUITY_FACTOR = 2.0
 
-MATCH_FIELDS = ("cislo_popisne", "cislo_orientacni", "cislo_typ",
+MATCH_FIELDS = ("cislo_popisne", "cislo_orientacni", "cislo_typ", "psc",
                 "cislo_zdroj", "cislo_vzdalenost_m", "cislo_kandidatu")
 
 SOURCE_NAME = "ruian"
@@ -190,6 +193,7 @@ class Index:
             "cislo_popisne": nearest.get("cislo_domovni", ""),
             "cislo_orientacni": _orientacni(nearest),
             "cislo_typ": nearest.get("typ_cisla", ""),
+            "psc": nearest.get("psc", ""),
             "cislo_zdroj": SOURCE_NAME,
             "cislo_vzdalenost_m": f"{nearest_away:.1f}",
             "cislo_kandidatu": str(len(crowd)),

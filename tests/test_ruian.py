@@ -345,3 +345,17 @@ def test_the_nearest_point_wins_even_when_it_is_the_other_series():
     got = mixed.match(*at(0, 2), "Uzakrutu")
     assert got["cislo_popisne"] == "163"
     assert got["cislo_typ"] == "č.ev."
+
+
+def test_the_postcode_travels_with_the_number():
+    """No portal here publishes one, and the register has it on 98.7% of the
+    points a listing matches. It costs nothing to carry."""
+    got = STREET.match(*at(0, 30), "Leopoldova")
+    assert got["psc"] == "14900"
+
+
+def test_the_postcode_is_empty_when_the_register_has_none():
+    bare = index_of(point("leopoldova", "1", 0, 0))
+    bare.by_street["leopoldova"][0]["psc"] = ""
+    assert bare.match(*at(0, 0), "Leopoldova")["psc"] == ""
+    assert ruian.blank_match()["psc"] == ""
