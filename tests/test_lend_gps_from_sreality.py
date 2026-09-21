@@ -261,3 +261,82 @@ def test_history_is_not_required():
     listings = {"i1": idnes_row()}
     filled, _ = lender.lend(listings, [donor()], {"i1": 5_000_000}, {})
     assert filled == 1
+
+
+# --- the weekly re-examination ----------------------------------------------
+
+def borrowed_row(lat=50.03, lon=14.51, **extra):
+    row = idnes_row(**extra)
+    row["lat"], row["lon"] = lat, lon
+    row["gps_zdroj"] = lender.FROM_SREALITY
+    row["cislo_popisne"] = "1204"
+    row["cislo_zdroj"] = "ruian"
+    return row
+
+
+def test_a_better_pair_replaces_the_one_made_earlier():
+    """Where exactly one candidate matched and it was the wrong flat, the row
+    kept a wrong coordinate for ever - and a wrong coordinate quietly becomes
+    a wrong house number."""
+    listings = {"i1": borrowed_row(lat=50.09, lon=14.40)}
+    changed, stats = lender.repair(listings, [donor(lat=50.03, lon=14.51)],
+                                   PRICES)
+    assert changed == 1
+    assert listings["i1"]["lat"] == 50.03
+    assert stats["coordinate changed"] == 1
+
+
+def test_the_house_number_is_cleared_when_the_coordinate_moves():
+    """It was derived from the old coordinate. Left behind it would name a
+    building this row no longer points at."""
+    listings = {"i1": borrowed_row(lat=50.09, lon=14.40)}
+    lender.repair(listings, [donor(lat=50.03, lon=14.51)], PRICES)
+    assert listings["i1"]["cislo_popisne"] == ""
+    assert listings["i1"]["cislo_zdroj"] == ""
+
+
+def test_a_confirmed_pair_keeps_its_house_number():
+    """Redoing the number every week would churn the file for nothing."""
+    listings = {"i1": borrowed_row()}
+    changed, stats = lender.repair(listings, [donor()], PRICES)
+    assert changed == 0
+    assert listings["i1"]["cislo_popisne"] == "1204"
+    assert stats["coordinate confirmed"] == 1
+
+
+def test_a_portals_own_coordinate_is_never_re_examined():
+    """An advert's own figure beats any donor's, and is not this tool's to
+    revisit."""
+    row = borrowed_row()
+    row["gps_zdroj"] = ""
+    listings = {"i1": row}
+    changed, stats = lender.repair(listings, [donor(lat=50.09, lon=14.40)],
+                                   PRICES)
+    assert changed == 0
+    assert listings["i1"]["lat"] == 50.03
+    assert stats["borrowed coordinates re-examined"] == 0
+
+
+def test_a_coordinate_borrowed_from_a_cluster_is_left_to_dedup():
+    from common import coords
+    row = borrowed_row()
+    row["gps_zdroj"] = coords.FROM_CLUSTER
+    listings = {"i1": row}
+    changed, _ = lender.repair(listings, [donor(lat=50.09, lon=14.40)], PRICES)
+    assert changed == 0
+
+
+def test_a_vanished_pair_keeps_what_it_has():
+    """The advert being gone from sreality today is not evidence the
+    coordinate was wrong, and discarding it would lose good data."""
+    listings = {"i1": borrowed_row()}
+    changed, stats = lender.repair(listings, [], PRICES)
+    assert changed == 0
+    assert listings["i1"]["lat"] == 50.03
+
+    listings = {"i1": borrowed_row()}
+    changed, stats = lender.repair(
+        listings, [donor(address="Jinocanska, Praha 5")], PRICES)
+    assert changed == 0
+    assert listings["i1"]["lat"] == 50.03
+    assert stats["pair no longer on offer - kept"] == 1

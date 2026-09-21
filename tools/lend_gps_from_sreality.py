@@ -58,7 +58,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from common import cas, dedup, net, price_memory, storage
+from common import cas, dedup, net, price_memory, ruian, storage
 from common.budget import Budget
 from scrapers import sreality
 
@@ -203,6 +203,102 @@ def _why_not(row: dict, candidates: list) -> str:
     return order[best] if best >= 0 else order[0]
 
 
+def repair(listings: dict, donors: list, prices: dict = None,
+           remembered: dict = None) -> tuple:
+    """Re-examine coordinates borrowed earlier. Returns (changed, stats).
+
+    A pair, once made, was never looked at again: `lend` skips any row that
+    already has coordinates. That is right for the common case and wrong for
+    the failure case. Where exactly one candidate matched and it was the
+    wrong flat - the true twin absent from sreality that day, or priced
+    differently - the row keeps a wrong coordinate for ever, and a wrong
+    coordinate quietly becomes a wrong house number.
+
+    So once a week every borrowed coordinate is matched again against that
+    day's adverts, and a different answer is taken as the better one: it was
+    reached with more price history and a fuller donor set than the original.
+
+    Only rows that BORROWED from a donor. A portal's own coordinate is never
+    touched, and one borrowed from a clustered sibling belongs to dedup.
+
+    A row whose pair has vanished keeps what it has. The advert being gone
+    from sreality today is not evidence the coordinate was wrong, and
+    throwing it away would lose good data to prove a point.
+    """
+    stats: Counter = Counter()
+    prices = prices or {}
+    remembered = remembered or {}
+
+    borrowed = [row for row in listings.values()
+                if row.get("gps_zdroj") == FROM_SREALITY]
+    stats["borrowed coordinates re-examined"] = len(borrowed)
+    if not borrowed or not donors:
+        return 0, stats
+
+    by_street = {}
+    for donor in donors:
+        key = dedup.street_key(donor.get("address"))
+        if key:
+            by_street.setdefault(key, []).append(donor)
+
+    changed = 0
+    for row in borrowed:
+        key = dedup.street_key(row.get("address"))
+        candidates = by_street.get(key) if key else None
+        if not candidates:
+            stats["pair no longer on offer - kept"] += 1
+            continue
+
+        probe = dict(row)
+        probe.pop("lat", None)
+        probe.pop("lon", None)
+        seen = prices.get(row["internal_id"])
+        if isinstance(seen, (list, tuple, set)):
+            probe["prices"] = list(seen)
+        elif seen is not None:
+            probe["price"] = seen
+
+        dated = []
+        for candidate in candidates:
+            history = price_memory.history_for(
+                remembered, candidate.get("source_id"))
+            if history:
+                candidate = dict(candidate)
+                candidate["prices"] = (
+                    [candidate["price"]] + history
+                    if candidate.get("price") not in (None, "")
+                    else history)
+            dated.append(candidate)
+
+        found = None
+        for price_rel in PRICE_STAGES:
+            found = dedup.best_match(probe, dated,
+                                     area_abs_m=AREA_TOLERANCE_M,
+                                     price_rel_pct=price_rel)
+            if found:
+                break
+        if not found:
+            stats["pair no longer on offer - kept"] += 1
+            continue
+
+        donor, _confidence = found
+        if (str(donor["lat"]) != str(row.get("lat"))
+                or str(donor["lon"]) != str(row.get("lon"))):
+            row["lat"] = donor["lat"]
+            row["lon"] = donor["lon"]
+            # The house number was derived from the old coordinate. Clearing
+            # the source makes the next backfill redo it rather than leave a
+            # number that belongs to a building this row no longer points at.
+            for field in ruian.MATCH_FIELDS:
+                row[field] = ""
+            changed += 1
+            stats["coordinate changed"] += 1
+        else:
+            stats["coordinate confirmed"] += 1
+
+    return changed, stats
+
+
 def lend(listings: dict, donors: list, prices: dict = None,
          remembered: dict = None) -> tuple:
     """Fill blank coordinates from a matching donor. Returns (filled, stats).
@@ -301,6 +397,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-dir", default=str(storage.DATA_DIR))
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--repair", action="store_true",
+                        help="re-examine coordinates borrowed earlier, "
+                             "instead of filling blank ones")
     parser.add_argument("--max-seconds", type=int, default=1200)
     args = parser.parse_args(argv)
 
@@ -324,11 +423,15 @@ def main(argv=None) -> int:
     print(f"remembered today's prices for {recorded} sreality adverts "
           f"({len(remembered)} earlier days kept)")
 
-    filled, stats = lend(listings, donors, price_by_id, remembered)
+    if args.repair:
+        filled, stats = repair(listings, donors, price_by_id, remembered)
+    else:
+        filled, stats = lend(listings, donors, price_by_id, remembered)
     print(f"\n{len(listings)} listings")
     for reason, count in stats.most_common():
         print(f"  {count:6d}  {reason}")
-    print(f"\n{filled} rows gained coordinates.")
+    print(f"\n{filled} rows "
+          f"{'changed' if args.repair else 'gained'} coordinates.")
 
     if not args.apply:
         print("Dry run; pass --apply to write.")

@@ -846,3 +846,46 @@ def test_borrowing_still_takes_the_data_lock():
     would race an hourly scrape doing the same."""
     workflow = load(WORKFLOWS / "lend-gps.yml")
     assert "scrape-data" in workflow["jobs"]["lend"]["concurrency"]["group"]
+
+
+def test_the_weekly_run_re_examines_borrowed_coordinates():
+    """A pair, once made, is otherwise never revisited: the daily run skips
+    any row that already has coordinates. Weekly is where a wrong one gets a
+    second look, before the archive stores it."""
+    steps = load(REPORT)["jobs"]["report"]["steps"]
+    runs = [s.get("run", "") for s in steps]
+    joined = " ".join(runs)
+    assert "--repair" in joined, "nothing re-examines the borrowed pairs"
+    assert "tools.backfill_cislo" in joined, (
+        "a moved coordinate has its house number cleared; without this the "
+        "archive stores rows with a coordinate and no number")
+
+    repair_at = next(i for i, r in enumerate(runs) if "--repair" in r)
+    fill_at = next(i for i, r in enumerate(runs) if "backfill_cislo" in r)
+    report_at = next(i for i, r in enumerate(runs) if "tools.report" in r)
+    assert repair_at < fill_at < report_at, (
+        "the order has to be re-examine, then number, then report")
+
+
+def test_re_examining_never_fails_the_weekly_report():
+    """A portal unreachable this morning is a reason to keep last week's
+    coordinates, not to lose the week's report."""
+    steps = load(REPORT)["jobs"]["report"]["steps"]
+    step = next(s for s in steps if "--repair" in s.get("run", ""))
+    assert step.get("continue-on-error") is True
+
+
+def test_the_archive_is_taken_after_the_re_examination():
+    """Weekly re-pairing is only worth doing if the archive stores it. The
+    report runs at hour 5 and the backup at hour 6, both Monday and Tuesday."""
+    import yaml
+    backup = yaml.safe_load(
+        (Path(__file__).resolve().parent.parent / "deploy" / "backup.yml")
+        .read_text(encoding="utf-8"))
+    report_hours = {int(c["cron"].split()[1])
+                    for c in load(REPORT)[True]["schedule"]}
+    backup_hours = {int(c["cron"].split()[1])
+                    for c in backup[True]["schedule"]}
+    assert max(report_hours) < min(backup_hours), (
+        f"report at {report_hours} does not finish before backup at "
+        f"{backup_hours}")
