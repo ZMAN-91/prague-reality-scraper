@@ -132,7 +132,7 @@ class Index:
     def match(self, lat: Optional[float], lon: Optional[float],
               ulice: Optional[str],
               max_distance_m: float = MAX_DISTANCE_M) -> Optional[dict]:
-        """The nearest register point on `ulice`, as the five match fields.
+        """The nearest register point on `ulice`, as the match fields.
 
         None when there is nothing to go on: no coordinate, no street, a
         street the register does not know, or a nearest point too far away to
@@ -144,7 +144,7 @@ class Index:
     def match_detail(self, lat: Optional[float], lon: Optional[float],
                      ulice: Optional[str],
                      max_distance_m: float = MAX_DISTANCE_M) -> Optional[tuple]:
-        """(the five match fields, the register row they came from).
+        """(the match fields, the register row they came from).
 
         The row carries the district the register places that building in,
         which nothing in the matching uses - which is exactly what makes it
@@ -205,7 +205,7 @@ def _orientacni(point: dict) -> str:
 
 
 def blank_match() -> dict:
-    """The five fields, empty - what a listing carries when there was no
+    """The match fields, empty - what a listing carries when there was no
     match, so that every row has the same columns whether or not one was
     found. An empty cislo_zdroj is the marker: no number here was inferred."""
     return {field: "" for field in MATCH_FIELDS}
