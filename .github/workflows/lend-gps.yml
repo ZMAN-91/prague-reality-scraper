@@ -99,9 +99,9 @@ jobs:
           APPLY: ${{ github.event.inputs.apply || 'true' }}
         run: |
           if [ "$APPLY" = "true" ]; then
-            python -m tools.lend_gps_from_sreality --data-dir store/data --apply
+            python -m tools.lend_gps_from_sreality --data-dir store/data --logs-dir store/logs --apply
           else
-            python -m tools.lend_gps_from_sreality --data-dir store/data
+            python -m tools.lend_gps_from_sreality --data-dir store/data --logs-dir store/logs
           fi
 
       - name: Fill house numbers for whatever gained coordinates

@@ -510,6 +510,9 @@ def lend(listings: dict, donors: list, prices: dict = None,
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-dir", default=str(storage.DATA_DIR))
+    parser.add_argument("--logs-dir", default=str(storage.LOGS_DIR),
+                        help="where to record that sreality's city sweep "
+                             "completed; tools/health.py reads it")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--repair", action="store_true",
                         help="re-examine coordinates borrowed earlier, "
@@ -579,6 +582,23 @@ def main(argv=None) -> int:
                                 data_dir / "observations")
     storage.append_changes(change_rows, now, data_dir / "changes")
     storage.write_last_observation_state(last_obs, state_path)
+    # This walk is the ONLY thing that completes a sweep of sreality. The
+    # hourly pass covers two boroughs on purpose and says so; run.py's
+    # nightly city pass does not include sreality at all. Without this entry
+    # tools/health.py sees a source that has not finished a sweep since the
+    # day the hourly pass was narrowed, and says so every hour - which is
+    # the failure mode it was just rebuilt to avoid, arriving from the
+    # other side.
+    storage.write_run_log({
+        "started_at": now_iso,
+        "finished_at": cas.now().replace(microsecond=0).isoformat(),
+        "kind": "sreality city walk",
+        "scope": "city",
+        "transactions": ["prodej", "pronajem"],
+        "sources": {"sreality": seen_stats},
+        "total_listings": len(listings),
+        "ok": not seen_stats["errors"],
+    }, Path(args.logs_dir))
     print(f"Wrote {data_dir / 'listings.csv'}, "
           f"{len(observation_rows)} observations, "
           f"{len(change_rows)} attribute changes.")

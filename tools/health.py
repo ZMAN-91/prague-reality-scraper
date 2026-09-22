@@ -47,6 +47,13 @@ MIN_SPACING_MINUTES = 40
 # room to spare.
 RENT_OVERDUE_DAYS = 8.5
 
+# How long a source may go without completing a full sweep before its
+# removals have genuinely stopped being recorded. Every source completes one
+# at least daily - bezrealitky every run from its sitemap, iDNES on the
+# nightly city pass, sreality on the daily city-wide index walk - so this is
+# a day with a quarter of a day of slack for a late or skipped window.
+MAX_HOURS_WITHOUT_COMPLETE_SWEEP = 30.0
+
 # Sunday 00:00-05:00 UTC belongs to the rent pass: the sale cron skips it and
 # the external waker sleeps through it, both on purpose. Sale sweeps stop for
 # five hours every Sunday, which is not a broken waker - and a check that
@@ -174,12 +181,60 @@ def check_last_run(runs: list[dict]) -> list[str]:
         errors = source.get("errors") or []
         if errors:
             out.append(f"{name} reported {len(errors)} error(s), first: {errors[0]}")
-        if not source.get("run_complete"):
-            out.append(f"{name} did not finish its sweep, so nothing it "
-                       "missed can be treated as gone.")
         if source.get("fetched") == 0:
             out.append(f"{name} fetched nothing at all - the portal changed, "
                        "or it is blocking us.")
+    return out
+
+
+def check_sweep_freshness(runs: list[dict], now: datetime) -> list[str]:
+    """How long since each source last got all the way round.
+
+    This replaces a per-run test - "did THIS run finish its sweep" - which
+    was wrong in principle and cost nine failed jobs and nine emails before
+    anyone looked at why.
+
+    Not finishing a sweep in one run is the normal, designed state for two
+    of the three sources. iDNES rotates through ~257 index pages, so an
+    hourly run sees perhaps a tenth of Prague and reports itself incomplete
+    by construction. sreality's hourly pass walks two boroughs on purpose
+    and must NOT claim completeness - that claim is exactly the bug that
+    marked 1,201 live listings missing. Both are correct behaviour, and the
+    old check called both of them a failure, every hour, for ever.
+
+    health.py's own docstring says a finding that repeats on every run
+    trains you to ignore the whole file. It was right, and this file was
+    the thing that proved it.
+
+    What IS worth an email is a source that has not completed a sweep in a
+    long time: then removals really have stopped being recorded. Every
+    source here completes one at least daily - bezrealitky every run from
+    its sitemap, iDNES on the nightly city pass, sreality on the daily
+    city-wide index walk - so a day and a quarter of silence is a real
+    fault and nothing less is.
+    """
+    last_complete: dict[str, Optional[datetime]] = {}
+    for run in runs:
+        when = parse(run.get("started_at"))
+        for name, source in (run.get("sources") or {}).items():
+            last_complete.setdefault(name, None)
+            if when is not None and source.get("run_complete"):
+                if last_complete[name] is None or when > last_complete[name]:
+                    last_complete[name] = when
+
+    out = []
+    for name in sorted(last_complete):
+        when = last_complete[name]
+        if when is None:
+            out.append(f"{name} has never completed a sweep in any logged "
+                       "run, so nothing it misses can be treated as gone.")
+            continue
+        hours = (now - when).total_seconds() / 3600
+        if hours > MAX_HOURS_WITHOUT_COMPLETE_SWEEP:
+            out.append(
+                f"{name} has not completed a sweep for {hours:.1f} hours "
+                f"(last {when:%Y-%m-%d %H:%M}) - removals stopped being "
+                "recorded that long ago.")
     return out
 
 
@@ -207,7 +262,8 @@ def report(data_dir: Path, logs_dir: Path, now: Optional[datetime] = None) -> li
     now = now or datetime.now(timezone.utc)
     runs = load_runs(logs_dir)
     return (check_gap(runs, now) + check_spacing(runs) + check_rent(runs, now)
-            + check_last_run(runs) + check_days(data_dir, now))
+            + check_last_run(runs) + check_sweep_freshness(runs, now)
+            + check_days(data_dir, now))
 
 
 def main() -> int:

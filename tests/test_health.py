@@ -145,12 +145,42 @@ def test_errors_are_surfaced(tmp_path):
     assert any("HTTP 500" in f for f in got), got
 
 
-def test_an_unfinished_sweep_is_surfaced(tmp_path):
-    """It decides whether absence may be read as removal, so a sweep that
-    did not finish is not a smaller version of one that did."""
-    sources = {"idnes": {"fetched": 10, "errors": [], "run_complete": False}}
-    got = findings(tmp_path, [run(sources=sources)])
-    assert any("did not finish" in f for f in got), got
+def test_one_unfinished_sweep_is_not_a_fault(tmp_path):
+    """This test used to assert the opposite, and the opposite cost nine
+    failed jobs and nine emails in nine hours.
+
+    Not finishing in one run is the designed state for two of the three
+    sources. iDNES rotates through ~257 index pages, so an hourly run sees
+    a tenth of Prague; sreality's hourly pass walks two boroughs on purpose
+    and must not claim otherwise - that claim is the bug that once marked
+    1,201 live listings missing. Calling either a failure fires every hour
+    for ever, which is what this file's own docstring warns against.
+    """
+    got = findings(tmp_path, [
+        run(minutes_ago=90, sources={
+            "idnes": {"fetched": 10, "errors": [], "run_complete": True}}),
+        run(minutes_ago=30, sources={
+            "idnes": {"fetched": 10, "errors": [], "run_complete": False}}),
+    ], days=["2026-09-16", "2026-09-17"])
+    assert got == [], got
+
+
+def test_a_source_that_has_not_completed_a_sweep_in_over_a_day_is_surfaced(tmp_path):
+    """The condition that IS worth an email: removals have genuinely stopped
+    being recorded. Every source completes a sweep at least daily."""
+    got = findings(tmp_path, [
+        run(minutes_ago=60 * 40, sources={
+            "idnes": {"fetched": 10, "errors": [], "run_complete": True}}),
+        run(minutes_ago=30, sources={
+            "idnes": {"fetched": 10, "errors": [], "run_complete": False}}),
+    ])
+    assert any("has not completed a sweep" in f for f in got), got
+
+
+def test_a_source_that_never_completed_one_is_surfaced(tmp_path):
+    got = findings(tmp_path, [run(sources={
+        "idnes": {"fetched": 10, "errors": [], "run_complete": False}})])
+    assert any("never completed a sweep" in f for f in got), got
 
 
 def test_a_source_that_fetched_nothing_is_surfaced(tmp_path):

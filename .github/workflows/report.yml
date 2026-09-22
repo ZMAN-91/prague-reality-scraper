@@ -123,7 +123,7 @@ jobs:
           SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
         run: |
           python -m tools.lend_gps_from_sreality \
-            --data-dir store/data --repair --apply
+            --data-dir store/data --logs-dir store/logs --repair --apply
 
       - name: Fill house numbers for anything the re-examination moved
         # A moved coordinate has its number cleared, because the old one

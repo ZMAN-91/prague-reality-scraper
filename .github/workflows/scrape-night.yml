@@ -276,7 +276,7 @@ jobs:
           SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
         run: |
           python -m tools.lend_gps_from_sreality \
-            --data-dir store/data --apply
+            --data-dir store/data --logs-dir store/logs --apply
 
       - name: Fill house numbers for whatever just gained coordinates
         # A borrowed coordinate is only worth having if it is used. The

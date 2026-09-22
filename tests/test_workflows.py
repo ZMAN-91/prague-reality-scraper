@@ -976,3 +976,35 @@ def test_the_heartbeat_does_not_depend_on_the_scheduler_it_protects():
     writer = [s for s in steps if "STATUS.md" in s.get("run", "")
               and "heartbeat_due" not in s.get("run", "")][0]
     assert "steps.due.outputs.go" in writer.get("if", "")
+
+
+# --- the sreality city walk has to leave its record where the data lives -----
+
+def test_every_lend_gps_call_writes_its_log_into_the_data_repo():
+    """The tool records that sreality's city sweep completed, and that entry
+    is the only thing that keeps tools/health.py quiet about sreality: the
+    hourly pass covers two boroughs on purpose and run.py's nightly city
+    pass does not include sreality at all.
+
+    Without --logs-dir the entry lands in the code checkout, which is thrown
+    away when the job ends. That is not a hypothetical: the quality history
+    was written into that same discarded checkout for a day and simply did
+    not exist.
+    """
+    called = []
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if "tools.lend_gps_from_sreality" in line and not line.strip().startswith("#"):
+                called.append((path.name, line.strip()))
+
+    assert called, "nothing runs the sreality city walk any more"
+    for name, line in called:
+        # The invocation may be split across continuation lines, so check the
+        # whole run: block rather than the one line the tool name is on.
+        block = (WORKFLOWS / name).read_text(encoding="utf-8")
+        start = block.index("tools.lend_gps_from_sreality")
+        window = block[max(0, start - 200):start + 200]
+        assert "--logs-dir store/logs" in window, (
+            f"{name} runs the walk without --logs-dir store/logs, so its "
+            f"record of the sweep is discarded: {line}")

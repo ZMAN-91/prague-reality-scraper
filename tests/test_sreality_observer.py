@@ -334,3 +334,78 @@ def test_no_collect_still_only_observes(tmp_path):
     written = storage.read_listings(data_dir / "listings.csv")
     assert make_internal_id(SOURCE, "newcomer") not in written
     assert written[make_internal_id(SOURCE, "kept")]["status"] == STATUS_ACTIVE
+
+
+# --- and it tells the health check it got round ------------------------------
+
+def test_the_walk_records_that_it_completed_a_sweep(tmp_path):
+    """This walk is the ONLY thing that completes a sweep of sreality: the
+    hourly pass covers two boroughs on purpose and says so, and run.py's
+    nightly city pass does not include sreality at all.
+
+    Without the entry, tools/health.py sees a source that has not finished a
+    sweep since the hourly pass was narrowed - which is exactly the nine
+    failed jobs and nine emails this was all rebuilt to stop, arriving from
+    the other side.
+    """
+    import json
+    from common import storage
+
+    data_dir = tmp_path / "data"
+    logs_dir = tmp_path / "logs"
+    (data_dir / "state").mkdir(parents=True)
+    storage.write_listings(dataset("kept"), data_dir / "listings.csv")
+
+    with patch.object(lend, "walk_city",
+                      return_value=([walked("kept")], [], {SCOPE})), \
+         patch.object(lend.net, "build_session", lambda *a, **k: object()):
+        lend.main(["--data-dir", str(data_dir), "--logs-dir", str(logs_dir),
+                   "--apply"])
+
+    written = list(logs_dir.glob("*.jsonl"))
+    assert written, "the walk left no record that it ran"
+    entry = json.loads(written[0].read_text(encoding="utf-8").splitlines()[0])
+    assert entry["sources"]["sreality"]["run_complete"] is True
+    assert entry["scope"] == "city"
+
+
+def test_a_walk_that_completed_nothing_does_not_claim_it_did(tmp_path):
+    """An empty completed_scopes means no scope was walked to its end, and
+    the entry has to say so or health is being lied to rather than
+    informed."""
+    import json
+    from common import storage
+
+    data_dir = tmp_path / "data"
+    logs_dir = tmp_path / "logs"
+    (data_dir / "state").mkdir(parents=True)
+    storage.write_listings(dataset("kept"), data_dir / "listings.csv")
+
+    with patch.object(lend, "walk_city",
+                      return_value=([walked("kept")], ["boom"], set())), \
+         patch.object(lend.net, "build_session", lambda *a, **k: object()):
+        lend.main(["--data-dir", str(data_dir), "--logs-dir", str(logs_dir),
+                   "--apply"])
+
+    entry = json.loads(
+        list(logs_dir.glob("*.jsonl"))[0].read_text(encoding="utf-8").splitlines()[0])
+    assert entry["sources"]["sreality"]["run_complete"] is False
+    assert entry["ok"] is False
+
+
+def test_a_dry_run_leaves_no_record(tmp_path):
+    """It did not write the data either, so a log saying it swept would put
+    health and the dataset out of step."""
+    from common import storage
+
+    data_dir = tmp_path / "data"
+    logs_dir = tmp_path / "logs"
+    (data_dir / "state").mkdir(parents=True)
+    storage.write_listings(dataset("kept"), data_dir / "listings.csv")
+
+    with patch.object(lend, "walk_city",
+                      return_value=([walked("kept")], [], {SCOPE})), \
+         patch.object(lend.net, "build_session", lambda *a, **k: object()):
+        lend.main(["--data-dir", str(data_dir), "--logs-dir", str(logs_dir)])
+
+    assert not logs_dir.exists() or not list(logs_dir.glob("*.jsonl"))
