@@ -235,7 +235,7 @@ def test_price_change_is_logged_once(no_sleep, paths):
     assert prices == ["5000000", "4500000"]
 
 
-def test_disappearance_takes_a_week_to_become_removed(no_sleep, paths):
+def test_disappearance_takes_three_days_to_become_removed(no_sleep, paths):
     from datetime import datetime, timedelta, timezone
 
     data_dir, logs_dir = paths
@@ -250,9 +250,9 @@ def test_disappearance_takes_a_week_to_become_removed(no_sleep, paths):
         rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
         statuses.append(rows["2"]["status"])
 
-    assert all(s.startswith("missing_") for s in statuses[:6]), \
-        f"removed before the week was up: {statuses}"
-    assert statuses[6] == "removed"
+    assert all(s.startswith("missing_") for s in statuses[:2]), \
+        f"removed before the three days were up: {statuses}"
+    assert statuses[2] == "removed"
     # ...and the surviving listing is untouched throughout.
     rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
     assert rows["1"]["status"] == "active"

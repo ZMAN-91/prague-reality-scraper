@@ -160,11 +160,20 @@ def test_out_of_area_listing_is_never_stored():
 # --- disappearance / removal -------------------------------------------
 
 
-def test_a_listing_is_removed_only_after_a_week_of_absence():
-    """Six days of being missed is not a removal; the seventh is. The old
-    rule was three consecutive misses, which at an hourly cadence meant three
-    hours - short enough that a portal hiccup lasting a morning produced a
-    wave of false removals."""
+def test_a_listing_is_removed_only_after_three_days_of_absence():
+    """Two days of being missed is not a removal; the third is.
+
+    The rule this replaces was three consecutive MISSES, which at an hourly
+    cadence meant three hours - short enough that a portal hiccup lasting a
+    morning produced a wave of false removals. Days, not misses, is what
+    makes three safe: it is the same three days for a source walked hourly
+    and one whose sweep spans a day.
+
+    It was seven days until the history sheet showed all 9,715 episodes as
+    active, because nothing had had time to be confirmed gone. The caution
+    moved rather than went: those days are now visible as `disappearing`
+    with a count, instead of being indistinguishable from a live advert.
+    """
     listings, last_obs = {}, {}
     merge([make_listing("1")], listings, last_obs, "2026-03-01T00:00:00+00:00")
 
@@ -173,9 +182,9 @@ def test_a_listing_is_removed_only_after_a_week_of_absence():
         merge([], listings, last_obs, f"2026-03-{day:02d}T00:00:00+00:00")
         statuses.append(list(listings.values())[0]["status"])
 
-    assert statuses[:6] == [f"missing_{n}" for n in range(1, 7)], \
-        "something was removed before the week was up"
-    assert statuses[6] == STATUS_REMOVED, "seven days absent must be removed"
+    assert statuses[:2] == ["missing_1", "missing_2"], \
+        "something was removed before the three days were up"
+    assert statuses[2] == STATUS_REMOVED, "three days absent must be removed"
 
 
 def test_each_missing_step_writes_exactly_one_observation():
@@ -186,7 +195,7 @@ def test_each_missing_step_writes_exactly_one_observation():
         _, obs = merge([], listings, last_obs, f"2026-03-{day:02d}T00:00:00+00:00")
         rows.extend(obs)
     assert [r["status"] for r in rows] == \
-        [f"missing_{n}" for n in range(1, 7)] + [STATUS_REMOVED]
+        ["missing_1", "missing_2", STATUS_REMOVED]
     assert all(r["price"] == "" for r in rows)  # no price info at a disappearance
 
 

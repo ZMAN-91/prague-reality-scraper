@@ -40,7 +40,20 @@ MISSING_STATUS_PREFIX = "missing_"
 # Days also make the rule mean the same thing for every source, which a run
 # count never could: three misses is three hours of sreality and the better
 # part of a week of iDNES, whose sweep spans many runs.
-REMOVAL_AFTER_DAYS = 7
+#
+# Three, not the week it started at. A week was chosen to be safe against a
+# portal that goes down for a morning, and it is - but it also meant that on
+# a six-day-old dataset every one of 9,715 property episodes read "active",
+# because nothing had had time to be confirmed gone. A departure that takes
+# longer to confirm than the market takes to move is not a cautious
+# measurement, it is a missing one.
+#
+# The caution is not lost, it moved: an advert spends those days in
+# missing_1, missing_2, missing_3, and tools/episodes.py now reports that
+# state as `disappearing` with a day count instead of calling it active. So
+# a listing that has been gone two days is visible as such while still being
+# allowed to come back.
+REMOVAL_AFTER_DAYS = 3
 
 # --- Column layouts (must match README exactly) -------------------------
 

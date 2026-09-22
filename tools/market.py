@@ -95,6 +95,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from common import cas, storage
+from common.schema import REMOVAL_AFTER_DAYS
 from tools import episodes
 
 # 1 is "today", 7 and 30 are what the report shows. A window of one day is
@@ -107,10 +108,12 @@ WINDOWS = (1, 7, 30)
 # does it in two weeks.
 QUICK_DAYS = 14
 
-# A departure takes this long to be confirmed (common/schema REMOVAL_AFTER_DAYS).
-# Kept as its own name because what it means here is different: it is the
-# length of the tail in which departure counts are still rising.
-CONFIRMATION_LAG_DAYS = 7
+# A departure takes this long to be confirmed. Kept as its own name because
+# what it means here is different: it is the length of the tail in which
+# departure counts are still rising. Bound to the schema's value rather than
+# repeated, because the two must agree and a literal here would go stale the
+# moment the ladder is retuned - which it just was, from 7 days to 3.
+CONFIRMATION_LAG_DAYS = REMOVAL_AFTER_DAYS
 
 # Below this many properties a median is noise, not a measurement.
 MIN_SAMPLE = 5

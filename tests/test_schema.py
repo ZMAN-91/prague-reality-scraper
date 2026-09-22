@@ -59,8 +59,14 @@ def test_the_status_holds_still_while_the_day_does():
 def test_the_number_says_how_many_days():
     assert next_missing_status(STATUS_ACTIVE, days_absent=0) == "missing_1"
     assert next_missing_status("missing_1", days_absent=1) == "missing_1"
-    assert next_missing_status("missing_1", days_absent=3) == "missing_3"
-    assert next_missing_status("missing_3", days_absent=6) == "missing_6"
+    assert next_missing_status("missing_1", days_absent=2) == "missing_2"
+    # Past the threshold the ladder ends rather than counting on, which is
+    # the one thing the day count must not hide.
+    assert next_missing_status("missing_2", days_absent=3) == STATUS_REMOVED
+    # And the count is still a count when the threshold is lifted, so the
+    # number means days and not "however far the ladder happens to go".
+    assert next_missing_status("missing_1", days_absent=5,
+                               removal_after_days=99) == "missing_5"
 
 
 def test_not_knowing_how_long_is_never_evidence_of_removal():

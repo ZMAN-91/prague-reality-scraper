@@ -252,14 +252,49 @@ def test_observations_are_read_from_every_month(tmp_path):
 
 
 def test_a_temporarily_missing_listing_has_not_left_the_market():
-    """Since removal became a week of absence, a listing sits in missing_N for
-    seven days. Reading "not active" as "gone" counted 51 of 10 990 live
-    listings as departures, and would turn every portal hiccup into a wave of
-    departures followed by a wave of arrivals when they came back."""
-    for status in ("missing_1", "missing_2", "missing_6"):
+    """Reading "not active" as "gone" counted 51 of 10 990 live listings as
+    departures, and would turn every portal hiccup into a wave of departures
+    followed by a wave of arrivals when they came back.
+
+    Still true, and it is what `disappearing` is for: not seen, not gone.
+    The things that count departures ask for `removed` exactly, so this
+    state is a departure to none of them.
+    """
+    for status in ("missing_1", "missing_2", "missing_3"):
         listings = {"a": listing("a", "2026-01-01", "2026-01-10", status=status)}
-        assert one(episodes.build(listings, {}))["outcome"] == "active", \
+        assert one(episodes.build(listings, {}))["outcome"] == "disappearing", \
+            f"{status} was not reported as on its way out"
+        assert one(episodes.build(listings, {}))["outcome"] != "removed", \
             f"{status} was counted as a departure"
+
+
+def test_an_episode_on_its_way_out_says_how_long_it_has_been_gone():
+    """The whole point of the state: "gone three days" has to be readable
+    off the sheet, not derived from two date columns by whoever opens it."""
+    from datetime import date
+    listings = {"a": listing("a", "2026-01-01", "2026-01-10", status="missing_2")}
+    row = one(episodes.build(listings, {}, today=date(2026, 1, 13)))
+    assert row["outcome"] == "disappearing"
+    assert row["days_missing"] == 3
+
+
+def test_a_listing_still_being_seen_is_not_missing_for_any_days():
+    from datetime import date
+    listings = {"a": listing("a", "2026-01-01", "2026-01-10", status="active")}
+    row = one(episodes.build(listings, {}, today=date(2026, 1, 13)))
+    assert row["outcome"] == "active"
+    assert row["days_missing"] == 0
+
+
+def test_days_on_market_does_not_include_the_waiting_period():
+    """A departure is confirmed REMOVAL_AFTER_DAYS after the last sighting.
+    If that tail were added, every departure would carry this project's
+    patience in its time-on-market figure rather than the market's."""
+    from datetime import date
+    listings = {"a": listing("a", "2026-01-01", "2026-01-10", status="removed")}
+    row = one(episodes.build(listings, {}, today=date(2026, 1, 20)))
+    assert row["days_on_market"] == 9, "the probation window leaked in"
+    assert row["days_missing"] == 10
 
 
 def test_only_a_confirmed_removal_is_a_departure():

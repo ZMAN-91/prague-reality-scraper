@@ -62,7 +62,7 @@ def test_a_listing_seen_earlier_in_the_sweep_is_not_marked_missing():
 def test_a_listing_not_seen_anywhere_in_the_sweep_is_marked_missing():
     listings = dataset(
         {f"live{n}": "2026-09-15" for n in range(40)}
-        | {f"gone{n}": "2026-09-10" for n in range(3)}
+        | {f"gone{n}": "2026-09-14" for n in range(3)}
     )
     merge_source(
         IDNES, [], [], listings, {}, NOW,
@@ -70,10 +70,10 @@ def test_a_listing_not_seen_anywhere_in_the_sweep_is_marked_missing():
     )
     statuses = {sid: listings[make_internal_id(IDNES, sid)]["status"] for sid in ("live0", "gone0")}
     assert statuses["live0"] == STATUS_ACTIVE
-    # Last seen on the 10th, and NOW is the 16th: six days gone, and the
+    # Last seen on the 14th, and NOW is the 16th: two days gone, and the
     # number says so. It used to say "missing_1" because it counted misses
     # rather than days, and this was that listing's first miss.
-    assert statuses["gone0"] == "missing_6"
+    assert statuses["gone0"] == "missing_2"
 
 
 def test_the_suspicious_drop_guard_is_not_tripped_by_a_partial_run():

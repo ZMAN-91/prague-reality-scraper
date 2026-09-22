@@ -37,6 +37,26 @@ adverts belong to the same episode if they are the same property and the gap
 between them is at most GAP_DAYS; a longer gap is a new attempt to sell,
 which is a different thing and should not be averaged with the first.
 
+`outcome` has three values, not two:
+
+    active         at least one advert for it was seen in the last sweep
+    disappearing   every advert has stopped appearing, and none has been
+                   gone long enough to be called removed. `days_missing`
+                   says how far into that this is.
+    removed        gone for REMOVAL_AFTER_DAYS, confirmed
+
+The middle one exists because both two-value readings are wrong. "Anything
+not fully removed is active" made all 9,715 episodes read active on a
+six-day-old dataset, since nothing had had time to be confirmed gone.
+"Anything not active is a departure" was tried first and was worse: it
+called 51 of 10,990 live listings gone and turned every portal hiccup into
+a wave of departures followed by a wave of arrivals.
+
+`days_missing` of 0 on a `disappearing` row is not a contradiction: it means
+the last sighting was today and the next sweep did not find it. A source
+swept completely every run - bezrealitky from its sitemap - can lose a
+listing within the same day it last saw it.
+
 WHAT THIS CANNOT TELL YOU: whether a listing that disappeared was sold or
 withdrawn. No portal publishes that, so neither does this. `outcome` says
 removed, never sold.
@@ -69,7 +89,7 @@ FIELDS = [
     "priority_zone",
     "sources", "listing_count", "internal_ids",
     "first_seen", "last_seen", "days_on_market", "gap_before_days",
-    "outcome",
+    "outcome", "days_missing",
     "first_price", "last_price", "min_price", "max_price",
     "price_changes", "discount_czk", "discount_pct",
     "price_per_m2_first", "price_per_m2_last",
@@ -202,7 +222,12 @@ def segment(spans: list[tuple[date, date, str]], gap_days: int = GAP_DAYS):
 
 def build(listings: dict[str, dict], observations: dict[str, list[dict]],
           gap_days: int = GAP_DAYS,
-          changes: Optional[dict] = None) -> list[dict]:
+          changes: Optional[dict] = None,
+          today: Optional[date] = None) -> list[dict]:
+    # A parameter rather than a call inside the loop: days_missing is
+    # measured against it, and a test that cannot pin "now" cannot check a
+    # day count at all.
+    today = today or cas.today()
     keys = group_properties(listings)
     by_property: dict[str, list[str]] = defaultdict(list)
     for internal_id, key in keys.items():
@@ -248,16 +273,29 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
 
             area = next((as_float(r.get("area_m2")) for r in rows
                          if as_float(r.get("area_m2"))), None)
-            # On the market unless EVERY advert for it is confirmed removed.
+            # Three states, not two.
             #
-            # This used to ask whether any advert was `active`, which made
-            # every listing in missing_1 or missing_2 a departure. Since
-            # removal became a week of absence rather than three misses, a
-            # listing sits in missing_N for seven days - so that reading
-            # counted 51 of 10 990 live listings as gone, and would have
-            # counted every temporary portal hiccup as a wave of departures
-            # followed by a wave of arrivals when they came back.
-            live = any(r.get("status") != STATUS_REMOVED for r in rows)
+            # `active` used to mean "not every advert is confirmed removed",
+            # which is true of a flat nobody has seen for two days, and the
+            # file said so: on a six-day-old dataset all 9,715 episodes read
+            # active, because nothing had had time to be confirmed gone. The
+            # opposite reading - any advert not `active` is a departure -
+            # was tried first and was worse: it counted 51 of 10,990 live
+            # listings as gone and turned every portal hiccup into a wave of
+            # departures followed by a wave of arrivals.
+            #
+            # Both are the same mistake, which is forcing a three-state
+            # thing into two. An advert is up, or it has stopped appearing
+            # and may yet come back, or it is gone. `disappearing` is that
+            # middle state, and days_missing says how far into it this is.
+            statuses = [r.get("status") for r in rows]
+            live = any(s == STATUS_ACTIVE for s in statuses)
+            if live:
+                outcome, days_missing = "active", 0
+            elif all(s == STATUS_REMOVED for s in statuses):
+                outcome, days_missing = "removed", (today - episode["end"]).days
+            else:
+                outcome, days_missing = "disappearing", (today - episode["end"]).days
 
             edit_rows = [c for i in members for c in (changes or {}).get(i, [])]
             edits = len(edit_rows)
@@ -286,9 +324,19 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
                 "internal_ids": "|".join(sorted(members)),
                 "first_seen": episode["start"].isoformat(),
                 "last_seen": episode["end"].isoformat(),
+                # end is the last SIGHTING, never the day the removal was
+                # confirmed. So this is time on the market and does not
+                # include the days spent waiting to see whether the advert
+                # comes back - which would otherwise add REMOVAL_AFTER_DAYS
+                # to every departure and make the figure a property of this
+                # project's patience rather than of the market.
                 "days_on_market": (episode["end"] - episode["start"]).days,
                 "gap_before_days": "" if episode["gap"] is None else episode["gap"],
-                "outcome": "active" if live else "removed",
+                "outcome": outcome,
+                # Days since the last sighting, so "gone three days" is a
+                # column rather than a subtraction. Zero while it is still
+                # being seen - not blank, which sorts and filters badly.
+                "days_missing": days_missing,
                 "first_price": first_price if first_price is not None else "",
                 "last_price": last_price if last_price is not None else "",
                 "min_price": min(prices) if prices else "",
