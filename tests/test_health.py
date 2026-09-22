@@ -270,3 +270,82 @@ def test_a_gap_spanning_the_whole_weekend_counts_the_window_once(tmp_path):
     assert any("not waking it" in f for f in got), got
     hours = float(got[0].split()[3])
     assert 36 < hours < 42, got
+
+
+def test_one_bad_category_does_not_erase_the_whole_source(tmp_path):
+    """Found by an end-to-end run, not by reasoning.
+
+    run_complete is `bool(scopes) and not real_errors`, so a suspicious drop
+    in ONE category appends an error and the whole source reads incomplete -
+    even though the other three finished cleanly. sreality's dum/pronajem is
+    65 active adverts: small enough to be volatile, big enough to trip the
+    drop guard. Thirty hours later this would start emailing about a sweep
+    that happened.
+    """
+    got = findings(tmp_path, [
+        run(minutes_ago=90, sources={"sreality": {
+            "fetched": 8000, "errors": [], "run_complete": True,
+            "scopes_absence_marked": ["byt/prodej", "byt/pronajem",
+                                      "dum/prodej", "dum/pronajem"]}}),
+        run(minutes_ago=30, sources={"sreality": {
+            "fetched": 8000,
+            "errors": ["suspicious drop in active listings for sreality "
+                       "dum/pronajem (65 -> 0); skipping absence-marking"],
+            "run_complete": False,
+            "scopes_absence_marked": ["byt/prodej", "byt/pronajem",
+                                      "dum/prodej"]}}),
+    ], days=["2026-09-16", "2026-09-17"])
+    assert not any("has not completed" in f or "never completed" in f
+                   for f in got), got
+
+
+def test_a_category_that_really_has_gone_quiet_is_still_surfaced(tmp_path):
+    """The other side: per-scope must not mean per-scope-is-optional. One
+    category that has not been absence-marked for over a day is a category
+    whose removals stopped being recorded."""
+    got = findings(tmp_path, [
+        run(minutes_ago=60 * 40, sources={"sreality": {
+            "fetched": 8000, "errors": [], "run_complete": True,
+            "scopes_absence_marked": ["byt/prodej", "dum/pronajem"]}}),
+        run(minutes_ago=30, sources={"sreality": {
+            "fetched": 8000, "errors": [], "run_complete": True,
+            "scopes_absence_marked": ["byt/prodej"]}}),
+    ])
+    assert any("dum/pronajem has not completed" in f for f in got), got
+    assert not any("byt/prodej has not completed" in f for f in got), got
+
+
+def test_a_pass_that_completes_no_scope_does_not_invent_a_permanent_finding(tmp_path):
+    """The bug the first version of this fix shipped with, caught by an
+    end-to-end run and not by any unit test here.
+
+    The hourly area pass completes no scope by design. Registering an entry
+    for it produced "sreality has never completed a sweep" on every run for
+    ever - an empty entry that nothing could ever fill. That is precisely
+    the failure this whole check was rewritten to stop, reintroduced one
+    level down.
+    """
+    got = findings(tmp_path, [
+        run(minutes_ago=90, sources={"sreality": {
+            "fetched": 8000, "errors": [], "run_complete": True,
+            "scopes_absence_marked": ["byt/prodej"]}}),
+        run(minutes_ago=30, sources={"sreality": {
+            "fetched": 2900, "errors": [], "run_complete": False,
+            "scopes_absence_marked": []}}),
+    ], days=["2026-09-16", "2026-09-17"])
+    assert got == [], got
+
+
+def test_a_source_that_has_completed_nothing_at_all_is_still_surfaced(tmp_path):
+    """The one case the per-scope view cannot see on its own: with no
+    completed scope there is no scope to report on. Broken from day one has
+    to be louder than merely partial."""
+    got = findings(tmp_path, [
+        run(minutes_ago=90, sources={"sreality": {
+            "fetched": 2900, "errors": [], "run_complete": False,
+            "scopes_absence_marked": []}}),
+        run(minutes_ago=30, sources={"sreality": {
+            "fetched": 2900, "errors": [], "run_complete": False,
+            "scopes_absence_marked": []}}),
+    ], days=["2026-09-16", "2026-09-17"])
+    assert any("never completed a sweep" in f for f in got), got

@@ -54,6 +54,10 @@ RENT_OVERDUE_DAYS = 8.5
 # a day with a quarter of a day of slack for a late or skipped window.
 MAX_HOURS_WITHOUT_COMPLETE_SWEEP = 30.0
 
+# What a log line from before scopes were recorded gets called, so an old
+# log still says something rather than silently counting as complete.
+SCOPE_UNKNOWN = "(scope not recorded)"
+
 # Sunday 00:00-05:00 UTC belongs to the rent pass: the sale cron skips it and
 # the external waker sleeps through it, both on purpose. Sale sweeps stop for
 # five hours every Sunday, which is not a broken waker - and a check that
@@ -213,26 +217,58 @@ def check_sweep_freshness(runs: list[dict], now: datetime) -> list[str]:
     city-wide index walk - so a day and a quarter of silence is a real
     fault and nothing less is.
     """
-    last_complete: dict[str, Optional[datetime]] = {}
+    # Per SCOPE, not per source. `run_complete` is
+    # `bool(scopes) and not real_errors`, so one bad category takes the
+    # whole source down with it: a suspicious drop in sreality's
+    # dum/pronajem - 65 active adverts, small enough to be volatile and big
+    # enough to trip the guard - makes the daily walk log itself as
+    # incomplete even though the other three categories finished cleanly.
+    # Thirty hours later this would start emailing about a sweep that
+    # happened. That is the same over-broad failure this check was just
+    # rewritten to stop, one layer down.
+    #
+    # `scopes_absence_marked` is the positive, precise statement: these are
+    # the categories whose absence WAS marked, which is the only thing a
+    # completed sweep buys.
+    # Only scopes that have completed at least once get an entry. Creating
+    # one from a run that completed NOTHING is what the first version of
+    # this did, and it produced "sreality has never completed a sweep" on
+    # every run for ever - the hourly area pass completes no scope by
+    # design, so the empty entry could never be filled. That is the exact
+    # failure being fixed here, reintroduced one level down. An end-to-end
+    # run caught it; the unit tests did not.
+    last_complete: dict[tuple[str, str], datetime] = {}
+    seen_sources: set[str] = set()
     for run in runs:
         when = parse(run.get("started_at"))
         for name, source in (run.get("sources") or {}).items():
-            last_complete.setdefault(name, None)
-            if when is not None and source.get("run_complete"):
-                if last_complete[name] is None or when > last_complete[name]:
-                    last_complete[name] = when
+            seen_sources.add(name)
+            done = source.get("scopes_absence_marked")
+            if done is None:
+                # An older log line, from before scopes were recorded.
+                done = [SCOPE_UNKNOWN] if source.get("run_complete") else []
+            if when is None:
+                continue
+            for scope in done:
+                key = (name, scope)
+                if key not in last_complete or when > last_complete[key]:
+                    last_complete[key] = when
 
     out = []
-    for name in sorted(last_complete):
-        when = last_complete[name]
-        if when is None:
-            out.append(f"{name} has never completed a sweep in any logged "
-                       "run, so nothing it misses can be treated as gone.")
-            continue
+    # A source that has completed nothing at all in the whole log is broken
+    # rather than merely partial, and is the one case the per-scope view
+    # cannot see: with no completed scope there is no scope to report on.
+    for name in sorted(seen_sources - {n for n, _ in last_complete}):
+        out.append(f"{name} has never completed a sweep in any logged run, "
+                   "so nothing it misses can be treated as gone.")
+
+    for (name, scope) in sorted(last_complete):
+        when = last_complete[(name, scope)]
+        where = name if scope == SCOPE_UNKNOWN else f"{name} {scope}"
         hours = (now - when).total_seconds() / 3600
         if hours > MAX_HOURS_WITHOUT_COMPLETE_SWEEP:
             out.append(
-                f"{name} has not completed a sweep for {hours:.1f} hours "
+                f"{where} has not completed a sweep for {hours:.1f} hours "
                 f"(last {when:%Y-%m-%d %H:%M}) - removals stopped being "
                 "recorded that long ago.")
     return out
