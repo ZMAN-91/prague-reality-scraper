@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from common import cas
 from tools import quality
 
 
@@ -95,3 +96,66 @@ def test_the_command_fails_loudly_and_passes_quietly(tmp_path, monkeypatch, caps
     monkeypatch.setattr(quality, "faults", lambda t, h: ["something broke"])
     assert quality.main(["--data-dir", str(tmp_path)]) == 1
     assert "::error::" in capsys.readouterr().out
+
+
+# --- a population that lost its observer -------------------------------------
+
+def _active(source, transaction, last_seen, n):
+    from common.schema import STATUS_ACTIVE, make_internal_id
+    out = {}
+    for i in range(n):
+        sid = f"{source}-{transaction}-{i}"
+        out[make_internal_id(source, sid)] = {
+            "internal_id": make_internal_id(source, sid),
+            "source": source, "source_id": sid,
+            "property_type": "byt", "transaction_type": transaction,
+            "lat": "50.05", "lon": "14.45", "ulice": "Ulice",
+            "mestska_cast": "Vinohrady", "psc": "12000",
+            "cislo_zdroj": "ruian",
+            "last_seen_at": last_seen, "status": STATUS_ACTIVE,
+        }
+    return out
+
+
+def test_active_rows_nobody_has_looked_for_are_a_fault():
+    """The bug that cost 1,201 listings, in its silent direction: nothing
+    errors, no count moves, and a whole population is simply not observed."""
+    listings = _active("sreality", "pronajem", "2026-09-01", 200)
+    listings.update(_active("idnes", "prodej", cas.today().isoformat(), 5000))
+    today = quality.measure(listings, None)
+    assert today["stale_active"] == 200
+    assert today["stale_active_group"] == "sreality/pronajem"
+    assert any("lost its observer" in f for f in quality.faults(today, {}))
+
+
+def test_a_freshly_seen_dataset_is_not_a_fault():
+    listings = _active("sreality", "pronajem", cas.today().isoformat(), 200)
+    today = quality.measure(listings, None)
+    assert today["stale_active"] == 0
+    assert not quality.faults(today, {})
+
+
+def test_a_handful_of_stale_rows_is_not_a_missing_observer():
+    """A portal that renumbers a few ids must not fail the nightly run."""
+    listings = _active("sreality", "pronajem", "2026-09-01", 5)
+    listings.update(_active("idnes", "prodej", cas.today().isoformat(), 900))
+    today = quality.measure(listings, None)
+    assert today["stale_active"] == 5
+    assert not quality.faults(today, {})
+
+
+def test_one_bad_group_is_not_diluted_by_the_healthy_ones():
+    """Counted per group on purpose: 200 unobserved rows among 13,000 fresh
+    ones is a broken observer, and as a share of the dataset it is noise."""
+    listings = _active("sreality", "pronajem", "2026-09-01", 200)
+    listings.update(_active("idnes", "prodej", cas.today().isoformat(), 13000))
+    assert quality.faults(quality.measure(listings, None), {})
+
+
+def test_a_row_marked_missing_is_not_counted_as_unobserved():
+    """It was looked for. That is the opposite of this fault."""
+    listings = _active("sreality", "pronajem", "2026-09-01", 200)
+    for row in listings.values():
+        row["status"] = "missing_2"
+    today = quality.measure(listings, None)
+    assert today["stale_active"] == 0

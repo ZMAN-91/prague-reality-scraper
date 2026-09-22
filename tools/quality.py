@@ -28,6 +28,16 @@ WHAT IS WATCHED
                       legitimately - new listings arrive before they are
                       paired - so only a sharp fall is a fault.
 
+  stale actives       active listings nobody has looked for in four days.
+                      Every observer here runs at least daily and a row that
+                      was looked for and not found stops being active within
+                      one, so this can only mean a stored population has lost
+                      its observer. That failure is silent in every other
+                      check: nothing errors, no share moves, and the rows
+                      look healthy. It has already happened once - 1,127
+                      sreality rows outside the two watched boroughs, when
+                      the hourly pass narrowed.
+
 TWO KINDS OF THRESHOLD
 
 An absolute floor catches a collapse from any starting point. A fall relative
@@ -45,8 +55,11 @@ import statistics
 import sys
 from pathlib import Path
 
+from datetime import timedelta
+
 from common import address as address_mod
 from common import cas, dedup, ruian, storage
+from common.schema import STATUS_ACTIVE
 
 #: Below this the district cross-check is not reporting a bad week, it is
 #: reporting something broken. Measured at 98.4% when built.
@@ -55,6 +68,25 @@ MIN_DISTRICT_AGREEMENT = 90.0
 #: How far a share may fall below its own recent median before it is a fault
 #: rather than drift, in percentage points.
 MAX_DROP_POINTS = 10.0
+
+#: How long an active listing may go unseen before its absence says
+#: something about this project rather than about the listing.
+#:
+#: Every observer here runs at least daily, and a row an observer looked for
+#: and did not find stops being active within a day. So an active row last
+#: seen four days ago was not looked for at all - which is the shape of the
+#: bug this exists to catch, and a shape no other check has: the rows look
+#: perfectly healthy, the counts do not move, and nothing errors.
+#:
+#: It happened. The hourly pass was narrowed to two boroughs while 1,127
+#: sreality rows sat outside them, and nothing looked for those rows again.
+#: The fix gave them an observer; this notices the next population that
+#: loses one.
+STALE_AFTER_DAYS = 4
+
+#: Below this a stale group is a handful of oddities - a row whose source_id
+#: changed shape, a portal that renumbers - not a missing observer.
+STALE_MIN_ROWS = 25
 
 #: Days of history kept, and how many of them a comparison needs.
 HISTORY_DAYS = 90
@@ -97,6 +129,8 @@ def measure(listings: dict, index) -> dict:
         "psc_pct": share(lambda r: (r.get("psc") or "").strip()),
     }
 
+    out.update(_stale(rows))
+
     if index is None:
         return out
 
@@ -128,9 +162,43 @@ def measure(listings: dict, index) -> dict:
     return out
 
 
+def _stale(rows) -> dict:
+    """The worst (source, transaction) group of active-but-unobserved rows.
+
+    Reported as one number rather than a total so that one badly-served
+    group cannot be diluted by every healthy one: 1,127 unobserved rows in
+    13,408 is 8% of the dataset and would read as noise against a total.
+    """
+    cutoff = (cas.today() - timedelta(days=STALE_AFTER_DAYS)).isoformat()
+    worst_key, worst_count = None, 0
+    counts: dict[tuple, int] = {}
+    for row in rows:
+        if row.get("status") != STATUS_ACTIVE:
+            continue
+        seen = cas.day_of(row.get("last_seen_at"))
+        if seen and seen > cutoff:
+            continue
+        key = (row.get("source"), row.get("transaction_type"))
+        counts[key] = counts.get(key, 0) + 1
+        if counts[key] > worst_count:
+            worst_key, worst_count = key, counts[key]
+    return {
+        "stale_active": worst_count,
+        "stale_active_group": "/".join(x or "?" for x in worst_key) if worst_key else "",
+    }
+
+
 def faults(today: dict, history: dict) -> list:
     """Everything wrong with today's numbers, as sentences."""
     problems = []
+
+    stale = today.get("stale_active") or 0
+    if stale >= STALE_MIN_ROWS:
+        problems.append(
+            f"{stale} active {today.get('stale_active_group')} listings have "
+            f"not been seen for {STALE_AFTER_DAYS} days - a listing that was "
+            "looked for and not found stops being active within one, so "
+            "these were not looked for: some population has lost its observer")
 
     agreement = today.get("district_agreement_pct")
     if agreement is not None and agreement < MIN_DISTRICT_AGREEMENT:
