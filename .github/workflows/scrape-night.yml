@@ -279,6 +279,18 @@ jobs:
           python -m tools.episodes --data-dir store/data
           python -m tools.market --data-dir store/data
 
+      - name: Record the dataset's quality
+        # BEFORE the commit, because --record writes a file that has to be
+        # committed with the rest of the night's data. Put after it, the
+        # history is written into the runner's checkout and thrown away -
+        # which is exactly what happened on the first night this ran, and the
+        # file simply never appeared.
+        #
+        # It never fails here. The failing check is the step below, after the
+        # commit, so a fault cannot take the night's collection with it.
+        run: |
+          python -m tools.quality --data-dir store/data --record --never-fail
+
       - name: Commit and push data changes
         # The whole sequence lives in tools/commit_data.sh, which both
         # workflows call and tests/test_commit_step.py exercises against real
@@ -299,7 +311,7 @@ jobs:
         # plausible distances, and would look entirely normal everywhere
         # else. It used to report into this log and be read by nobody.
         run: |
-          python -m tools.quality --data-dir store/data --record
+          python -m tools.quality --data-dir store/data
 
       - name: Check the collection's health
         # Runs even when the scrape failed: a failed run still has something

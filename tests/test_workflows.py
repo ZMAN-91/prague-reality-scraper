@@ -920,10 +920,32 @@ def test_the_quality_check_comes_after_the_data_is_committed():
     steps = load(NIGHT)["jobs"]["scrape"]["steps"]
     runs = [s.get("run", "") for s in steps]
     commit_at = next(i for i, r in enumerate(runs) if "commit_data.sh" in r)
-    check_at = next(i for i, r in enumerate(runs) if "tools.quality" in r)
+    # The FAILING check, not the recording pass that runs before the commit
+    # to get its file committed. Both call tools.quality; only one can fail.
+    check_at = next(i for i, r in enumerate(runs)
+                    if "tools.quality" in r and "--never-fail" not in r)
     assert commit_at < check_at, (
-        "the quality check runs before the commit, so a fault would discard "
-        "the data it is complaining about")
+        "the quality check that can fail runs before the commit, so a fault "
+        "would discard the data it is complaining about")
+
+
+def test_the_quality_history_is_written_before_the_commit():
+    """--record writes a file that has to be committed with the night's data.
+    Run after the commit it lands in the runner's checkout and is thrown away
+    - which is what happened on the first night, and the file never
+    appeared."""
+    steps = load(NIGHT)["jobs"]["scrape"]["steps"]
+    runs = [s.get("run", "") for s in steps]
+    record_at = next(i for i, r in enumerate(runs) if "--record" in r)
+    commit_at = next(i for i, r in enumerate(runs) if "commit_data.sh" in r)
+    assert record_at < commit_at, (
+        "the quality history is written after the commit, so it is never "
+        "stored")
+
+    recorder = steps[record_at]
+    assert "--never-fail" in recorder["run"], (
+        "the pre-commit pass can fail the job, which would discard the "
+        "night's data over a quality fault")
 
 
 def test_only_the_daily_run_records_a_quality_point():

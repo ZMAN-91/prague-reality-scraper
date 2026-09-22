@@ -174,6 +174,9 @@ def main(argv=None) -> int:
     parser.add_argument("--data-dir", default=str(storage.DATA_DIR))
     parser.add_argument("--record", action="store_true",
                         help="append today's numbers to the history")
+    parser.add_argument("--never-fail", action="store_true",
+                        help="report faults but always exit 0, for the pass "
+                             "that runs before the commit")
     args = parser.parse_args(argv)
     data_dir = Path(args.data_dir)
 
@@ -201,8 +204,9 @@ def main(argv=None) -> int:
         return 0
     print("")
     for problem in problems:
-        print(f"::error::[quality] {problem}")
-    return 1
+        print(f"::{'warning' if args.never_fail else 'error'}::"
+              f"[quality] {problem}")
+    return 0 if args.never_fail else 1
 
 
 if __name__ == "__main__":
