@@ -72,3 +72,45 @@ def test_a_release_whose_upload_failed_is_due():
 def test_the_following_monday_asks_for_the_next_week():
     _, why = run("", now="2026-09-28T00:30:00Z")
     assert "backup-2026-W39" in why, why
+
+
+# --- an archive cannot predate the week it claims to hold --------------------
+
+def test_an_archive_uploaded_before_the_week_ended_does_not_count():
+    """The real one, found by checking rather than by it failing.
+
+    A manual run on Monday 2026-09-21 - back when the tag was cut from the
+    current week rather than the closed one - left a release tagged
+    backup-2026-W39 holding 10,943 listings as of that morning. W39 is the
+    week ending Sunday 2026-09-27. The run on Monday 2026-09-28 would have
+    found that release, called the week done, and skipped it: the week with
+    every recent change in it would have had no archive at all.
+
+    This is the same failure as the one in this file's docstring, one layer
+    down. Asking "was anything uploaded" was not enough; it has to have been
+    uploaded after the week it names.
+    """
+    out, why = run("2026-09-21T07:57:40Z", now="2026-09-28T04:00:00Z")
+    assert out == "go=true"
+    assert "before the week it names" in why
+
+
+def test_an_archive_uploaded_after_the_week_ended_counts():
+    """The other side, or the fix would simply rebuild every week for ever
+    and the Tuesday retry would take a second copy."""
+    out, _ = run("2026-09-28T04:10:00Z", now="2026-09-28T04:00:00Z")
+    assert out == "go=false"
+
+
+def test_the_tuesday_retry_still_finds_mondays_archive():
+    """The case the tag exists for, unchanged by the above."""
+    out, _ = run("2026-09-28T04:10:00Z", now="2026-09-29T04:00:00Z")
+    assert out == "go=false"
+
+
+def test_an_archive_uploaded_on_the_closing_sunday_itself_counts():
+    """The boundary, decided in the lenient direction: a snapshot taken as
+    the week closes holds that week. Strictness here would buy nothing and
+    would rebuild a perfectly good archive."""
+    out, _ = run("2026-09-27T23:00:00Z", now="2026-09-28T04:00:00Z")
+    assert out == "go=false"

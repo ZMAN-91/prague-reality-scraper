@@ -3,7 +3,7 @@
 # Decide whether this attempt should build the weekly archive.
 #
 #   backup_due.sh                       # ask the API (what the workflow does)
-#   backup_due.sh --published ISO --today YYYY-MM-DD
+#   backup_due.sh --uploaded ISO [--tag TAG]
 #                                       # read fixtures instead (what tests do).
 #                                       # An empty ISO stands in for "no such
 #                                       # release".
@@ -74,7 +74,30 @@ if [ -z "$UPLOADED" ]; then
   exit 0
 fi
 
-# Anything under this tag is this week's archive by definition - the tag
+# An archive of a week cannot have been built before that week ended. The
+# tag names the week it HOLDS, and a file uploaded while the week was still
+# running holds something else - a mid-week snapshot that happens to carry
+# the label.
+#
+# This is not hypothetical. A manual run on Monday 2026-09-21 - back when
+# the tag was cut from the current week rather than the closed one - left a
+# release tagged backup-2026-W39 carrying 10,943 listings as of that
+# morning. W39 is the week ending Sunday 2026-09-27. Without this test the
+# run on Monday 2026-09-28 would have found that release, called the week
+# done and skipped it, and the week would have had no archive at all.
+#
+# The retry case the tag exists for is untouched: an archive built on
+# Monday was uploaded AFTER the Sunday, so Tuesday still finds it and stops.
+UPLOADED_DAY="${UPLOADED:0:10}"
+if [ -n "$UPLOADED_DAY" ] && [ "$UPLOADED_DAY" \< "$CLOSED_SUNDAY" ]; then
+  echo "$TAG holds an archive uploaded $UPLOADED, before the week it names" \
+       "even ended ($CLOSED_SUNDAY) - it is a mid-week snapshot, not this" \
+       "week's backup. Rebuilding." >&2
+  echo "go=true"
+  exit 0
+fi
+
+# Anything else under this tag is this week's archive by definition - the tag
 # names the week it holds. The Tuesday retry therefore finds Monday's work
 # and stops, rather than rebuilding it.
 echo "$TAG already holds an archive (uploaded $UPLOADED); nothing to do." >&2
