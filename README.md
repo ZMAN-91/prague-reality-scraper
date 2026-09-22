@@ -2,9 +2,14 @@
 
 Víceletý, bez zásahu běžící sběrač dat o realitním trhu v Praze a jejím
 těsném okolí ze **sreality.cz**, **bezrealitky.cz** a **Reality.iDNES.cz**.
-Prodej běží každou hodinu, pronájem jednou týdně v neděli ráno, obojí přes
-GitHub Actions, ukládá vše do plain-text CSV/JSON a je navržený tak, aby
-přežil roky provozu bez jediného lidského zásahu.
+Prodej i pronájem běží každou hodinu přes GitHub Actions, ukládá vše do
+plain-text CSV/JSON a je navržený tak, aby přežil roky provozu bez jediného
+lidského zásahu.
+
+(Tenhle odstavec dřív tvrdil, že pronájem jede jednou týdně v neděli ráno.
+Neplatí to od chvíle, kdy se nájem přidal k hodinovému průchodu a samostatný
+nedělní workflow byl zrušen — a zastaralá věta v prvním odstavci README je
+přesně ten druh omylu, který tenhle projekt stál celý den.)
 
 **Tady je kód. Data jsou jinde** — v privátním repozitáři, kam tenhle sběr
 zapisuje přes deploy key. Důvod a mechanika jsou v `docs/rozdeleni.md`;
@@ -170,6 +175,17 @@ e-mail o selhání a skutečný výpadek vypadal úplně stejně
 (záměrně — viz sekce o GitHub Actions níže).
 
 ## Co se sbírá odkud a jak často
+
+### Přehled: co běží každou hodinu, denně a týdně
+
+| kdy | co | kde |
+|---|---|---|
+| **každou hodinu** | sběr prodeje i nájmu ze všech tří zdrojů; sreality jen Praha 4 + 10, bezrealitky a iDNES celá Praha; doplnění čísel popisných novým řádkům; export CSV; commit | `scrape.yml` |
+| **denně, 02:00–04:59** | celoměstský průchod iDNES a bezrealitky; pak celoměstská procházka indexu sreality, která **(a)** půjčuje GPS iDNES inzerátům a **(b)** jako jediná potvrzuje, jestli uložené sreality inzeráty mimo sledovaný pás ještě visí; doplnění čísel; zápis metrik kvality; commit; kontrola kvality | `scrape-night.yml` |
+| **každých 6 hodin** | heartbeat — hlídá, že plánovač vůbec doručuje | `heartbeat.yml` |
+| **týdně, Po/Út 05:00** | přepárování dříve půjčených souřadnic (`--repair`), doplnění čísel, kontrola kvality, přestavba časových řad, týdenní report | `report.yml` |
+| **týdně, Po/Út 06:00** | ověřený archiv datového repozitáře | `backup.yml` |
+| **měsíčně, 1.–7. den, 07:00** | přestavba adresního indexu RÚIAN | `build-ruian-index.yml` |
 
 **Prodej a pronájem se sbírají zvlášť**, na jiném rozvrhu a v jiném rozsahu.
 

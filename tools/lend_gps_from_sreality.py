@@ -32,13 +32,25 @@ cent - on the cheapest path the API offers, reading the index rather than one
 request per listing. The footprint argument that set the original rule is the
 same argument that permits this.
 
-THE DONORS ARE NOT COLLECTED
+THE DONORS ARE NOT COLLECTED - BUT THE WALK IS USED TWICE
 
-They are read, used, and dropped. Storing them would change what the dataset
-means - sreality is collected for the watched area, deliberately - and would
-hand absence-marking a population it never walked. Nothing here writes a new
-listing; the only thing that changes is lat/lon/gps_zdroj on rows that had
-none.
+No donor becomes a row. Storing them would change what the dataset means:
+sreality is collected for the watched area, deliberately, and one morning's
+coordinate errand must not quietly replace that with the whole city.
+
+What the walk IS used for, besides lending coordinates, is saying which
+sreality adverts already stored here are still up. That is not the same
+concession. Absence-marking needs a walk that covers the stored population,
+and this one does - okres Praha, every category, every day, and every
+sreality row stored here is in Praha (checked each run by `observe`, not
+assumed). The hourly pass covers only the two watched boroughs, so without
+this the 1,127 rows left outside the belt by the retired city-wide rent pass
+had no observer at all: they would have sat "active" for ever, and the run
+that wrongly believed a narrowed walk was complete marked 1,201 of them
+missing instead. Same hole, two directions.
+
+`run.merge_source(insert_new=False)` is what keeps the two apart: refresh,
+reactivate and absence-mark what is stored; drop what is not.
 
 SAMENESS IS DECIDED BY dedup, NOT HERE
 
@@ -58,6 +70,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+import run
 from common import cas, dedup, net, price_memory, ruian, storage
 from common.budget import Budget
 from scrapers import sreality
@@ -91,18 +104,27 @@ AREA_TOLERANCE_M = 1.0
 PRICE_STAGES = (None, 10.0)
 
 
-def collect_donors(session, budget=None, districts=None) -> list:
-    """sreality's Prague index, as rows shaped like listings.csv.
+def walk_city(session, budget=None, districts=None):
+    """One city-wide read of sreality's index.
 
-    Only rows that carry a coordinate: a donor without one has nothing to
-    give, and keeping it would only slow the matching down.
+    Returns (normalized, errors, completed_scopes) so the same walk can be
+    used twice: once to lend coordinates, once to say which of the sreality
+    adverts already stored here are still up. Nothing is fetched twice.
     """
-    listings, _pages, errors, _scopes = sreality.fetch_all(
+    listings, _pages, errors, scopes = sreality.fetch_all(
         session,
         budget=budget,
         districts=districts or (sreality.DISTRICT_PRAHA,),
     )
+    return listings, errors, scopes
 
+
+def donors_from(listings) -> list:
+    """The walk's rows, shaped like listings.csv.
+
+    Only rows that carry a coordinate: a donor without one has nothing to
+    give, and keeping it would only slow the matching down.
+    """
     today = cas.today().isoformat()
     donors = []
     for item in listings:
@@ -127,7 +149,66 @@ def collect_donors(session, budget=None, districts=None) -> list:
             "last_seen_at": today,
             "status": "active",
         })
-    return donors, errors
+    return donors
+
+
+def collect_donors(session, budget=None, districts=None):
+    """walk_city + donors_from, for callers that only want the donors."""
+    listings, errors, _scopes = walk_city(session, budget=budget,
+                                          districts=districts)
+    return donors_from(listings), errors
+
+
+def observe(listings, walked, errors, scopes, last_obs, now_iso):
+    """Tell the stored sreality rows apart into still-up and gone.
+
+    THE HOLE THIS CLOSES
+
+    sreality is collected for the two watched boroughs and nowhere else, so
+    the hourly pass asks about districts 5004 and 5010 only. But 1,127 rows
+    from a retired city-wide rent pass are stored outside that belt, and
+    once the hourly pass narrowed, nothing looked for them at all. They
+    would have sat "active" for ever, and a narrowed walk that mistakenly
+    claimed completeness marked every one of them missing instead - both
+    failures of the same missing observer.
+
+    This walk already reads the whole city. Using it costs nothing: the
+    rows are in memory either way, and the alternative was one more walk.
+
+    IT OBSERVES, IT DOES NOT COLLECT
+
+    `insert_new=False` - see run.merge_source. A source_id the walk sees
+    and this project has never stored is dropped. The collection area is a
+    decision, not an accident of which index page was read.
+    """
+    # The walk covers okres Praha. That is enough only for as long as
+    # every stored sreality row is in Praha, which is true today and is
+    # nothing this code controls - so it is checked rather than assumed,
+    # every run, and a stray row costs absence-marking rather than
+    # costing the stray row's neighbours their status.
+    strays = sorted({(row.get("obec") or "").strip()
+                     for row in listings.values()
+                     if row["source"] == "sreality"} - {"Praha", ""})
+    if strays:
+        errors = list(errors) + [
+            "sreality rows stored outside Praha (" + ", ".join(strays[:5])
+            + ") - the city walk does not cover them, so absence-marking "
+              "is skipped this run"
+        ]
+        scopes = set()
+
+    new_ids: list[str] = []
+    return run.merge_source(
+        "sreality",
+        walked,
+        errors,
+        listings,
+        last_obs,
+        now_iso,
+        new_ids,
+        completed_scopes=scopes,
+        insert_new=False,
+    )
 
 
 def _price_histories(data_dir) -> dict:
@@ -411,9 +492,26 @@ def main(argv=None) -> int:
 
     session = net.build_session()
     budget = Budget(args.max_seconds)
-    donors, errors = collect_donors(session, budget=budget)
-    print(f"{len(donors)} sreality adverts with coordinates")
+    walked, errors, scopes = walk_city(session, budget=budget)
+    donors = donors_from(walked)
+    print(f"{len(walked)} sreality adverts walked, "
+          f"{len(donors)} with coordinates")
     for error in errors:
+        print(f"  ! {error}")
+
+    now = cas.now()
+    now_iso = now.replace(microsecond=0).isoformat()
+    state_path = data_dir / "state" / "last_observation.json"
+    last_obs = storage.read_last_observation_state(state_path)
+    seen_stats, observation_rows, change_rows = observe(
+        listings, walked, errors, scopes, last_obs, now_iso)
+    print(f"\nstored sreality rows: {seen_stats['updated']} still up, "
+          f"{seen_stats['reactivated']} back, "
+          f"{seen_stats['missing_marked']} not found "
+          f"({seen_stats['removed_confirmed']} now removed)")
+    if not seen_stats["scopes_absence_marked"]:
+        print("  ! no scope was complete enough to mark absence")
+    for error in seen_stats["errors"]:
         print(f"  ! {error}")
 
     price_by_id = _price_histories(data_dir)
@@ -438,7 +536,13 @@ def main(argv=None) -> int:
         return 0
 
     storage.write_listings(listings, data_dir / "listings.csv")
-    print(f"Wrote {data_dir / 'listings.csv'}.")
+    storage.append_observations(observation_rows, now,
+                                data_dir / "observations")
+    storage.append_changes(change_rows, now, data_dir / "changes")
+    storage.write_last_observation_state(last_obs, state_path)
+    print(f"Wrote {data_dir / 'listings.csv'}, "
+          f"{len(observation_rows)} observations, "
+          f"{len(change_rows)} attribute changes.")
     return 0
 
 

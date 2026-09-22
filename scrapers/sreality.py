@@ -88,6 +88,23 @@ DISTRICT_PRAHA_VYCHOD = 56
 DISTRICT_PRAHA_ZAPAD = 57
 DISTRICT_IDS: tuple[int, ...] = (DISTRICT_PRAHA, DISTRICT_PRAHA_VYCHOD, DISTRICT_PRAHA_ZAPAD)
 
+#: The districts a walk must cover before its silence may be read as a
+#: listing having gone. Just Prague proper: every sreality row this project
+#: has ever stored is in obec Praha (measured 2026-09-22: 4,232 of 4,232),
+#: and 56/57 are the surrounding okres, which the city-wide scope walks for
+#: coverage rather than because anything from them is kept.
+#:
+#: This used to read `districts is None`, which asked whether the caller had
+#: named any districts rather than which ones - so the daily city-wide donor
+#: walk, which names Prague explicitly, could not mark absence at all, while
+#: the two-borough walk that named nothing could. Getting that backwards
+#: once already cost 1,201 listings wrongly called missing.
+#:
+#: The geographic claim is checked against the store, not assumed:
+#: tools.lend_gps_from_sreality.observe refuses to absence-mark if a stored
+#: sreality row turns up outside Prague.
+ABSENCE_DISTRICT_IDS: frozenset[int] = frozenset({DISTRICT_PRAHA})
+
 # The watched area, as the postal districts that hold it.
 #
 # 50xx is a second, finer id space in the same locality_district_id
@@ -535,7 +552,8 @@ def fetch_all(
             # sreality did not need one was that the watched belt sits inside
             # these two districts - true of the belt, and irrelevant to what
             # is actually stored.
-            walked_whole_city = districts is None
+            walked = frozenset(districts) if districts else frozenset(DISTRICT_IDS)
+            walked_whole_city = ABSENCE_DISTRICT_IDS <= walked
             if scope_ok and walked_whole_city:
                 completed_scopes.add((property_type, transaction_type))
 

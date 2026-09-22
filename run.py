@@ -418,6 +418,7 @@ def merge_source(
     new_internal_ids: list[str],
     completed_scopes: Optional[set] = None,
     absence_since: Optional[dict] = None,
+    insert_new: bool = True,
 ) -> dict:
     """Merge one source's freshly-fetched listings into the shared
     `listings` dict and produce observation rows, in place. Returns a stats
@@ -442,6 +443,18 @@ def merge_source(
     With `absence_since` set, a listing counts as seen if it was seen at any
     point during the sweep, which is what a multi-run sweep actually knows.
 
+    `insert_new=False` makes this a pure observer: rows already stored for
+    this source are refreshed, reactivated or marked absent exactly as
+    usual, and a source_id that is not stored yet is dropped rather than
+    created. It exists for a walk whose reach is wider than what this
+    project deliberately collects - the daily city-wide sreality index read
+    that lends coordinates to iDNES. That walk covers every sreality row
+    stored here, so it can answer "is this advert still up"; letting it
+    also *add* rows would quietly replace the collection area with the
+    whole city. Absence-marking stays honest because the drop is applied
+    before anything is counted: both sides of the suspicious-drop guard
+    then talk about the same population.
+
     This scoping matters a lot: sreality alone walks twelve independent
     slices, and the previous "any error anywhere means skip absence-marking
     for the entire source" rule meant one permanently-broken district id
@@ -450,6 +463,11 @@ def merge_source(
 
     fetched_by_id = {l.source_id: l for l in normalized if l.in_target_area}
     skipped_out_of_area = sum(1 for l in normalized if not l.in_target_area)
+    if not insert_new:
+        stored_ids = {row["source_id"] for row in listings.values()
+                      if row["source"] == source_name}
+        fetched_by_id = {sid: l for sid, l in fetched_by_id.items()
+                         if sid in stored_ids}
     since_by_scope = dict(absence_since or {})
 
     def seen_within_sweep(row: dict) -> bool:

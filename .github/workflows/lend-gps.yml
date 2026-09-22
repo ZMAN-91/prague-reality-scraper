@@ -1,4 +1,4 @@
-name: Borrow coordinates from sreality (on demand)
+name: Walk sreality city-wide (on demand)
 
 # The same step the nightly pass runs, on its own, for when it is wanted now
 # rather than tomorrow morning.
@@ -87,7 +87,7 @@ jobs:
           SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
         run: python -m tools.probe_pairing_strategies --data-dir store/data
 
-      - name: Borrow coordinates
+      - name: Borrow coordinates and confirm what is still up
         if: ${{ github.event.inputs.probe_rules != 'true'
                 && github.event.inputs.probe_praha10 != 'true'
                 && github.event.inputs.probe_strategies != 'true' }}
