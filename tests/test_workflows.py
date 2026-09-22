@@ -55,7 +55,19 @@ def fires_at(spec, weekday, hour):
             if field == "*":
                 return True
             for part in field.split(","):
-                if "-" in part:
+                if "/" in part:
+                    # "*/6" and "0-18/6": a range, taken every N.
+                    base, _, step = part.partition("/")
+                    step = int(step)
+                    if base in ("*", ""):
+                        low, high = 0, 23
+                    elif "-" in base:
+                        low, high = (int(x) for x in base.split("-"))
+                    else:
+                        low = high = int(base)
+                    if low <= value <= high and (value - low) % step == 0:
+                        return True
+                elif "-" in part:
                     low, high = (int(x) for x in part.split("-"))
                     if low <= value <= high:
                         return True
@@ -328,18 +340,16 @@ def test_something_pushes_to_this_repository_often_enough():
     to the private data repository, so without a deliberate push here the
     hourly scrape stops after two months - silently, with nothing red.
 
-    The margin matters more than the exact day: a weekly beat leaves eight
-    chances to notice before the window closes.
+    The cadence used to be the cron's business: one attempt, once a week. It
+    is the guard's now, because one attempt a week from a scheduler that
+    delivers 1 in 32 is not a cadence, it is a coin toss. The margin is what
+    matters either way - a beat every seven days leaves eight chances to
+    notice before the window closes.
     """
-    spec = load(HEARTBEAT)
-    minute, hour, dom, month, dow = spec[True]["schedule"][0]["cron"].split()
-    assert dom == "*" and month == "*", "a day-of-month schedule can skip months"
-    assert dow != "*", "must be weekly or more often, not a monthly gamble"
-    del minute, hour
-
-    body = " ".join(str(s.get("run", "")) for s in spec["jobs"]["beat"]["steps"])
-    assert "git push" in body, "a heartbeat that does not push is not activity"
-
+    from tools import heartbeat_due
+    assert heartbeat_due.MAX_AGE_DAYS * 8 <= 60, (
+        f"a beat every {heartbeat_due.MAX_AGE_DAYS} days leaves too little "
+        "margin inside GitHub's 60-day window")
 
 def test_the_heartbeat_fails_loudly_if_it_has_nothing_to_push():
     """The failure that would otherwise be invisible: the step runs, commits
@@ -925,3 +935,22 @@ def test_only_the_daily_run_records_a_quality_point():
                       for s in load(REPORT)["jobs"]["report"]["steps"])
     assert "tools.quality --data-dir store/data --record" in night
     assert "--record" not in weekly.split("tools.quality")[1][:60]
+
+
+def test_the_heartbeat_does_not_depend_on_the_scheduler_it_protects():
+    """It keeps GitHub from disabling scheduled workflows, and asked for one
+    attempt a week from a scheduler measured at 1 delivery in 32. A bad run
+    inside sixty days switches the collection off with nothing red."""
+    beat = load(WORKFLOWS / "heartbeat.yml")
+    attempts = sum(len([h for h in range(24) if fires_at(beat, weekday, h)])
+                   for weekday in range(7))
+    assert attempts >= 14, (
+        f"only {attempts} heartbeat attempts a week against a scheduler that "
+        "drops most of them")
+
+    steps = beat["jobs"]["beat"]["steps"]
+    guard = [s for s in steps if "heartbeat_due" in s.get("run", "")]
+    assert guard, "nothing stops four attempts a day committing four times"
+    writer = [s for s in steps if "STATUS.md" in s.get("run", "")
+              and "heartbeat_due" not in s.get("run", "")][0]
+    assert "steps.due.outputs.go" in writer.get("if", "")

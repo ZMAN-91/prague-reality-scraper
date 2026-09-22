@@ -9,15 +9,22 @@ name: Heartbeat
 # nothing is red, so it would look exactly like a working system that had
 # quietly gone silent.
 #
-# So this pushes something. Once a week is far inside the 60-day window while
-# staying out of the log: 52 commits a year, not 8760.
+# So this pushes something, about once a week: far inside the 60-day window
+# while staying out of the log, 52 commits a year rather than 8,760.
+#
+# Once a week is the CADENCE, not the number of attempts. Asking once a week
+# is the one thing this project knows not to do - GitHub delivered 1 of 32
+# scheduled attempts when measured, so a weekly request is a coin toss
+# repeated fifty times a year, and a bad run of it inside sixty days switches
+# the collection off silently. Four attempts a day, and tools/heartbeat_due.py
+# reads what the last one wrote to decide whether this one should commit.
 #
 # It is deliberately NOT part of the scrape workflow. A heartbeat that only
 # beats when the thing it is keeping alive already ran is not a heartbeat.
 
 on:
   schedule:
-    - cron: "17 4 * * 1"
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -34,7 +41,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Is a heartbeat due?
+        id: due
+        run: python -m tools.heartbeat_due --status STATUS.md >> "$GITHUB_OUTPUT"
+
       - name: Record that the collector is still running
+        if: steps.due.outputs.go == 'true'
         run: |
           set -euo pipefail
           {
