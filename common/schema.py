@@ -58,33 +58,34 @@ REMOVAL_AFTER_DAYS = 3
 # --- Column layouts (must match README exactly) -------------------------
 
 LISTING_FIELDS = [
-    "internal_id",
-    "source",
-    "source_id",
-    "url",
+    # Ordered the way the row is read, not the way it was built: what the
+    # property IS, then where it is, then whether it is still up, then the
+    # provenance that says how far to trust the middle part, and the
+    # identifiers last. A column layout is the first documentation anyone
+    # meets, and the old one opened with three hashes and a URL.
+    #
+    # There is no price here. Prices live in data/observations, because a
+    # price is an event with a date and this file holds one row per listing;
+    # the exported views in data/csv/ join the two.
     "property_type",
     "transaction_type",
     "disposition",
     "area_m2",
     "floor",
-    "lat",
-    "lon",
-    # Where lat/lon came from: "" when the portal published them, "cluster"
-    # when another advert for the same flat did. Borrowed coordinates are a
-    # weaker claim than observed ones and must not read as the same thing.
-    "gps_zdroj",
-    "address",
-    # The same address broken up and folded to ASCII, so a column of them
-    # sorts and filters. `address` stays exactly as the portal said it -
-    # dedup matches on it, and it is the evidence these four are derived
-    # from. See common/address.py, including why cislo_popisne is empty.
+
+    # WHERE. The raw address the portal published is deliberately NOT stored
+    # any more. It was kept because dedup matched on it in four places; those
+    # now read `ulice` / `mestska_cast` / `obec`, which is the same answer
+    # (measured over the live data: the same 4,850 pairs, not one gained or
+    # lost) and a cleaner one - "Hostivar, Praha" yielded no locality at all
+    # through the raw string and yields Hostivar through the parsed columns.
+    # The scrapers still carry it in memory for the run that parses it.
     "ulice",
     # Inferred, not published - see common/ruian.py. No portal gives a house
     # number, so this is the nearest address point the state register holds
-    # on that street, and the three fields after it are what say how much to
-    # believe it: the source, how far the portal's pin was from that point,
-    # and how many different houses were about equally close. A number
-    # without them would read as fact.
+    # on that street, and cislo_zdroj / cislo_vzdalenost_m / cislo_kandidatu
+    # below are what say how much to believe it. A number without them would
+    # read as fact.
     "cislo_popisne",
     "cislo_orientacni",
     # Which numbering series, in the register's own words: "c.p." for a
@@ -97,16 +98,38 @@ LISTING_FIELDS = [
     # neighbour's - but it is filled for 98.7% of matches and no portal here
     # publishes one at all.
     "psc",
-    "cislo_zdroj",
-    "cislo_vzdalenost_m",
-    "cislo_kandidatu",
     "mestska_cast",
     "obec",
     "priority_zone",
-    "description",
+
+    # STILL ON THE MARKET?
+    "status",
     "first_seen_at",
     "last_seen_at",
-    "status",
+
+    # HOW FAR TO TRUST THE ABOVE. Every inferred field names its source, so
+    # a reader can tell what the portal said from what this project worked
+    # out. See gps_zdroj on why a borrowed coordinate must not read like an
+    # observed one.
+    "lat",
+    "lon",
+    "gps_zdroj",
+    "cislo_zdroj",
+    "cislo_vzdalenost_m",
+    "cislo_kandidatu",
+    # "portal" when the advert named the district, "ruian" when the register
+    # supplied it for an advert that did not, "ulice" when it was the only
+    # district that street runs through. Without this column the district
+    # cross-check in tools/quality.py would start grading the register
+    # against its own answers and report 100% agreement for ever.
+    "mestska_cast_zdroj",
+
+    # IDENTITY AND PLUMBING.
+    "internal_id",
+    "source",
+    "source_id",
+    "url",
+    "description",
     "cluster_id",
     # Was missing from this list until it was caught by a CSV round-trip
     # test: common/dedup.py sets it on every clustered row, but

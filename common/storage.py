@@ -215,9 +215,8 @@ def write_listings(listings: dict[str, dict], path: Path = LISTINGS_PATH) -> Non
         # under an older version get tidied the next time they are saved
         # instead of keeping their line breaks forever. See schema.clean_text:
         # embedded newlines turned 2 682 rows into 23 848 physical lines.
-        for column in ("description", "address"):
-            if row.get(column):
-                row[column] = clean_text(row[column])
+        if row.get("description"):
+            row["description"] = clean_text(row["description"])
         writer.writerow(row)
     _atomic_write_text(path, buf.getvalue())
 

@@ -319,6 +319,21 @@ def render(series: list[dict], episodes_rows: list[dict],
     return "\n".join(out)
 
 
+def _where(row: dict) -> str:
+    """A readable address from the parsed columns.
+
+    The raw string the portal published is not stored any more (see
+    schema.LISTING_FIELDS), and it was never the better label anyway: it was
+    whichever shape that portal happened to use, so a column of them read as
+    three different conventions stacked on top of each other.
+    """
+    street = (row.get("ulice") or "").strip()
+    number = (row.get("cislo_popisne") or "").strip()
+    district = (row.get("mestska_cast") or "").strip()
+    head = f"{street} {number}".strip() if street else ""
+    return ", ".join(part for part in (head, district) if part) or "?"
+
+
 def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
     live = [r for r in episodes_rows if r.get("outcome") == "active"]
     gone = [r for r in episodes_rows if r.get("outcome") == "removed"]
@@ -357,7 +372,7 @@ def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
                 "|---|---|---:|---:|---:|---:|"]
         for r in rows:
             out.append(
-                f"| {(r.get('address') or '?')[:40]} "
+                f"| {_where(r)[:40]} "
                 f"| {r.get('disposition') or '?'} "
                 f"| {fmt(as_num(r.get('last_price')), 'Kč')} "
                 f"| {r.get('days_on_market')} "

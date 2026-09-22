@@ -195,15 +195,18 @@ def describe_coverage(all_rows: list[dict], logs_dir: Path | None = None) -> str
 
 
 def street_names(rows: list[dict]) -> Counter:
-    """Street names in the dataset, counted. The address is
-    "Street 12, District, City", so the street is the first component with
-    any house number trimmed off."""
+    """Street names in the dataset, counted.
+
+    From `ulice`, which is the parsed street. This used to take the first
+    comma-separated component of the raw address and trim a house number off
+    it, which was the same work common/address.py already does properly -
+    and which stopped working the moment the raw string left the record.
+    """
     names: Counter = Counter()
     for row in rows:
-        first = (row.get("address") or "").split(",")[0].strip()
-        first = re.sub(r"\s+\d+\S*$", "", first).strip()
-        if first:
-            names[first] += 1
+        name = (row.get("ulice") or "").strip()
+        if name:
+            names[name] += 1
     return names
 
 

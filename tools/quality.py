@@ -138,6 +138,13 @@ def measure(listings: dict, index) -> dict:
     for row in rows:
         if row.get("cislo_zdroj") != ruian.SOURCE_NAME:
             continue
+        # Only a district the PORTAL named. Since tools/backfill_cislo.py
+        # started filling the blanks from the register, a row whose district
+        # came from there would be checked against its own source, agree by
+        # construction, and walk this figure to 100% - which is the one way
+        # this check could be silently retired.
+        if (row.get("mestska_cast_zdroj") or "") not in ("", "portal"):
+            continue
         stated = _fold(row.get("mestska_cast"))
         if not stated:
             continue

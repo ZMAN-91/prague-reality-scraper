@@ -225,6 +225,50 @@ def street_key(address: Optional[str]) -> str:
     return folded
 
 
+def street_of(row: dict) -> str:
+    """The row's street, from the parsed column when there is one.
+
+    `ulice` is what listings.csv stores; `address` is the portal's raw
+    string, which only rows still in flight carry - a donor read out of
+    sreality's index, or a listing being merged this run. Both go through
+    street_key, which costs nothing on an already-clean name (no comma to
+    split on, no house number to strip) and still applies the one rule that
+    matters: "Praha 4" is not a street and must never match.
+
+    This used to read `address` only. That made the raw string load-bearing
+    for clustering, which is why it was still being stored long after
+    everything a person reads had moved to the parsed columns.
+
+    The raw string goes through the same parser rather than through
+    street_key directly, because street_key on its own invents streets:
+    "Praha 2 - Vinohrady" has no comma, so the whole of it came back as a
+    street named "praha 2 vinohrady" - and every iDNES row in Vinohrady
+    with no street published got the same one, which is exactly the
+    ingredient a false medium-confidence merge needs. address.parse knows
+    that string names a district. One parser, one answer.
+    """
+    ulice = (row.get("ulice") or "").strip()
+    if not ulice and row.get("address"):
+        from common import address as address_mod
+        ulice = address_mod.parse(row["address"])["ulice"]
+    return street_key(ulice)
+
+
+def locality_of(row: dict) -> set:
+    """Where the row says it is, from the parsed columns when there are any.
+
+    Same substitution as street_of, and the same answer: "Praha 4 -
+    Sporilov, Praha" tokenised gives {sporilov} once the shared words are
+    dropped, and so does mestska_cast="Sporilov" with obec="Praha".
+    """
+    stated = " ".join(part for part in ((row.get("mestska_cast") or ""),
+                                        (row.get("obec") or "")) if part)
+    if stated.strip():
+        tokens = {token for token in _fold(stated).split() if len(token) > 2}
+        return tokens - {"praha", "cz", "ceska", "republika"}
+    return locality_tokens(row.get("address"))
+
+
 #: What a portal writes when it means "not stated". bezrealitky writes
 #: "undefined" 245 times and "ostatni" 15 more, and two of those are not a
 #: match - it would pair a flat with any other whose size and price lined up.
@@ -354,7 +398,7 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
         # block of flats can hold a dozen identical 2+kk units on one street.
         # Nothing is ever merged or deleted on the strength of it - a cluster
         # is a label, and the rows stay separate and inspectable.
-        key_a, key_b = street_key(a.get("address")), street_key(b.get("address"))
+        key_a, key_b = street_of(a), street_of(b)
         if not key_a or key_a != key_b:
             return None
         if area_abs_m is not None:
@@ -368,7 +412,7 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
         # Prague, and with no coordinates to contradict it the street alone
         # would merge two unrelated flats. When both addresses say where they
         # are, they have to agree; when one does not, the street carries it.
-        places_a, places_b = locality_tokens(a.get("address")), locality_tokens(b.get("address"))
+        places_a, places_b = locality_of(a), locality_of(b)
         if places_a and places_b and not (places_a & places_b):
             return None
         return "medium"
@@ -399,7 +443,7 @@ def _match_confidence(a: dict, b: dict, require_time_overlap: bool = True,
 
 def _streets_contradict(a: dict, b: dict) -> bool:
     """True when both rows name a street and the streets differ."""
-    key_a, key_b = street_key(a.get("address")), street_key(b.get("address"))
+    key_a, key_b = street_of(a), street_of(b)
     return bool(key_a) and bool(key_b) and key_a != key_b
 
 
@@ -495,7 +539,7 @@ def cluster_listings(
         lat, lon = _to_float(row.get("lat")), _to_float(row.get("lon"))
         if lat is not None and lon is not None:
             buckets[_grid_key(lat, lon)].append(internal_id)
-        key = street_key(row.get("address"))
+        key = street_of(row)
         if key:
             street_buckets[key].append(internal_id)
 

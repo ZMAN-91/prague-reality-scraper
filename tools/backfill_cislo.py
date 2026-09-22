@@ -82,12 +82,19 @@ def backfill(listings: dict, index: ruian.Index) -> tuple:
         if match:
             fields, register_row = match
             _cross_check(row, register_row, districts)
+            filled = _fill_district(row, register_row, stats)
         else:
             fields = None
+            filled = _fill_district_from_street(row, index, stats)
 
         new = fields or ruian.blank_match()
-        if any(row.get(field, "") != new[field]
-               for field in ruian.MATCH_FIELDS):
+        # A district filled in is a changed row too, and counted once with
+        # the match fields rather than twice. Without it the summary read
+        # "0 rows would change" on the run that gave 1,858 listings the
+        # district they had never had - and an --apply that reports nothing
+        # changed is one nobody runs twice.
+        if filled or any(row.get(field, "") != new[field]
+                         for field in ruian.MATCH_FIELDS):
             changed += 1
         row.update(new)
 
@@ -100,6 +107,82 @@ def backfill(listings: dict, index: ruian.Index) -> tuple:
                      "crowds": crowds, "districts": districts}
 
 
+def _fill_district(row: dict, register_row: dict, stats: Counter) -> bool:
+    """Give a district to a listing whose portal named none.
+
+    2,061 of 13,408 rows carry no mestska_cast, and 1,866 of those are every
+    single bezrealitky listing - that portal does not publish one at all. The
+    register does, for the very building this row was just matched to, so the
+    answer was already in hand and was being thrown away.
+
+    Only ever fills a blank. A district the portal stated is evidence and
+    stays, even when the register disagrees: that disagreement is the whole
+    point of the cross-check above, and overwriting it would delete the
+    finding rather than record it.
+    """
+    if (row.get("mestska_cast") or "").strip():
+        return False
+    district = _fold_keep_case(register_row.get("cast_obce") or "")
+    if not district:
+        return False
+    row["mestska_cast"] = district
+    row["mestska_cast_zdroj"] = ruian.SOURCE_NAME
+    stats["district from the register"] += 1
+    return True
+
+
+def _fill_district_from_street(row: dict, index, stats: Counter) -> bool:
+    """The fallback for a row with no register match: the street itself.
+
+    Only when the street runs through exactly one district in the whole
+    register. Plenty do not - Evropska crosses four - and for those this
+    says nothing rather than guessing, because a guessed district would go
+    into the same column as a stated one and there would be no way back.
+
+    And only for a listing in Prague. The register loaded here is Prague's,
+    so a street name it recognises means "Prague has a street by that name",
+    not "this flat is on it". Measured before that condition was added: of
+    42 districts this supplied, 36 were wrong - a flat on Zitna in Hostivice
+    was placed in Nove Mesto, one on Riegrova in Cernosice in Klanovice, one
+    on Kralupska in Brandys nad Labem in Ruzyne. bezrealitky sweeps Prague
+    AND the ring of towns around it, and street names repeat out there.
+    """
+    if (row.get("mestska_cast") or "").strip():
+        return False
+    if (row.get("obec") or "").strip() != "Praha":
+        stats["outside Prague, so the register cannot place it"] += 1
+        return False
+    ulice = (row.get("ulice") or "").strip()
+    if not ulice:
+        return False
+    district = _sole_district(index, ulice)
+    if not district:
+        return False
+    row["mestska_cast"] = district
+    row["mestska_cast_zdroj"] = "ulice"
+    stats["district from the street"] += 1
+    return True
+
+
+def _sole_district(index, ulice: str) -> str:
+    """The one district a street runs through, or "" when it runs through
+    more than one (or the register has never heard of it)."""
+    points = index.by_street.get(_fold(ulice)) or []
+    districts = {(point.get("cast_obce") or "").strip() for point in points}
+    districts.discard("")
+    if len(districts) != 1:
+        return ""
+    return _fold_keep_case(districts.pop())
+
+
+def _fold_keep_case(value: str) -> str:
+    """Diacritics off, capitalisation kept: the register writes "Hradcany"
+    as "Hrad\u010dany" and the portals write "Vinohrady", so stripping the
+    accents is all it takes for the two to be the same column."""
+    from common import address
+    return address.strip_diacritics(value).strip()
+
+
 def _cross_check(row: dict, register_row: dict, districts: Counter) -> None:
     """Does the register put this building in the district the portal named?
 
@@ -110,6 +193,14 @@ def _cross_check(row: dict, register_row: dict, districts: Counter) -> None:
     single row as a disagreement. It did, the first time this was measured by
     hand.
     """
+    # Only a district the PORTAL named. A district this tool filled in from
+    # the register on an earlier run would be compared against the register
+    # that produced it, agree by construction, and push the figure to 100%
+    # - retiring the one check that would notice a broken coordinate
+    # conversion, by feeding it its own output.
+    if (row.get("mestska_cast_zdroj") or "") not in ("", "portal"):
+        districts["not the portal's district"] += 1
+        return
     stated = _fold(row.get("mestska_cast") or "")
     if not stated:
         districts["portal named no district"] += 1

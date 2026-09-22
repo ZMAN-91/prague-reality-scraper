@@ -57,7 +57,6 @@ def first_run():
     ("disposition", "disposition", "3+1"),
     ("area_m2", "area", 62.0),
     ("floor", "floor", 5),
-    ("address", "address", "Jihovychodni IV, Praha"),
     ("description", "description", "Kompletne zrekonstruovany byt"),
 ])
 def test_a_changed_attribute_is_logged(field, argument, value):

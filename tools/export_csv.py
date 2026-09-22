@@ -37,21 +37,20 @@ from tools.listing_query import (
 )
 
 VIEW_FIELDS = [
-    "internal_id",
-    "source",
-    "source_id",
+    # Read in the order a person asks the questions: what is it, where is
+    # it, what does it cost, is it still up - and only then the provenance
+    # and the identifiers. See schema.LISTING_FIELDS, which now reads the
+    # same way.
     "property_type",
     "transaction_type",
     "disposition",
     "area_m2",
-    "price",
-    "price_per_m2",
     "floor",
-    # No `address` here on purpose. It stays in listings.csv - dedup.py
-    # matches on it in four places, and it is the evidence ulice /
-    # mestska_cast / obec are parsed from - but it is not what a person
-    # reads: it is whichever shape the portal happened to use, so a column
-    # of them sorts by the portal rather than by the street.
+
+    # No raw `address` column, and now there is not one to have: the record
+    # itself stores the parsed fields only. It was never what a person
+    # reads, either - it was whichever shape the portal happened to use, so
+    # a column of them sorted by the portal rather than by the street.
     "ulice",
     "cislo_popisne",
     # These travel WITH the number, always. cislo_popisne is inferred from
@@ -60,23 +59,33 @@ VIEW_FIELDS = [
     "cislo_orientacni",
     "cislo_typ",
     "psc",
-    "cislo_zdroj",
-    "cislo_vzdalenost_m",
-    "cislo_kandidatu",
     "mestska_cast",
     "obec",
     "priority_zone",
+
+    "price",
+    "price_per_m2",
+    "price_observed_at",
+
     "status",
     "first_seen_at",
     "last_seen_at",
-    "price_observed_at",
-    "cluster_id",
-    "dedup_confidence",
-    "relisted_from",
+
     "lat",
     "lon",
     "gps_zdroj",
+    "cislo_zdroj",
+    "cislo_vzdalenost_m",
+    "cislo_kandidatu",
+    "mestska_cast_zdroj",
+
+    "internal_id",
+    "source",
+    "source_id",
     "url",
+    "cluster_id",
+    "dedup_confidence",
+    "relisted_from",
 ]
 
 

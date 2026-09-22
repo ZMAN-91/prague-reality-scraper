@@ -408,6 +408,21 @@ def _same_value(before, after) -> bool:
     return str(before).strip().lower() == str(after).strip().lower()
 
 
+def _located(raw) -> dict:
+    """The parsed address columns, with the district's provenance on them.
+
+    mestska_cast_zdroj exists so that a district the portal stated can be
+    told from one this project worked out. tools/backfill_cislo.py fills the
+    blanks from the address register, and the cross-check in
+    tools/quality.py - which asks whether the register agrees with the
+    portal - has to skip the rows where the register IS the portal's answer,
+    or it grades itself and reports 100% for ever.
+    """
+    parsed = address.parse(raw)
+    parsed["mestska_cast_zdroj"] = "portal" if parsed.get("mestska_cast") else ""
+    return parsed
+
+
 def merge_source(
     source_name: str,
     normalized: list,
@@ -609,8 +624,9 @@ def merge_source(
                 "lat": listing.lat if listing.lat is not None else "",
                 "lon": listing.lon if listing.lon is not None else "",
                 "gps_zdroj": coords.OWN if listing.lat is not None else "",
-                "address": listing.address or "",
-                **address.parse(listing.address),
+                # The portal's raw string is parsed here and not kept: see
+                # schema.LISTING_FIELDS on why it no longer has to be.
+                **_located(listing.address),
                 # Empty until the register is consulted - see the address
                 # matching step below. Present here so every row carries
                 # every column from the moment it is created.
@@ -675,12 +691,18 @@ def merge_source(
             update("disposition", listing.disposition)
             update("area_m2", listing.area_m2)
             update("floor", listing.floor)
-            update("address", listing.address)
-            # Derived, so they follow the address rather than being compared
-            # against it: a re-parse is not an edit the listing made, and
-            # logging one as a change would fill the log the first time this
-            # parser improves.
-            row.update(address.parse(row.get("address")))
+            # Re-parsed from the portal's CURRENT string, not from a stored
+            # copy of an older one. Applied with the same rule as everything
+            # else here - a field that comes back blank does not clobber a
+            # good value - which also protects a mestska_cast the register
+            # supplied for an advert that never named one.
+            #
+            # Not logged as attribute changes: a re-parse is not an edit the
+            # listing made, and logging one would fill the change log the
+            # first time this parser improves.
+            for field, value in _located(listing.address).items():
+                if value:
+                    row[field] = value
             update("description", listing.description)
             if listing.lat is not None and listing.lon is not None:
                 # The portal's own figure supersedes anything borrowed.

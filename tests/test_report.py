@@ -162,10 +162,10 @@ def test_segments_get_their_own_section_with_the_roll_up_first():
 
 def test_notable_properties_are_listed():
     episodes_rows = [
-        {"address": "Roztylske namesti", "disposition": "2+kk", "outcome": "active",
+        {"ulice": "Roztylske namesti", "disposition": "2+kk", "outcome": "active",
          "last_price": "7000000", "days_on_market": "120", "discount_pct": "8.5",
          "attribute_changes": "3"},
-        {"address": "Hornomecholupska", "disposition": "3+1", "outcome": "removed",
+        {"ulice": "Hornomecholupska", "disposition": "3+1", "outcome": "removed",
          "last_price": "9000000", "days_on_market": "4", "discount_pct": "",
          "attribute_changes": "0"},
     ]
@@ -205,7 +205,7 @@ def test_the_header_counts_days_in_czech():
 def test_a_ranking_by_discount_excludes_what_was_never_discounted():
     """The first clean run listed five properties under "biggest discounts"
     at 0.00 % each - with every value tied, the sort returned file order."""
-    rows = [{"address": f"a{i}", "disposition": "2+kk", "outcome": "active",
+    rows = [{"ulice": f"a{i}", "disposition": "2+kk", "outcome": "active",
              "last_price": "7000000", "days_on_market": "0",
              "discount_pct": "0.0", "attribute_changes": "0"}
             for i in range(5)]
@@ -215,7 +215,7 @@ def test_a_ranking_by_discount_excludes_what_was_never_discounted():
 
 
 def test_a_real_discount_is_still_ranked():
-    rows = [{"address": "Zlevnena", "disposition": "2+kk", "outcome": "active",
+    rows = [{"ulice": "Zlevnena", "disposition": "2+kk", "outcome": "active",
              "last_price": "7000000", "days_on_market": "40",
              "discount_pct": "6.5", "attribute_changes": "0"}]
     assert "Zlevnena" in render(days(3, nabidka=5), rows)
@@ -223,7 +223,7 @@ def test_a_real_discount_is_still_ranked():
 
 def test_vanishing_on_the_day_it_appeared_is_the_fastest_departure():
     """Zero is the absence of a discount, but it is a real time on market."""
-    rows = [{"address": "Bleskem", "disposition": "2+kk", "outcome": "removed",
+    rows = [{"ulice": "Bleskem", "disposition": "2+kk", "outcome": "removed",
              "last_price": "7000000", "days_on_market": "0",
              "discount_pct": "", "attribute_changes": "0"}]
     text = render(days(3, nabidka=5), rows)
@@ -244,7 +244,7 @@ def test_an_axis_does_not_run_below_zero_for_a_count():
 def test_a_price_that_went_up_is_not_printed_as_a_negative_discount():
     """The first real report printed "-0.45 %" under "sleva" for a property
     whose asking price had risen - the opposite of what happened."""
-    rows = [{"address": "Zdrazilo", "disposition": "1+kk", "outcome": "active",
+    rows = [{"ulice": "Zdrazilo", "disposition": "1+kk", "outcome": "active",
              "last_price": "6550000", "days_on_market": "10",
              "discount_pct": "-0.77", "attribute_changes": "2"}]
     text = render(days(3, nabidka=5), rows)
@@ -254,7 +254,7 @@ def test_a_price_that_went_up_is_not_printed_as_a_negative_discount():
 
 
 def test_a_real_discount_reads_as_a_fall():
-    rows = [{"address": "Zlevnilo", "disposition": "2+kk", "outcome": "active",
+    rows = [{"ulice": "Zlevnilo", "disposition": "2+kk", "outcome": "active",
              "last_price": "7000000", "days_on_market": "40",
              "discount_pct": "6.50", "attribute_changes": "0"}]
     assert "-6.50 %" in render(days(3, nabidka=5), rows)

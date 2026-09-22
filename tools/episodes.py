@@ -82,19 +82,19 @@ from common.schema import STATUS_ACTIVE, STATUS_REMOVED, is_missing_status
 # without re-deriving any of the rest.
 GAP_DAYS = 14
 
+# Same order as schema.LISTING_FIELDS reads in: what it is, where it is,
+# what it cost, whether it is still up, then the small print.
 FIELDS = [
-    "property_key", "episode",
     "property_type", "transaction_type", "disposition", "area_m2",
-    "address", "ulice", "cislo_popisne", "mestska_cast", "obec",
-    "priority_zone",
-    "sources", "listing_count", "internal_ids",
-    "first_seen", "last_seen", "days_on_market", "gap_before_days",
-    "outcome", "days_missing",
+    "ulice", "cislo_popisne", "mestska_cast", "obec", "priority_zone",
     "first_price", "last_price", "min_price", "max_price",
     "price_changes", "discount_czk", "discount_pct",
     "price_per_m2_first", "price_per_m2_last",
-    "attribute_changes",
-    "cut_days", "edit_days",
+    "outcome", "days_missing",
+    "first_seen", "last_seen", "days_on_market", "gap_before_days",
+    "attribute_changes", "cut_days", "edit_days",
+    "sources", "listing_count",
+    "property_key", "episode", "internal_ids",
 ]
 
 
@@ -313,8 +313,6 @@ def build(listings: dict[str, dict], observations: dict[str, list[dict]],
                 "disposition": next((r.get("disposition") for r in rows
                                      if r.get("disposition")), ""),
                 "area_m2": area if area is not None else "",
-                "address": next((r.get("address") for r in rows
-                                 if r.get("address")), ""),
                 **{field: next((r.get(field) for r in rows if r.get(field)), "")
                    for field in ("ulice", "cislo_popisne", "mestska_cast", "obec")},
                 "priority_zone": any(str(r.get("priority_zone")).lower() == "true"

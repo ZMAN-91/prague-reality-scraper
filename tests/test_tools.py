@@ -10,6 +10,7 @@ unless the matching itself is known to work.
 import csv
 from pathlib import Path
 
+from common import address as address_mod
 from common.schema import LISTING_FIELDS
 from tools.export_csv import export
 from tools.filter_street import filter_street, slugify
@@ -68,6 +69,18 @@ def listing(internal_id, **overrides):
         }
     )
     row.update(overrides)
+    # `address` is not a stored column any more (see schema.LISTING_FIELDS),
+    # but it is still the most readable way to write a fixture. Parsed the
+    # same way run.py parses it, so a test that says "Nurmiho 12, Hostivar,
+    # Praha" gets exactly the columns a real row would have.
+    if "address" in row:
+        raw = row.pop("address")
+        parsed = address_mod.parse(raw)
+        parsed["mestska_cast_zdroj"] = "portal" if parsed["mestska_cast"] else ""
+        for field, value in parsed.items():
+            row.setdefault(field, "")
+            if value or not row[field]:
+                row[field] = value
     return row
 
 
@@ -290,16 +303,22 @@ def test_filter_street_substring_query_still_matches(tmp_path):
     assert filter_street("Nurni", data_dir)["matched"] == 1
 
 
-def test_street_names_strips_house_numbers(tmp_path):
+def test_street_names_reads_the_parsed_column():
+    """It used to take the first comma-separated piece of the raw address
+    and trim a house number off it - work common/address.py already does,
+    and work that stopped being possible when the raw string left the
+    record. The column it reads now is already a street and already ASCII."""
     from tools.filter_street import street_names
 
     names = street_names([
-        {"address": "Nurmiho 12, Hostivar, Praha"},
-        {"address": "Nurmiho 1101/4, Praha"},
-        {"address": "V Zeleném údolí 1302/11, Praha"},
+        {"ulice": "Nurmiho"},
+        {"ulice": "Nurmiho"},
+        {"ulice": "V Zelenem udoli"},
+        {"ulice": ""},
     ])
     assert names["Nurmiho"] == 2
-    assert names["V Zeleném údolí"] == 1
+    assert names["V Zelenem udoli"] == 1
+    assert "" not in names
 
 
 def test_slugify_produces_a_safe_folder_name():
@@ -384,20 +403,58 @@ def test_the_views_do_not_carry_the_raw_address():
         assert field in VIEW_FIELDS, field
 
 
-def test_the_raw_address_is_still_kept_in_the_record():
-    """Removing it from the record would break cross-source matching:
-    dedup.py reads it through street_key() and locality_tokens(), and it is
-    the evidence ulice / mestska_cast / obec are parsed from. A view is a
-    view; the record has to keep its evidence."""
+def test_the_record_does_not_keep_the_raw_address_either():
+    """This test used to assert the opposite, and said so: removing the raw
+    string would break cross-source matching, because dedup read it through
+    street_key() and locality_tokens().
+
+    It was right until dedup stopped reading it. The parsed columns are the
+    same answer - measured over the live 13,408 rows, street_key(address)
+    and street_of(row) disagree on exactly none, and clustering produces the
+    identical 4,850 pairs - and a better one, because "Hostivar, Praha"
+    yields no locality at all through the raw string and yields Hostivar
+    through mestska_cast.
+    """
     from common.schema import LISTING_FIELDS
-    assert "address" in LISTING_FIELDS
+    assert "address" not in LISTING_FIELDS
 
     import inspect
     from common import dedup
     source = inspect.getsource(dedup)
-    assert 'get("address")' in source, (
-        "dedup no longer reads the raw address; if that is deliberate this "
-        "test should go, but it must be deliberate")
+    for helper in ("def street_of", "def locality_of"):
+        assert helper in source, f"dedup lost {helper}"
+
+
+def test_the_parsed_columns_answer_what_the_raw_address_used_to():
+    """The substitution itself, on the address shapes all three portals
+    actually publish. If this drifts, clustering drifts with it."""
+    from common import address as addr
+    from common import dedup
+
+    for raw in ("Nurmiho, Hostivar, Praha",
+                "Nurmiho 1101/4, Praha 4 - Sporilov, Praha",
+                "Roztylská 15, Praha 4",
+                "Praha 2 - Vinohrady"):
+        parsed = addr.parse(raw)
+        # Reading the raw string through street_of must give the same answer
+        # as reading the parsed row, whichever way round a caller holds it.
+        assert dedup.street_of(parsed) == dedup.street_of({"address": raw}), raw
+        # The parsed side may know MORE - "Hostivar, Praha" has nothing
+        # after the first comma but its district is Hostivar - and never
+        # less, because a lost locality would let two unrelated flats on a
+        # same-named street in different districts merge.
+        assert dedup.locality_of(parsed) >= dedup.locality_tokens(raw), raw
+
+
+def test_a_district_is_never_mistaken_for_a_street():
+    """iDNES publishes "Praha 2 - Vinohrady" for a listing whose street it
+    does not know. street_key alone saw no comma, took the whole string, and
+    returned a street called "praha 2 vinohrady" - the same one for every
+    such listing in Vinohrady, which is what a false medium-confidence merge
+    is made of."""
+    from common import dedup
+    for raw in ("Praha 2 - Vinohrady", "Praha 10", "Praha", "Hostivar, Praha"):
+        assert dedup.street_of({"address": raw}) == "", raw
 
 
 def test_a_house_number_never_appears_in_a_view_without_its_caveats():

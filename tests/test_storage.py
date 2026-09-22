@@ -75,7 +75,7 @@ def test_listings_roundtrip(tmp_path):
         "lat": "50.0755",
         "lon": "14.4378",
         "gps_zdroj": "",
-        "address": "Praha 10",
+        "mestska_cast_zdroj": "portal",
         "ulice": "",
         "cislo_popisne": "",
         "cislo_orientacni": "",
@@ -128,7 +128,7 @@ def test_listings_roundtrip_preserves_awkward_text(tmp_path):
     nasty = 'Byt 2+kk, "luxusní"; s výhledem\nna park — 55 m²\r\nblízko metra'
     path = tmp_path / "listings.csv"
     row = {field: "" for field in LISTING_FIELDS}
-    row.update({"internal_id": "x1", "description": nasty, "address": "Nurniho 5, Praha 4"})
+    row.update({"internal_id": "x1", "description": nasty, "ulice": "Nurniho"})
     storage.write_listings({"x1": row}, path)
 
     loaded = storage.read_listings(path)["x1"]
@@ -138,7 +138,7 @@ def test_listings_roundtrip_preserves_awkward_text(tmp_path):
     # commas, the quotes, the semicolon, the em dash, the superscript - must
     # survive byte for byte, because those are the actual CSV landmines.
     assert loaded["description"] == 'Byt 2+kk, "luxusní"; s výhledem na park — 55 m² blízko metra'
-    assert loaded["address"] == "Nurniho 5, Praha 4"
+    assert loaded["ulice"] == "Nurniho"
 
 
 def test_listings_write_is_atomic_no_partial_file_left_behind(tmp_path):
@@ -245,7 +245,7 @@ def test_descriptions_are_written_as_one_line_each(tmp_path):
         row.update({
             "internal_id": f"id{n}",
             "description": f"Radek jedna\nradek dva\r\nradek tri {n}",
-            "address": "Nurmiho,\nPraha",
+            "ulice": "Nurmiho",
         })
         rows[f"id{n}"] = row
     storage.write_listings(rows, path)
@@ -261,7 +261,7 @@ def test_a_row_written_by_an_older_version_is_tidied_on_the_next_save(tmp_path):
 
     path = tmp_path / "listings.csv"
     row = {field: "" for field in LISTING_FIELDS}
-    row.update({"internal_id": "old", "description": "stary\nzapis", "address": "Ulice"})
+    row.update({"internal_id": "old", "description": "stary\nzapis", "ulice": "Ulice"})
     storage.write_listings({"old": row}, path)
     assert "\n" not in storage.read_listings(path)["old"]["description"]
 

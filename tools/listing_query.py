@@ -93,17 +93,21 @@ def is_live(row: dict) -> bool:
 
 
 def match_street(row: dict, street_query: str) -> bool:
-    """True if a listing's address/url plausibly refers to `street_query`.
+    """True if a listing plausibly refers to `street_query`.
+
+    Reads `ulice` rather than the raw address, which the record no longer
+    keeps - and which was the looser of the two anyway, since it carried the
+    district and the city as well.
 
     Deliberately checks the URL too: sreality bakes the street into its
-    canonical detail URL slug, and for a listing whose address field came
-    back thin that slug is the only street signal we have.
+    canonical detail URL slug, and for a listing whose street came back
+    empty that slug is the only signal there is.
     """
     needle = fold(street_query).strip()
     if not needle:
         return False
     haystack = " ".join(
-        fold(row.get(field)) for field in ("address", "url", "description")
+        fold(row.get(field)) for field in ("ulice", "url", "description")
     )
     return needle in haystack
 
