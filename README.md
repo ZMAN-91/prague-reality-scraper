@@ -98,6 +98,22 @@ jejíž docstring rozepisuje, co je ověřené a co dohad.
   „těsné okolí", takže o zařazení rozhoduje až bounding box, ne dotaz.
 - URL inzerátu se skládá přesně stejným algoritmem jako na webu, včetně
   kódovníku `category_sub_cb` — vyčteno z reálného zdroje, ne odhadnuto.
+- **Rozsah: celá Praha, ale ve dvou rozlišeních.** Hodinový průchod chodí
+  jen do Prahy 4 a 10 (sledovaný pás) a tam stahuje i detaily a popisy.
+  Jednou denně se prochází index celé Prahy — ~25 požadavků, žádné detaily
+  — a jeho řádky se **ukládají**.
+
+  Dřív se zahazovaly, s odůvodněním, že sreality se sbírají jen pro
+  sledovanou oblast. To bylo mířeno vedle: sběrná oblast šetří provoz tím,
+  že rozhoduje, **co se stáhne**, a tyhle stránky se stahují tak jako tak.
+  Zahazování řádků neušetřilo srealitám jediný požadavek a stálo dataset
+  největší pražský portál — měřeno: sreality byly ve 41,7 % epizod proti
+  69,9 % u iDNES, takže každé srovnání zdrojů bylo srovnání pokrytí, ne trhu.
+
+  Co to znamená pro data: řádky mimo pás nemají popis, jsou viděné jednou
+  denně (ne každou hodinu) a jejich syrové odpovědi se nearchivují —
+  1,5 MB gzipu denně je půl gigabajtu ročně a to je jediné místo, kde
+  důkaz stojí víc, než je platný.
 
 ### bezrealitky.cz
 
@@ -181,7 +197,7 @@ e-mail o selhání a skutečný výpadek vypadal úplně stejně
 | kdy | co | kde |
 |---|---|---|
 | **každou hodinu** | sběr prodeje i nájmu ze všech tří zdrojů; sreality jen Praha 4 + 10, bezrealitky a iDNES celá Praha; doplnění čísel popisných novým řádkům; export CSV; commit | `scrape.yml` |
-| **denně, 02:00–04:59** | celoměstský průchod iDNES a bezrealitky; pak celoměstská procházka indexu sreality, která **(a)** půjčuje GPS iDNES inzerátům a **(b)** jako jediná potvrzuje, jestli uložené sreality inzeráty mimo sledovaný pás ještě visí; doplnění čísel; zápis metrik kvality; commit; kontrola kvality | `scrape-night.yml` |
+| **denně, 02:00–04:59** | celoměstský průchod iDNES a bezrealitky; pak celoměstská procházka indexu sreality, která **(a)** sbírá pražské inzeráty mimo sledovaný pás, **(b)** půjčuje GPS iDNES inzerátům a **(c)** jako jediná potvrzuje, jestli uložené sreality inzeráty mimo pás ještě visí; doplnění čísel a městských částí; zápis metrik kvality; commit; kontrola kvality | `scrape-night.yml` |
 | **každých 6 hodin** | heartbeat — hlídá, že plánovač vůbec doručuje | `heartbeat.yml` |
 | **týdně, Po/Út 05:00** | přepárování dříve půjčených souřadnic (`--repair`), doplnění čísel, kontrola kvality, přestavba časových řad, týdenní report | `report.yml` |
 | **týdně, Po/Út 06:00** | ověřený archiv datového repozitáře | `backup.yml` |

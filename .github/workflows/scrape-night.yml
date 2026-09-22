@@ -236,7 +236,7 @@ jobs:
             --data-dir store/data \
             --logs-dir store/logs
 
-      - name: Walk sreality city-wide - lend coordinates, confirm what is still up
+      - name: Walk sreality city-wide - collect, lend coordinates, confirm what is still up
         # iDNES publishes no coordinates anywhere, and it is 64% of
         # everything collected. Without one a listing gets no house number,
         # no priority zone and no place on a map.
@@ -244,17 +244,25 @@ jobs:
         # sreality's search index carries them on every row, so this walks
         # Prague's index - about 25 requests at 500 rows a page, no detail
         # pages at all - and lends a coordinate to any iDNES row it can match
-        # to the same flat. The adverts it reads are used and dropped, never
-        # stored: sreality is collected for the watched area deliberately,
-        # and storing a city's worth here would replace that decision with
-        # whatever index page happened to be read.
+        # to the same flat.
+        #
+        # The adverts it reads are also KEPT. They used not to be, on the
+        # reasoning that sreality is collected for the watched area
+        # deliberately - but the collection area does its work by deciding
+        # what to REQUEST, and these pages are requested either way.
+        # Dropping the rows afterwards saved sreality nothing and cost the
+        # dataset Prague's largest portal: measured at 41.7% of property
+        # episodes against iDNES's 69.9%, which made every cross-source
+        # comparison a comparison of coverage rather than of the market.
+        #
+        # Index rows only - GPS, area, disposition, price, locality, no
+        # description and no detail request. Replaying one archived city
+        # walk through the parser: 6,278 rows, 100% with coordinates.
         #
         # The same walk is also the only observer the sreality rows outside
         # the watched belt have. 1,127 of them were left there by a retired
         # city-wide rent pass; the hourly pass asks about two boroughs, so
-        # without this they would sit "active" for ever. It refreshes and
-        # absence-marks what is stored and creates nothing - see
-        # run.merge_source(insert_new=False).
+        # without this they would sit "active" for ever.
         #
         # Daily, here, because this is the pass that has just collected the
         # night's new iDNES listings - so they are given coordinates in the

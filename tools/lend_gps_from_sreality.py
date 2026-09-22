@@ -32,25 +32,56 @@ cent - on the cheapest path the API offers, reading the index rather than one
 request per listing. The footprint argument that set the original rule is the
 same argument that permits this.
 
-THE DONORS ARE NOT COLLECTED - BUT THE WALK IS USED TWICE
+THE WALK IS KEPT, NOT THROWN AWAY
 
-No donor becomes a row. Storing them would change what the dataset means:
-sreality is collected for the watched area, deliberately, and one morning's
-coordinate errand must not quietly replace that with the whole city.
+This file used to say, at some length, that the adverts it reads are used
+and dropped - that storing them would replace a deliberate collection area
+with whatever index page happened to be read. That was the right instinct
+pointed at the wrong thing.
 
-What the walk IS used for, besides lending coordinates, is saying which
-sreality adverts already stored here are still up. That is not the same
-concession. Absence-marking needs a walk that covers the stored population,
-and this one does - okres Praha, every category, every day, and every
-sreality row stored here is in Praha (checked each run by `observe`, not
-assumed). The hourly pass covers only the two watched boroughs, so without
-this the 1,127 rows left outside the belt by the retired city-wide rent pass
-had no observer at all: they would have sat "active" for ever, and the run
-that wrongly believed a narrowed walk was complete marked 1,201 of them
-missing instead. Same hole, two directions.
+The collection area exists to keep sreality's traffic near what a person
+clicking around would produce. It does that by deciding WHAT TO REQUEST,
+and this walk's requests are already being made: ~25 index pages, once a
+day, against the ~840 the hourly area passes send. Dropping the rows
+afterwards does not save sreality a single request. It only loses the data.
 
-`run.merge_source(insert_new=False)` is what keeps the two apart: refresh,
-reactivate and absence-mark what is stored; drop what is not.
+So the rows are kept. Measured before: sreality appeared in 41.7% of
+property episodes against iDNES's 69.9%, not because Prague's largest
+portal advertises less but because this project was only looking at two
+boroughs of it - which made every cross-source comparison a comparison of
+coverage rather than of the market.
+
+WHAT THE KEPT ROWS ARE, AND ARE NOT
+
+Index rows. They carry GPS, area, disposition, price and locality; they do
+not carry a description, and no detail request is spent getting one. A row
+whose index entry has no coordinate is not stored at all - it cannot be
+placed, cannot be given a house number, and buying it a detail request is
+exactly the traffic this walk is cheap enough to avoid.
+
+They are also seen once a day rather than hourly, so a price cut outside
+the two watched boroughs is dated to the day. Inside the belt the hourly
+pass still gives hour resolution, and still fills descriptions.
+
+And their raw responses are not archived. That is a deliberate hole in the
+audit trail and worth stating rather than discovering: this walk's index
+pages are 1.5 MB gzipped per day, which is half a gigabyte a year added to
+a repository that is already 46 MB of raw after six days. The parsed rows
+go to listings.csv and observations, which is the dataset; the archive is
+evidence, and this is the one place where the evidence costs more than it
+is worth. The hourly belt pass archives its own pages as before.
+
+THE OTHER HALF: ABSENCE
+
+The same walk says which stored sreality adverts are still up. Absence
+marking needs a walk that covers the stored population, and this one does -
+okres Praha, every category, every day, and every sreality row stored here
+is in Praha (checked each run by `observe`, not assumed). The hourly pass
+covers two boroughs, so without this the 1,127 rows left outside the belt
+by the retired city-wide rent pass had no observer at all: they would have
+sat "active" for ever, and the run that wrongly believed a narrowed walk
+was complete marked 1,201 of them missing instead. Same hole, two
+directions.
 
 SAMENESS IS DECIDED BY dedup, NOT HERE
 
@@ -159,8 +190,9 @@ def collect_donors(session, budget=None, districts=None):
     return donors_from(listings), errors
 
 
-def observe(listings, walked, errors, scopes, last_obs, now_iso):
-    """Tell the stored sreality rows apart into still-up and gone.
+def observe(listings, walked, errors, scopes, last_obs, now_iso,
+            new_ids=None, collect=True):
+    """Keep what the walk saw, and tell the stored rows still-up from gone.
 
     THE HOLE THIS CLOSES
 
@@ -175,11 +207,13 @@ def observe(listings, walked, errors, scopes, last_obs, now_iso):
     This walk already reads the whole city. Using it costs nothing: the
     rows are in memory either way, and the alternative was one more walk.
 
-    IT OBSERVES, IT DOES NOT COLLECT
+    IT COLLECTS TOO
 
-    `insert_new=False` - see run.merge_source. A source_id the walk sees
-    and this project has never stored is dropped. The collection area is a
-    decision, not an accident of which index page was read.
+    `collect=False` keeps the old behaviour - refresh and absence-mark what
+    is stored, drop what is not - and is what the tests use to pin the two
+    halves apart. In the pipeline it is True: the pages have been fetched
+    either way, and sreality's share of the dataset was a measure of how
+    little of it this project looked at rather than of the market.
     """
     # The walk covers okres Praha. That is enough only for as long as
     # every stored sreality row is in Praha, which is true today and is
@@ -197,7 +231,6 @@ def observe(listings, walked, errors, scopes, last_obs, now_iso):
         ]
         scopes = set()
 
-    new_ids: list[str] = []
     return run.merge_source(
         "sreality",
         walked,
@@ -205,9 +238,9 @@ def observe(listings, walked, errors, scopes, last_obs, now_iso):
         listings,
         last_obs,
         now_iso,
-        new_ids,
+        new_ids if new_ids is not None else [],
         completed_scopes=scopes,
-        insert_new=False,
+        insert_new=collect,
     )
 
 
@@ -482,6 +515,9 @@ def main(argv=None) -> int:
                         help="re-examine coordinates borrowed earlier, "
                              "instead of filling blank ones")
     parser.add_argument("--max-seconds", type=int, default=1200)
+    parser.add_argument("--no-collect", action="store_true",
+                        help="only refresh and absence-mark what is already "
+                             "stored; do not keep adverts the walk finds")
     args = parser.parse_args(argv)
 
     data_dir = Path(args.data_dir)
@@ -503,9 +539,12 @@ def main(argv=None) -> int:
     now_iso = now.replace(microsecond=0).isoformat()
     state_path = data_dir / "state" / "last_observation.json"
     last_obs = storage.read_last_observation_state(state_path)
+    new_ids: list[str] = []
     seen_stats, observation_rows, change_rows = observe(
-        listings, walked, errors, scopes, last_obs, now_iso)
-    print(f"\nstored sreality rows: {seen_stats['updated']} still up, "
+        listings, walked, errors, scopes, last_obs, now_iso, new_ids=new_ids,
+        collect=not args.no_collect)
+    print(f"\nstored sreality rows: {seen_stats['new']} new, "
+          f"{seen_stats['updated']} still up, "
           f"{seen_stats['reactivated']} back, "
           f"{seen_stats['missing_marked']} not found "
           f"({seen_stats['removed_confirmed']} now removed)")

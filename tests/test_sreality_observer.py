@@ -256,3 +256,81 @@ def test_a_dry_run_writes_nothing(tmp_path):
     written = storage.read_listings(data_dir / "listings.csv")
     assert written[make_internal_id(SOURCE, "gone")]["status"] == STATUS_ACTIVE
     assert not list((data_dir / "observations").glob("*.csv"))
+
+
+# --- and now it keeps what it reads -----------------------------------------
+
+def test_the_daily_walk_keeps_the_adverts_it_finds():
+    """sreality appeared in 41.7% of property episodes against iDNES's
+    69.9% - not because Prague's largest portal advertises less, but
+    because this project only looked at two boroughs of it. The pages were
+    being fetched either way; only the rows were being dropped."""
+    listings = dataset("kept")
+    merge_source(SOURCE, [walked("kept"), walked("newcomer")], [], listings,
+                 {}, NOW, [], completed_scopes={SCOPE}, insert_new=True)
+    assert make_internal_id(SOURCE, "newcomer") in listings
+
+
+def test_a_collected_row_carries_what_the_index_gave_it():
+    """Index rows, not detail pages: GPS, area, disposition, price and
+    locality, and no description - because a description costs a request
+    per listing and that is the traffic this walk is cheap enough to
+    avoid."""
+    listings = {}
+    merge_source(SOURCE, [walked("newcomer")], [], listings, {}, NOW, [],
+                 completed_scopes={SCOPE}, insert_new=True)
+    row = listings[make_internal_id(SOURCE, "newcomer")]
+    assert row["lat"] and row["lon"]
+    assert row["area_m2"] == 55.0
+    assert row["disposition"] == "2+kk"
+    assert row["ulice"] == "Ulice"
+    assert row["description"] == ""
+
+
+def test_an_advert_the_index_cannot_place_is_not_collected():
+    """No coordinate means it cannot be put on a map, cannot be given a
+    house number, and buying it a detail request is exactly the traffic
+    being avoided. Not stored rather than stored blind."""
+    placeless = walked("nowhere")
+    placeless.lat = placeless.lon = None
+    placeless.in_target_area = False
+    listings = {}
+    merge_source(SOURCE, [placeless], [], listings, {}, NOW, [],
+                 completed_scopes={SCOPE}, insert_new=True)
+    assert listings == {}
+
+
+def test_main_collects_by_default(tmp_path):
+    """The wiring. merge_source can take the flag and main never pass it."""
+    from common import storage
+
+    data_dir = tmp_path / "data"
+    (data_dir / "state").mkdir(parents=True)
+    storage.write_listings(dataset("kept"), data_dir / "listings.csv")
+
+    seen = [walked("kept"), walked("newcomer")]
+    with patch.object(lend, "walk_city", return_value=(seen, [], {SCOPE})), \
+         patch.object(lend.net, "build_session", lambda *a, **k: object()):
+        lend.main(["--data-dir", str(data_dir), "--apply"])
+
+    written = storage.read_listings(data_dir / "listings.csv")
+    assert make_internal_id(SOURCE, "newcomer") in written
+
+
+def test_no_collect_still_only_observes(tmp_path):
+    """The old behaviour is still reachable, and still correct: refresh and
+    absence-mark what is stored, keep nothing new."""
+    from common import storage
+
+    data_dir = tmp_path / "data"
+    (data_dir / "state").mkdir(parents=True)
+    storage.write_listings(dataset("kept"), data_dir / "listings.csv")
+
+    seen = [walked("kept"), walked("newcomer")]
+    with patch.object(lend, "walk_city", return_value=(seen, [], {SCOPE})), \
+         patch.object(lend.net, "build_session", lambda *a, **k: object()):
+        lend.main(["--data-dir", str(data_dir), "--apply", "--no-collect"])
+
+    written = storage.read_listings(data_dir / "listings.csv")
+    assert make_internal_id(SOURCE, "newcomer") not in written
+    assert written[make_internal_id(SOURCE, "kept")]["status"] == STATUS_ACTIVE
