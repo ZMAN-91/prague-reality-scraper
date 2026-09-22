@@ -515,7 +515,28 @@ def fetch_all(
                     # cases this slice's coverage is unknown.
                     scope_ok = False
 
-            if scope_ok:
+            # A NARROWED walk must never report a scope complete.
+            #
+            # completed_scopes is what absence marking runs off: a scope
+            # reported complete means "every listing of this kind was walked,
+            # so anything not seen is gone". Two districts out of the city is
+            # not that, and claiming it marks every listing elsewhere as
+            # vanished.
+            #
+            # This actually happened. The hourly pass was narrowed to Praha 4
+            # and 10 while the retired weekly rent pass had already stored
+            # rent listings from the whole city, and the next morning 1,201
+            # live adverts in Vinohrady, Smichov, Zizkov and Karlin were
+            # marked missing - not because they had gone, but because nothing
+            # had looked for them and this said it had.
+            #
+            # scrapers/idnes.py has carried the same guard, under the same
+            # name, since its own area walk was added. The reasoning that
+            # sreality did not need one was that the watched belt sits inside
+            # these two districts - true of the belt, and irrelevant to what
+            # is actually stored.
+            walked_whole_city = districts is None
+            if scope_ok and walked_whole_city:
                 completed_scopes.add((property_type, transaction_type))
 
     return normalized, raw_pages, errors, completed_scopes

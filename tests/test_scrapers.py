@@ -241,3 +241,30 @@ def test_parse_estate_puts_the_recovered_area_on_the_row():
         "price_czk": 6470000,
     })
     assert parsed["area_m2"] == 43.0
+
+
+# --- a narrowed walk must not claim to have seen everything -----------------
+
+def test_a_narrowed_sreality_walk_reports_no_completed_scope():
+    """completed_scopes is what absence marking runs off. Two districts out
+    of the city is not "everything of this kind was walked", and saying it is
+    marks every listing elsewhere as vanished.
+
+    This happened: the hourly pass was narrowed to Praha 4 and 10 while rent
+    listings from the whole city were already stored, and 1,201 live adverts
+    in Vinohrady, Smichov and Karlin were marked missing the next morning."""
+    from unittest.mock import patch
+    from common import net
+    from scrapers import sreality
+
+    payload = {"pagination": {"total": 0, "limit": 500}, "results": []}
+    with patch.object(net, "fetch_json", return_value=payload), \
+         patch.object(net, "polite_sleep", lambda *a, **k: None):
+        _l, _p, errors, narrowed = sreality.fetch_all(
+            object(), districts=sreality.AREA_DISTRICT_IDS)
+        _l, _p, _e, city = sreality.fetch_all(object())
+
+    assert not errors
+    assert narrowed == set(), (
+        f"a two-district walk claimed {narrowed} complete")
+    assert city, "a city-wide walk must still report its scopes complete"
