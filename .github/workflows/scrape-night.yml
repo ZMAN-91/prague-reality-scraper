@@ -171,22 +171,41 @@ jobs:
           ref: claude/real-estate-market-scraper-1tgiei
           path: store
 
+      - name: Is the city still unwalked today, now that it is our turn?
+        id: still_due
+        # The guard job answered this before the run joined the queue, and
+        # the answer can be stale by the time the queue lets it through. On
+        # 26 September the attempt dispatched at 00:31 asked while the 00:01
+        # pass was still running, saw no finished pass in the log, was told
+        # to go, waited behind it in the scrape-data group - and at 00:55
+        # walked the whole city a second time, sreality index included.
+        #
+        # Asked again here, after the wait and against the dataset checked
+        # out after it, the log holds the pass that just finished and the
+        # answer is no. Every step below that touches a portal or the data
+        # is gated on it; health, announce and the final failure hang off
+        # the scrape step and skip with it.
+        run: python3 -m tools.night_due --logs-dir store/logs >> "$GITHUB_OUTPUT"
       - name: Set up Python
+        if: steps.still_due.outputs.go == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
 
       - name: Install dependencies
+        if: steps.still_due.outputs.go == 'true'
         run: pip install -r requirements-dev.txt
 
       - name: Run tests
+        if: steps.still_due.outputs.go == 'true'
         # A scraper that writes to a committed dataset should not run at all
         # if its own parsing/merging logic is broken - the tests are offline
         # and take under a second.
         run: python -m pytest -q
 
       - name: Run scraper
+        if: steps.still_due.outputs.go == 'true'
         id: scrape
         # Never let a non-zero exit skip the commit step below: whatever
         # data/log output run.py produced before failing must still be
@@ -237,6 +256,7 @@ jobs:
             --logs-dir store/logs
 
       - name: Walk sreality city-wide - collect, lend coordinates, confirm what is still up
+        if: steps.still_due.outputs.go == 'true'
         # iDNES publishes no coordinates anywhere, and it is 64% of
         # everything collected. Without one a listing gets no house number,
         # no priority zone and no place on a map.
@@ -279,6 +299,7 @@ jobs:
             --data-dir store/data --logs-dir store/logs --apply
 
       - name: Fill house numbers for whatever just gained coordinates
+        if: steps.still_due.outputs.go == 'true'
         # A borrowed coordinate is only worth having if it is used. The
         # matcher is local and re-runnable, so this costs a second.
         continue-on-error: true
@@ -286,6 +307,7 @@ jobs:
           python -m tools.backfill_cislo --data-dir store/data --apply
 
       - name: Export human-readable CSV views
+        if: steps.still_due.outputs.go == 'true'
         # Cheap, offline, and makes the dataset browsable straight from the
         # repo without loading the full listings.csv.
         continue-on-error: true
@@ -295,6 +317,7 @@ jobs:
           python -m tools.market --data-dir store/data
 
       - name: Record the dataset's quality
+        if: steps.still_due.outputs.go == 'true'
         # BEFORE the commit, because --record writes a file that has to be
         # committed with the rest of the night's data. Put after it, the
         # history is written into the runner's checkout and thrown away -
@@ -307,6 +330,7 @@ jobs:
           python -m tools.quality --data-dir store/data --record --never-fail
 
       - name: Commit and push data changes
+        if: steps.still_due.outputs.go == 'true'
         # The whole sequence lives in tools/commit_data.sh, which both
         # workflows call and tests/test_commit_step.py exercises against real
         # git repositories. It was inline and identical in both files, which
@@ -317,6 +341,7 @@ jobs:
         run: bash tools/commit_data.sh "claude/real-estate-market-scraper-1tgiei" "Nightly city scrape"
 
       - name: Check the dataset's quality has not collapsed
+        if: steps.still_due.outputs.go == 'true'
         # AFTER the commit, deliberately. A quality fault is a reason to look
         # at the data, never a reason to lose the night's collection - and a
         # step that fails before the commit takes the data with it.

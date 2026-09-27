@@ -1008,3 +1008,45 @@ def test_every_lend_gps_call_writes_its_log_into_the_data_repo():
         assert "--logs-dir store/logs" in window, (
             f"{name} runs the walk without --logs-dir store/logs, so its "
             f"record of the sweep is discarded: {line}")
+
+
+# --- the nightly asks again after the queue, not only before it -------------
+
+def _night_scrape_steps():
+    return load(NIGHT)["jobs"]["scrape"]["steps"]
+
+
+def test_the_nightly_rechecks_whether_it_is_due_after_waiting_its_turn():
+    """26 September: the attempt dispatched at 00:31 asked while the 00:01
+    pass was still running, found no finished pass in the log, was told to
+    go, queued behind it in the scrape-data group, and at 00:55 walked the
+    whole city a second time - sreality index included.
+
+    The guard job cannot see the future, so the answer has to be asked again
+    once the wait is over, against the dataset checked out after it."""
+    steps = _night_scrape_steps()
+    names = [s["name"] for s in steps]
+    dataset = next(i for i, s in enumerate(steps)
+                   if "prague_reality_sector_analysis" in str(s.get("with", {}).get("repository", "")))
+    recheck = next((i for i, s in enumerate(steps) if s.get("id") == "still_due"), None)
+    assert recheck is not None, "no re-check inside the queued job"
+    assert recheck > dataset, "the re-check must read the dataset checked out AFTER the wait"
+    assert "tools.night_due" in steps[recheck]["run"]
+    assert "store/logs" in steps[recheck]["run"]
+
+
+def test_nothing_that_touches_a_portal_or_the_data_runs_when_it_is_not_due():
+    """Every step that scrapes, walks, writes or commits hangs off the
+    re-check. The three that already hang off the scrape step skip with it."""
+    steps = _night_scrape_steps()
+    recheck = next(i for i, s in enumerate(steps) if s.get("id") == "still_due")
+    for step in steps[recheck + 1:]:
+        cond = str(step.get("if", ""))
+        assert ("steps.still_due.outputs.go == 'true'" in cond
+                or "steps.scrape." in cond), (
+            f"{step['name']!r} would still run on a night that was already walked")
+    for must in ("Run scraper", "Commit and push data changes"):
+        step = next(s for s in steps if s["name"] == must)
+        assert "still_due" in str(step.get("if", "")), must
+    walk = next(s for s in steps if "lend_gps_from_sreality" in str(s.get("run", "")))
+    assert "still_due" in str(walk.get("if", "")), "the sreality walk would run twice"
