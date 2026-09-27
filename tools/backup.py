@@ -9,7 +9,8 @@ a clone plus a checkout.
 
 WHAT GOES IN, AND WHAT DOES NOT
 
-    data/listings.csv        one row per listing ever seen - the spine
+    data/listings.csv        one row per live listing - the spine
+    data/listings-archive/   the removed ones, one file per month
     data/observations/       every price/status change, append-only
     data/changes/            every other edit a listing made to itself
     data/state/              last observed value per listing
@@ -65,6 +66,9 @@ from pathlib import Path
 # fresh repository has no observations yet, and that is not an error.
 DATASET = (
     "data/listings.csv",
+    # Every removed listing, by the month it was last seen. Half of the
+    # listings table since 27 September - see storage.write_listings.
+    "data/listings-archive",
     "data/observations",
     "data/changes",
     "data/state",
@@ -157,6 +161,14 @@ def count_rows(path: Path) -> int:
         return max(sum(1 for _ in f) - 1, 0)
 
 
+def count_listings(root: Path) -> int:
+    """Every listing, live and archived, as the project's own reader sees
+    them - the number a restore has to reproduce."""
+    from common import storage
+
+    return len(storage.read_listings(root / "data/listings.csv"))
+
+
 def build_manifest(root: Path, files: list[Path], now: datetime,
                    commit: str | None = None) -> dict:
     """Everything needed to check a restore without trusting the archive."""
@@ -180,7 +192,7 @@ def build_manifest(root: Path, files: list[Path], now: datetime,
         "total_bytes": sum(e["bytes"] for e in entries),
         "counts": {
             "files": len(entries),
-            "listings": count_rows(root / "data/listings.csv"),
+            "listings": count_listings(root),
             "observation_months": len(observations),
             "observations": sum(
                 count_rows(root / p) for p in observations
@@ -340,7 +352,7 @@ def verify_archive(path: Path) -> dict:
         expected = manifest["counts"]["listings"]
         if len(listings) != expected:
             raise BackupError(
-                f"restored listings.csv holds {len(listings)} rows, "
+                f"restored listings hold {len(listings)} rows, "
                 f"manifest says {expected}"
             )
 

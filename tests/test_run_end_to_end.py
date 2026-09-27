@@ -137,6 +137,13 @@ def read_csv_rows(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def all_listings(data_dir: Path) -> list[dict]:
+    """Every listing, wherever it is filed: removed rows live in the monthly
+    archive beside listings.csv, not in it."""
+    from common import storage
+    return list(storage.read_listings(data_dir / "listings.csv").values())
+
+
 # --- the happy path ------------------------------------------------------
 
 
@@ -247,7 +254,7 @@ def test_disappearance_takes_three_days_to_become_removed(no_sleep, paths):
     statuses = []
     for day in range(1, 9):
         do_run(fake, data_dir, logs_dir, now=start + timedelta(days=day))
-        rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
+        rows = {r["source_id"]: r for r in all_listings(data_dir)}
         statuses.append(rows["2"]["status"])
 
     assert all(s.startswith("missing_") for s in statuses[:2]), \
@@ -298,16 +305,20 @@ def test_relisting_links_a_new_ad_to_the_removed_one(no_sleep, paths):
     for day in range(1, 9):  # a week of absence, which is what kills it now
         do_run(fake, data_dir, logs_dir, now=start + timedelta(days=day))
 
-    rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
+    rows = {r["source_id"]: r for r in all_listings(data_dir)}
     assert rows["1"]["status"] == "removed"
+    assert read_csv_rows(data_dir / "listings.csv") == [], "a removed row is archived"
 
     # A brand-new ad for the same physical unit (same GPS/disposition/area).
     fake.present = [999]
     do_run(fake, data_dir, logs_dir, now=start + timedelta(days=9))
 
-    rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
+    rows = {r["source_id"]: r for r in all_listings(data_dir)}
     assert rows["999"]["relisted_from"] == rows["1"]["internal_id"]
     assert rows["1"]["status"] == "removed", "the old row stays, it is not merged away"
+    # The link reaches into the archive: the old ad is not in listings.csv.
+    live = {r["source_id"] for r in read_csv_rows(data_dir / "listings.csv")}
+    assert live == {"999"}
 
 
 # --- budgets -------------------------------------------------------------
@@ -492,3 +503,99 @@ def test_a_scrape_run_without_an_index_still_collects(no_sleep, paths):
     rows = read_csv_rows(data_dir / "listings.csv")
     assert len(rows) == 1
     assert rows[0]["cislo_zdroj"] == ""
+
+
+# --- a listing that comes back after it was archived ------------------------
+#
+# Removed rows leave listings.csv for listings-archive/<YYYY-MM>.csv. The
+# collector must not notice: a listing that reappears is the same listing,
+# found in the archive, reactivated and moved back - never a second row.
+
+
+def _archive(data_dir: Path) -> Path:
+    return data_dir / "listings-archive"
+
+
+def _kill_and_revive(data_dir, logs_dir, start, gone_days):
+    from datetime import timedelta
+
+    fake = FakeSreality(present=[1, 2])
+    do_run(fake, data_dir, logs_dir, now=start)
+    first = {r["source_id"]: r for r in all_listings(data_dir)}["2"]
+
+    fake.present = [1]
+    for day in range(1, 5):
+        do_run(fake, data_dir, logs_dir, now=start + timedelta(days=day))
+    archived = {r["source_id"]: r for r in all_listings(data_dir)}["2"]
+    assert archived["status"] == "removed"
+    assert "2" not in {r["source_id"] for r in read_csv_rows(data_dir / "listings.csv")}
+    month = archived["last_seen_at"][:7]
+    assert [r["source_id"] for r in read_csv_rows(_archive(data_dir) / f"{month}.csv")] == ["2"]
+
+    fake.present = [1, 2]
+    do_run(fake, data_dir, logs_dir, now=start + timedelta(days=gone_days))
+    return first, month
+
+
+@pytest.mark.parametrize("start,gone_days", [
+    ((2026, 3, 1), 9),       # back the next week, same month
+    ((2026, 3, 1), 70),      # back two months later
+    ((2026, 12, 20), 30),    # archived in December, back in January
+])
+def test_an_archived_listing_that_reappears_is_the_same_listing(no_sleep, paths, start, gone_days):
+    from datetime import datetime, timezone
+
+    data_dir, logs_dir = paths
+    first, month = _kill_and_revive(
+        data_dir, logs_dir, datetime(*start, 9, 0, tzinfo=timezone.utc), gone_days)
+
+    rows = all_listings(data_dir)
+    assert len(rows) == 2, "a reappearance must not add a second row"
+    back = {r["source_id"]: r for r in rows}["2"]
+    assert back["internal_id"] == first["internal_id"]
+    assert back["first_seen_at"] == first["first_seen_at"], "its history starts where it did"
+    assert back["status"] == "active"
+    assert back["relisted_from"] == "", "the same ad coming back is not a re-listing"
+
+    # Filed once, in the live file; the archive it came from keeps its header.
+    live = [r["source_id"] for r in read_csv_rows(data_dir / "listings.csv")]
+    assert sorted(live) == ["1", "2"]
+    assert read_csv_rows(_archive(data_dir) / f"{month}.csv") == []
+    from common.schema import LISTING_FIELDS
+    assert (_archive(data_dir) / f"{month}.csv").read_text(encoding="utf-8").splitlines() \
+        == [",".join(LISTING_FIELDS)]
+
+    from common import storage
+    assert storage.duplicate_listings(data_dir / "listings.csv") == []
+
+    # Its observations continue under the same id: removed, then active again.
+    statuses = [
+        o["status"] for path in sorted((data_dir / "observations").glob("*.csv"))
+        for o in read_csv_rows(path) if o["internal_id"] == first["internal_id"]
+    ]
+    assert statuses[0] == "active" and "removed" in statuses and statuses[-1] == "active"
+
+
+def test_a_revived_listing_that_dies_again_is_archived_again(no_sleep, paths):
+    """Round two: removed again later, it goes to the month of its new last
+    sighting - and exists in exactly one file the whole time."""
+    from datetime import datetime, timedelta, timezone
+
+    data_dir, logs_dir = paths
+    start = datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc)
+    first, first_month = _kill_and_revive(data_dir, logs_dir, start, 70)
+
+    fake = FakeSreality(present=[1])
+    for day in range(71, 76):
+        do_run(fake, data_dir, logs_dir, now=start + timedelta(days=day))
+
+    from common import storage
+    rows = {r["source_id"]: r for r in all_listings(data_dir)}
+    again = rows["2"]
+    assert again["internal_id"] == first["internal_id"]
+    assert again["status"] == "removed"
+    second_month = again["last_seen_at"][:7]
+    assert second_month != first_month
+    assert [r["source_id"] for r in read_csv_rows(_archive(data_dir) / f"{second_month}.csv")] == ["2"]
+    assert read_csv_rows(_archive(data_dir) / f"{first_month}.csv") == []
+    assert storage.duplicate_listings(data_dir / "listings.csv") == []

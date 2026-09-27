@@ -11,15 +11,17 @@ from __future__ import annotations
 
 import csv
 import gzip
+import io
 import json
 import os
+import re
 import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
 from common.schema import (clean_text, CHANGE_FIELDS, LISTING_FIELDS,
-                           OBSERVATION_FIELDS)
+                           OBSERVATION_FIELDS, STATUS_REMOVED)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data"
@@ -190,35 +192,177 @@ def write_raw_archive(
 # --- listings.csv ------------------------------------------------------------
 
 
-def read_listings(path: Path = LISTINGS_PATH) -> dict[str, dict]:
-    """Load listings.csv into a dict keyed by internal_id. Empty dict if the
-    file doesn't exist yet (first-ever run)."""
-    if not path.exists():
-        return {}
+# listings.csv holds what is live - active and missing_N rows - and every
+# removed row lives in a monthly archive beside it, listings-archive/<YYYY-MM>.csv,
+# keyed by the month it was last seen. One file for everything ever seen grew
+# by ~590 rows a day and would have reached GitHub's 100 MB per-file limit
+# within about seven months, at which point every push is refused. A yearly
+# archive would cross the same limit; a monthly one stays near 12 MB.
+#
+# Callers do not see the split. read_listings returns the union and
+# write_listings puts each row where its status says it belongs, so a listing
+# that comes back after being archived is simply found (same internal_id, same
+# first_seen_at, its observations intact), reactivated by run.py like any
+# other, and moved back into listings.csv on the same write. Nothing anywhere
+# has to know which file a row happens to be in.
+#
+# Two rules the layout depends on:
+#
+# * An archive file is never deleted, only emptied to its header. The commit
+#   step stages no removals (commit_data.sh, rule 2), so a deleted file would
+#   stay in git holding its old rows and resurrect them on the next checkout.
+# * A row that changes file is written to its new file before it is removed
+#   from the old one. A write killed between the two leaves the row in both,
+#   which read_listings resolves, never in neither.
+
+ARCHIVE_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
+
+
+def archive_dir_for(path: Path = LISTINGS_PATH) -> Path:
+    """Where the removed rows of `path` live: listings-archive/ beside it."""
+    path = Path(path)
+    return path.with_name(f"{path.stem}-archive")
+
+
+def listing_files(path: Path = LISTINGS_PATH) -> list[Path]:
+    """The live file (if present) then every monthly archive, oldest first."""
+    path = Path(path)
+    files = [path] if path.exists() else []
+    archive = archive_dir_for(path)
+    if archive.is_dir():
+        files.extend(sorted(p for p in archive.glob("*.csv")
+                            if ARCHIVE_MONTH_RE.match(p.stem)))
+    return files
+
+
+def archive_month(row: dict) -> Optional[str]:
+    """The archive a row belongs in, or None for the live file.
+
+    Only removed rows are archived, by the month of their last sighting -
+    which does not change while they stay removed, so an archived row stays
+    put. A removed row with no usable date stays live rather than guess.
+    """
+    if row.get("status") != STATUS_REMOVED:
+        return None
+    month = (row.get("last_seen_at") or "")[:7]
+    return month if ARCHIVE_MONTH_RE.match(month) else None
+
+
+def _read_rows(path: Path) -> list[dict]:
     with open(path, "r", newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        return {row["internal_id"]: row for row in reader}
+        return list(csv.DictReader(f))
 
 
-def write_listings(listings: dict[str, dict], path: Path = LISTINGS_PATH) -> None:
-    """Rewrite listings.csv in full. Safe/cheap at the scale this project
-    expects (Prague-area flats+houses over several years: tens of thousands
-    of rows, not millions) - see README."""
-    import io
+def _newer_copy(a: dict, b: dict) -> dict:
+    """Which of two copies of one listing to keep.
 
+    Two copies only exist after a write was killed half way (or a hand
+    edit). The later sighting wins: that is the reappearance, back in the live
+    file while its old copy still sits in the archive. On a tie the removed
+    copy wins, because a tie is a listing that was just archived - its
+    last_seen_at does not move on the way to `removed`.
+    """
+    a_seen, b_seen = a.get("last_seen_at") or "", b.get("last_seen_at") or ""
+    if a_seen != b_seen:
+        return a if a_seen > b_seen else b
+    if (b.get("status") == STATUS_REMOVED) != (a.get("status") == STATUS_REMOVED):
+        return b if b.get("status") == STATUS_REMOVED else a
+    return a
+
+
+def union_rows(row_sets: Iterable[Iterable[dict]]) -> tuple[dict[str, dict], list[str]]:
+    """One dict from several files' rows, and the ids that were in more than one."""
+    merged: dict[str, dict] = {}
+    duplicates: list[str] = []
+    for rows in row_sets:
+        for row in rows:
+            internal_id = row["internal_id"]
+            if internal_id in merged:
+                duplicates.append(internal_id)
+                merged[internal_id] = _newer_copy(merged[internal_id], row)
+            else:
+                merged[internal_id] = row
+    return merged, sorted(set(duplicates))
+
+
+def read_listings(path: Path = LISTINGS_PATH) -> dict[str, dict]:
+    """Every listing ever seen - listings.csv and its archives - keyed by
+    internal_id. Empty dict if there is nothing yet (first-ever run)."""
+    merged, _ = union_rows(_read_rows(p) for p in listing_files(path))
+    return merged
+
+
+def duplicate_listings(path: Path = LISTINGS_PATH) -> list[str]:
+    """internal_ids present in more than one listings file. Should be empty;
+    read_listings copes either way and the next write removes them."""
+    return union_rows(_read_rows(p) for p in listing_files(path))[1]
+
+
+def _render(rows: Iterable[dict]) -> str:
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=LISTING_FIELDS, extrasaction="ignore")
     writer.writeheader()
-    for internal_id in sorted(listings.keys()):
-        row = listings[internal_id]
+    for row in sorted(rows, key=lambda r: r["internal_id"]):
+        writer.writerow(row)
+    return buf.getvalue()
+
+
+def write_listings(listings: dict[str, dict], path: Path = LISTINGS_PATH,
+                   keep_archives: Iterable[str] = ()) -> list[Path]:
+    """Write every listing to the file its status puts it in. Returns the
+    files whose contents changed.
+
+    `keep_archives` names archive months that must be written even if no row
+    belongs in them and they are not on disk - reconcile passes the months
+    the other run committed, so a month this run emptied is emptied in git
+    too instead of keeping its rows there.
+    """
+    path = Path(path)
+    archive = archive_dir_for(path)
+
+    new: dict[Path, dict[str, dict]] = {path: {}}
+    for internal_id, row in listings.items():
         # Normalised here as well as at parse time, so that rows written
         # under an older version get tidied the next time they are saved
         # instead of keeping their line breaks forever. See schema.clean_text:
         # embedded newlines turned 2 682 rows into 23 848 physical lines.
         if row.get("description"):
             row["description"] = clean_text(row["description"])
-        writer.writerow(row)
-    _atomic_write_text(path, buf.getvalue())
+        month = archive_month(row)
+        target = path if month is None else archive / f"{month}.csv"
+        new.setdefault(target, {})[internal_id] = row
+    for month in keep_archives:
+        if ARCHIVE_MONTH_RE.match(month):
+            new.setdefault(archive / f"{month}.csv", {})
+
+    old: dict[Path, dict[str, dict]] = {}
+    original: dict[Path, str] = {}
+    for existing in listing_files(path):
+        new.setdefault(existing, {})  # emptied to a header, never deleted
+        with open(existing, "r", newline="", encoding="utf-8") as f:
+            original[existing] = f.read()
+        old[existing] = {r["internal_id"]: r
+                         for r in csv.DictReader(io.StringIO(original[existing]))}
+
+    # Phase one: every file that gains a row is written first, still holding
+    # the rows that are about to leave it for another file. After this the
+    # moved rows exist twice and nowhere zero times.
+    for target, rows in new.items():
+        before = old.get(target, {})
+        if set(rows) - set(before):
+            leaving = {i: r for i, r in before.items()
+                       if i not in rows and i in listings}
+            _atomic_write_text(target, _render({**leaving, **rows}.values()))
+
+    # Phase two: the exact contents, which drops the stay-behind copies.
+    # (_atomic_write_text skips a file that already holds these contents.)
+    changed: list[Path] = []
+    for target in sorted(new):
+        text = _render(new[target].values())
+        _atomic_write_text(target, text)
+        if text != original.get(target):
+            changed.append(target)
+    return changed
 
 
 # --- observations/<YYYY-MM>.csv ---------------------------------------------

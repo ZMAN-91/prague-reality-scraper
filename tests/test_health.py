@@ -436,3 +436,48 @@ def test_views_the_nightly_stopped_rebuilding_are_reported(tmp_path):
     assert any("derived views" in f and "2026-09-15" in f for f in got), got
     assert not any("missing from the series" in f for f in got), \
         "the gap check should not be the one catching this"
+
+
+# --- the listings files -------------------------------------------------------
+
+
+def _listing(n, status, last_seen):
+    from common.schema import LISTING_FIELDS
+    row = {f: "" for f in LISTING_FIELDS}
+    row.update(internal_id=f"sreality:{n}", source="sreality", source_id=str(n),
+               status=status, last_seen_at=last_seen)
+    return row
+
+
+def test_split_listings_files_are_healthy(tmp_path):
+    from common import storage
+    rows = {r["internal_id"]: r for r in [_listing(1, "active", "2026-09-27"),
+                                          _listing(2, "removed", "2026-08-02")]}
+    storage.write_listings(rows, tmp_path / "listings.csv")
+    assert health.check_listing_files(tmp_path) == []
+
+
+def test_a_listing_in_two_files_is_reported(tmp_path):
+    from common import storage
+    storage.write_listings({"sreality:1": _listing(1, "removed", "2026-08-02")},
+                           tmp_path / "listings.csv")
+    storage.write_listings({"sreality:1": _listing(1, "active", "2026-09-27")},
+                           tmp_path / "other.csv")
+    (tmp_path / "other.csv").replace(tmp_path / "listings.csv")
+    found = health.check_listing_files(tmp_path)
+    assert len(found) == 1 and "sreality:1" in found[0]
+
+
+def test_a_listings_file_near_the_github_limit_is_reported(tmp_path, monkeypatch):
+    from common import storage
+    storage.write_listings({"sreality:1": _listing(1, "removed", "2026-08-02")},
+                           tmp_path / "listings.csv")
+    monkeypatch.setattr(health, "MAX_LISTING_FILE_MB", 0.0001)
+    found = health.check_listing_files(tmp_path)
+    assert any("listings-archive/2026-08.csv" in f for f in found)
+    assert any(f.startswith("listings.csv") for f in found)
+
+
+def test_report_includes_the_listings_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(health, "check_listing_files", lambda data_dir: ["sentinel"])
+    assert "sentinel" in health.report(tmp_path, tmp_path)

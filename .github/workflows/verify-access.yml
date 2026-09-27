@@ -80,7 +80,12 @@ jobs:
               exit 1
             fi
           done
-          rows=$(( $(wc -l < store/data/listings.csv) - 1 ))
+          # Live rows are in listings.csv, removed ones in monthly archives
+          # beside it; one header line per file.
+          rows=0
+          for f in store/data/listings.csv store/data/listings-archive/*.csv; do
+            [ -f "$f" ] && rows=$(( rows + $(wc -l < "$f") - 1 ))
+          done
           echo "Read OK: ${rows} listings on ${DATA_BRANCH}."
           echo "rows=${rows}" >> "${GITHUB_STEP_SUMMARY}"
 

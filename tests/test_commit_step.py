@@ -223,3 +223,96 @@ def test_a_run_without_a_report_still_commits_its_data(world):
     assert not (run / "REPORT.md").exists()
     commit_data(run)
     assert "new1" in git(run, "show", "HEAD:data/listings.csv").stdout
+
+
+# --- the live file and its monthly archives --------------------------------
+#
+# Removed rows live in data/listings-archive/<YYYY-MM>.csv. Whatever the two
+# runs did with a row - archived it, brought it back - what gets committed must
+# hold every listing exactly once. Checked on the commit itself, not on the
+# working tree: the step stages no deletions, so a file that was only deleted
+# locally would still be in git.
+
+
+def full(internal_id, status="active", last_seen="2026-09-16"):
+    r = {field: "" for field in LISTING_FIELDS}
+    r.update(internal_id=internal_id, status=status, last_seen_at=last_seen,
+             first_seen_at="2026-09-01T10:00:00+00:00")
+    return r
+
+
+def store(clone, rows):
+    from common import storage
+    storage.write_listings({r["internal_id"]: r for r in rows},
+                           clone / "data" / "listings.csv")
+
+
+def committed(run, tmp_path):
+    """The listings as the pushed commit holds them, and where each one is."""
+    from common import storage
+    out = tmp_path / "committed"
+    out.mkdir()
+    subprocess.run(f"git -C {run} archive origin/main data | tar -x -C {out}",
+                   shell=True, check=True)
+    path = out / "data" / "listings.csv"
+    where = {}
+    for p in storage.listing_files(path):
+        for r in csv.DictReader(p.open(encoding="utf-8", newline="")):
+            where.setdefault(r["internal_id"], []).append(p.name)
+    return storage.read_listings(path), where
+
+
+def push(clone, message):
+    git(clone, "add", "-A")
+    git(clone, "commit", "-qm", message)
+    git(clone, "push", "-q", "origin", "main")
+
+
+def test_a_listing_this_run_revived_is_committed_once(world, tmp_path):
+    """It was archived when the run checked out; the run saw it again."""
+    run, other = world
+    store(other, [full("base1"), full("x", "removed", "2026-08-20")])
+    push(other, "x archived")
+    git(run, "pull", "-q", "origin", "main")
+
+    store(other, [full("base1"), full("x", "removed", "2026-08-20"), full("sale1")])
+    push(other, "another run meanwhile")
+
+    store(run, [full("base1"), full("x", "active", "2026-09-27")])
+    commit_data(run)
+
+    listings, where = committed(run, tmp_path)
+    assert where["x"] == ["listings.csv"]
+    assert listings["x"]["status"] == "active"
+    assert set(listings) == {"base1", "x", "sale1"}
+
+
+def test_a_month_the_other_run_created_is_emptied_in_git_too(world, tmp_path):
+    """The other run archived x into a month this run's checkout never had;
+    this run saw x again. Without writing that month back empty, git keeps
+    the other run's copy and x is committed twice."""
+    run, other = world
+    store(other, [full("base1"), full("x", "removed", "2026-08-20")])
+    push(other, "x archived")
+
+    store(run, [full("base1"), full("x", "active", "2026-09-27")])
+    commit_data(run)
+
+    listings, where = committed(run, tmp_path)
+    assert where["x"] == ["listings.csv"], where
+    assert listings["x"]["status"] == "active"
+
+
+def test_rows_only_the_other_run_archived_survive(world, tmp_path):
+    run, other = world
+    store(other, [full("base1"), full("gone1", "removed", "2026-07-02"),
+                  full("gone2", "removed", "2026-09-01")])
+    push(other, "the other run's history")
+
+    store(run, [full("base1"), full("rent1")])
+    commit_data(run)
+
+    listings, where = committed(run, tmp_path)
+    assert set(listings) == {"base1", "rent1", "gone1", "gone2"}
+    assert all(len(files) == 1 for files in where.values()), where
+    assert where["gone1"] == ["2026-07.csv"]

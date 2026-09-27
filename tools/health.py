@@ -62,6 +62,11 @@ SCOPE_UNKNOWN = "(scope not recorded)"
 # the external waker sleeps through it, both on purpose. Sale sweeps stop for
 # five hours every Sunday, which is not a broken waker - and a check that
 # says it is would cry wolf once a week until nobody read it any more.
+# GitHub warns at 50 MB and refuses a push carrying a file over 100 MB. Every
+# data file is committed, so the warning is the one worth acting on: at the
+# ~2 MB a day listings.csv used to grow, 50 MB leaves weeks, not hours.
+MAX_LISTING_FILE_MB = 50.0
+
 RENT_WINDOW_WEEKDAY = 6  # Sunday, as datetime.weekday() counts
 RENT_WINDOW_HOURS = (0, 5)
 
@@ -348,13 +353,41 @@ def check_exports_fresh(data_dir: Path, now: datetime) -> list[str]:
     return []
 
 
+def check_listing_files(data_dir: Path) -> list[str]:
+    """Is any listings file heading for GitHub's size limit, and is every
+    listing filed exactly once?
+
+    listings.csv keeps only what is live and the removed rows go to monthly
+    archives (see storage.write_listings), so neither should come near the
+    limit. One that does means the split has stopped doing its job - most
+    likely nothing is being marked removed any more, so nothing leaves the
+    live file. A listing in two files is a write that was cut off half way;
+    the reader copes and the next write repairs it, so one still there after
+    a run's own write is a fault.
+    """
+    main = data_dir / "listings.csv"
+    out = []
+    for path in storage.listing_files(main):
+        size_mb = path.stat().st_size / 1e6
+        if size_mb > MAX_LISTING_FILE_MB:
+            out.append(f"{path.relative_to(data_dir)} is {size_mb:.0f} MB; GitHub "
+                       f"refuses files over 100 MB, so it has to be split before then.")
+    duplicates = storage.duplicate_listings(main)
+    if duplicates:
+        shown = ", ".join(duplicates[:5]) + (" ..." if len(duplicates) > 5 else "")
+        out.append(f"{len(duplicates)} listing(s) filed in more than one listings "
+                   f"file: {shown}")
+    return out
+
+
 def report(data_dir: Path, logs_dir: Path, now: Optional[datetime] = None) -> list[str]:
     now = now or datetime.now(timezone.utc)
     runs = load_runs(logs_dir)
     rhythm = sweeps(runs)
     return (check_gap(rhythm, now) + check_spacing(rhythm) + check_rent(rhythm, now)
             + check_last_run(rhythm) + check_sweep_freshness(runs, now)
-            + check_days(data_dir, now) + check_exports_fresh(data_dir, now))
+            + check_days(data_dir, now) + check_exports_fresh(data_dir, now)
+            + check_listing_files(data_dir))
 
 
 def main() -> int:

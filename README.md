@@ -261,9 +261,38 @@ bezeztrátově v `observations/`. Naproti tomu `detail-*` (payload konkrétního
 inzerátu) se stahuje jednou za život inzerátu, je nenahraditelný, a proto se
 archivuje **vždy**.
 
-### 2. `data/listings.csv` — jeden řádek na unikátní inzerát
+### 2. `data/listings.csv` + `data/listings-archive/` — jeden řádek na unikátní inzerát
 
-Klíč: `source` + `source_id` (odvozeně: `internal_id`, viz níže). Sloupce:
+Klíč: `source` + `source_id` (odvozeně: `internal_id`, viz níže).
+
+Tabulka je od 27. 9. 2026 rozdělená do více souborů, protože jeden soubor by
+kvůli přírůstku ~590 řádků denně do zhruba sedmi měsíců přerostl limit
+GitHubu 100 MB na soubor:
+
+- `data/listings.csv` obsahuje **živé** inzeráty, tedy `active` a `missing_N`.
+- `data/listings-archive/<YYYY-MM>.csv` obsahuje inzeráty se stavem
+  `removed`, zařazené podle měsíce `last_seen_at`. Jeden měsíc má zhruba 12 MB.
+
+Kód o rozdělení neví. `storage.read_listings` vrací sjednocení všech souborů
+a `storage.write_listings` zapíše každý řádek tam, kam patří.
+
+Když se inzerát z archivu znovu objeví:
+
+- najde se pod stejným `internal_id`;
+- zachová si `first_seen_at` i historii pozorování;
+- znovu se aktivuje;
+- při stejném zápisu se přesune zpět do `listings.csv`.
+
+Archivní soubor se nikdy nemaže, jen se případně vyprázdní na hlavičku. Commit
+totiž nestaguje mazání, takže smazaný soubor by v gitu zůstal i s řádky.
+
+Při zápisu se řádek, který mění soubor, nejdřív zapíše do nového souboru a
+teprve potom se smaže ze starého. Přerušený zápis tak může nechat nanejvýš
+duplikát, nikdy ztrátu. Duplikát čtení vyřeší (vyhraje pozdější
+`last_seen_at`) a hodinová kontrola (`tools/health.py`) ho nahlásí, stejně
+jako soubor nad 50 MB.
+
+Sloupce:
 
 | sloupec | popis |
 |---|---|
@@ -476,7 +505,7 @@ archiv řeší to, co git neřeší: ztrátu samotného repozitáře (smazání,
 ztráta přístupu, problém s účtem) a případ, kdy chcete dataset jako jeden
 otevřitelný soubor, ne jako klon plus checkout.
 
-**Co v archivu je:** `data/listings.csv`, `data/observations/`,
+**Co v archivu je:** `data/listings.csv`, `data/listings-archive/`, `data/observations/`,
 `data/state/`, `data/progress.json`, `data/csv/` (odvozené pohledy, aby byl
 restore hned použitelný) a `logs/`.
 

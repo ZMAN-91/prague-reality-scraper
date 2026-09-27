@@ -301,3 +301,21 @@ def test_a_tree_without_the_address_index_still_backs_up(repo):
     """The first run after a fresh setup predates the first monthly build."""
     build(repo)
     assert list((repo / "backup").glob("*.tar.gz"))
+
+
+def test_archived_listings_travel_and_are_counted(repo):
+    """Removed listings live in data/listings-archive/. A backup of
+    listings.csv alone would restore part of the table and still pass."""
+    from common import storage
+
+    listings = storage.read_listings(repo / "data/listings.csv")
+    listings["a2"].update(status="removed", last_seen_at="2026-08-30")
+    storage.write_listings(listings, repo / "data/listings.csv")
+    assert (repo / "data/listings-archive/2026-08.csv").exists()
+
+    path, manifest = build(repo)
+    with tarfile.open(path, "r:gz") as tar:
+        names = {n.split("/", 1)[1] for n in tar.getnames() if "/" in n}
+    assert "data/listings-archive/2026-08.csv" in names
+    assert manifest["counts"]["listings"] == 2
+    assert backup.verify_archive(path)["listings"] == 2

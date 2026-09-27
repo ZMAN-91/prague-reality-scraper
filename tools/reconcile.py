@@ -12,10 +12,14 @@ Git is the wrong layer to merge this at. The data model has a key for every
 row, so the merge is well defined here and nowhere else:
 
   listings.csv   union by internal_id. A row both runs have takes ours (we
-                 just refreshed it), except that first_seen_at keeps the
-                 earlier of the two and last_seen_at the later - those two
+  + listings-    just refreshed it), except that first_seen_at keeps the
+    archive/     earlier of the two and last_seen_at the later - those two
                  are the fields where the other run may legitimately know
-                 more than we do.
+                 more than we do. The live file and its monthly archives
+                 are one table for this: a row the other run archived, or
+                 brought back, is the same row whichever file it is in, and
+                 the merged table is written back through storage so each
+                 row lands in the one file its status puts it in.
   observations/  append-only; the union of the lines, in order. Nothing is
                  ever rewritten here, so there is no conflict to resolve.
   logs/          same, one JSON object per line.
@@ -38,8 +42,9 @@ import io
 import json
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
+from common import storage
 from common.schema import LISTING_FIELDS
 
 
@@ -65,7 +70,18 @@ def merge_listings(ours_text: str, theirs_text: "str | None") -> str:
 
     theirs = {r["internal_id"]: r for r in csv.DictReader(io.StringIO(theirs_text))}
     ours = {r["internal_id"]: r for r in csv.DictReader(io.StringIO(ours_text))}
+    merged = merge_listing_rows(ours, theirs)
 
+    out = io.StringIO()
+    writer = csv.DictWriter(out, fieldnames=LISTING_FIELDS, extrasaction="ignore")
+    writer.writeheader()
+    for internal_id in sorted(merged):
+        writer.writerow(merged[internal_id])
+    return out.getvalue()
+
+
+def merge_listing_rows(ours: dict, theirs: dict) -> dict:
+    """The rule behind merge_listings, on dicts keyed by internal_id."""
     merged = dict(theirs)
     for internal_id, row in ours.items():
         other = theirs.get(internal_id)
@@ -79,13 +95,51 @@ def merge_listings(ours_text: str, theirs_text: "str | None") -> str:
             if other.get("last_seen_at", "") > row.get("last_seen_at", ""):
                 row["last_seen_at"] = other["last_seen_at"]
         merged[internal_id] = row
+    return merged
 
-    out = io.StringIO()
-    writer = csv.DictWriter(out, fieldnames=LISTING_FIELDS, extrasaction="ignore")
-    writer.writeheader()
-    for internal_id in sorted(merged):
-        writer.writerow(merged[internal_id])
-    return out.getvalue()
+
+def committed_files(ref: str, directory: str, repo: Path = Path(".")) -> list:
+    """Paths of the files directly under `directory` in `ref`."""
+    result = subprocess.run(
+        ["git", "-C", str(repo), "ls-tree", "--name-only", f"{ref}", f"{directory}/"],
+        capture_output=True, text=True,
+    )
+    return result.stdout.split() if result.returncode == 0 else []
+
+
+def reconcile_listings(base: str, path: Path, repo: Path) -> list:
+    """Merge the other run's listings - live file and archives - into ours.
+
+    Returns the changed files. Months the other run has an archive for are
+    rewritten even when this run has no rows for them, so a month emptied
+    here does not keep its rows in git (the commit stages no deletions).
+    """
+    try:
+        relative = path.resolve().relative_to(repo.resolve()).as_posix()
+    except ValueError:
+        relative = path.as_posix()
+    archive_rel = (PurePosixPath(relative).parent / storage.archive_dir_for(path).name).as_posix()
+
+    texts = []
+    live = read_committed(base, relative, repo)
+    if live is not None:
+        texts.append(live)
+    months = []
+    for committed in committed_files(base, archive_rel, repo):
+        month = PurePosixPath(committed).stem
+        if not committed.endswith(".csv") or not storage.ARCHIVE_MONTH_RE.match(month):
+            continue
+        text = read_committed(base, committed, repo)
+        if text is not None:
+            texts.append(text)
+            months.append(month)
+    if not texts:
+        return []
+
+    theirs, _ = storage.union_rows(list(csv.DictReader(io.StringIO(t))) for t in texts)
+    ours = storage.read_listings(path)
+    return storage.write_listings(merge_listing_rows(ours, theirs), path,
+                                  keep_archives=months)
 
 
 def merge_appended(ours_text: str, theirs_text: "str | None", has_header: bool) -> str:
@@ -153,7 +207,12 @@ def reconcile(base: str, data_dir: Path, logs_dir: Path,
             path.write_text(merged, encoding="utf-8")
             notes.append(f"merged {relative}")
 
-    handle(data_dir / "listings.csv", merge_listings)
+    if (data_dir / "listings.csv").exists():
+        for changed in reconcile_listings(base, data_dir / "listings.csv", repo):
+            try:
+                notes.append(f"merged {changed.resolve().relative_to(repo.resolve()).as_posix()}")
+            except ValueError:
+                notes.append(f"merged {changed.as_posix()}")
     for observations in sorted((data_dir / "observations").glob("*.csv")):
         handle(observations, merge_appended, True)
     for log in sorted(logs_dir.glob("*.jsonl")):
