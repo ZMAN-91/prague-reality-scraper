@@ -435,12 +435,26 @@ def test_the_scrapes_no_longer_write_the_report():
         assert "tools.report" not in body, f"{path.name} still writes the report"
 
 
-def test_the_scrapes_still_write_the_series():
-    """The record must stay current even though the page does not."""
-    for path in (SALE, RENT):
-        body = " ".join(str(s.get("run", ""))
-                        for s in load(path)["jobs"]["scrape"]["steps"])
-        assert "tools.episodes" in body and "tools.market" in body
+def _scrape_body(path):
+    return " ".join(str(s.get("run", ""))
+                    for s in load(path)["jobs"]["scrape"]["steps"])
+
+
+def test_the_nightly_pass_writes_the_derived_views_once_a_day():
+    """The record must stay current even though the page does not - daily."""
+    body = _scrape_body(RENT)
+    for tool in ("tools.export_csv", "tools.episodes", "tools.market"):
+        assert tool in body, f"{tool} missing from the nightly pass"
+
+
+def test_the_hourly_pass_does_not_rebuild_the_derived_views():
+    """data/csv/ is derived entirely from listings.csv and the observations.
+    Rebuilt and committed every hour it was a third of the data
+    repository's growth - 166 MB of history in its first twelve days - for
+    files anyone can regenerate in seconds. Once a day, by the nightly."""
+    body = _scrape_body(SALE)
+    for tool in ("tools.export_csv", "tools.episodes", "tools.market"):
+        assert tool not in body, f"the hourly pass rebuilds {tool} again"
 
 
 def test_the_report_rebuilds_the_whole_chain():

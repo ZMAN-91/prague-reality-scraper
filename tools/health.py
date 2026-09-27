@@ -33,7 +33,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-from common import storage
+from common import cas, storage
 
 # The waker aims for one sweep an hour. Three hours means roughly three
 # missed attempts in a row, which is a broken waker rather than bad luck.
@@ -316,13 +316,45 @@ def check_days(data_dir: Path, now: datetime) -> list[str]:
     return []
 
 
+def check_exports_fresh(data_dir: Path, now: datetime) -> list[str]:
+    """Is data/csv/ from the last day or two, or has the nightly stopped
+    rebuilding it?
+
+    Since 27 September the derived views are rebuilt once a day by the
+    nightly pass instead of every hour. When an hourly rebuild failed, the
+    next hour mended it; a daily one that fails leaves the views a day old,
+    and its step carries continue-on-error, so nothing would say so. The
+    day-gap check above cannot see it either - a stale series has no gap,
+    it just stops early.
+
+    The series includes the current Prague day, so a healthy nightly always
+    leaves the newest day at today or yesterday. Older than that is a
+    nightly that did not rebuild, and is reported from the first run of the
+    following day.
+    """
+    path = data_dir / "csv" / "trh_denne.csv"
+    if not path.exists():
+        return []
+    with open(path, encoding="utf-8", newline="") as handle:
+        days = [row["den"] for row in csv.DictReader(handle) if row.get("den")]
+    if not days:
+        return []
+    newest = date.fromisoformat(max(days))
+    today = cas.to_prague(now).date()
+    behind = (today - newest).days
+    if behind > 1:
+        return [f"The derived views in data/csv/ stop at {newest}, {behind} days "
+                "ago - the nightly pass has not rebuilt them."]
+    return []
+
+
 def report(data_dir: Path, logs_dir: Path, now: Optional[datetime] = None) -> list[str]:
     now = now or datetime.now(timezone.utc)
     runs = load_runs(logs_dir)
     rhythm = sweeps(runs)
     return (check_gap(rhythm, now) + check_spacing(rhythm) + check_rent(rhythm, now)
             + check_last_run(rhythm) + check_sweep_freshness(runs, now)
-            + check_days(data_dir, now))
+            + check_days(data_dir, now) + check_exports_fresh(data_dir, now))
 
 
 def main() -> int:

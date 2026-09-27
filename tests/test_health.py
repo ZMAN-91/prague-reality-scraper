@@ -412,3 +412,27 @@ def test_two_real_sweeps_a_minute_apart_are_still_caught(tmp_path):
     """The spacing check still does its job on the thing it is for."""
     got = findings(tmp_path, [run(minutes_ago=31), run(minutes_ago=30)])
     assert any("minutes apart" in f for f in got), got
+
+
+# --- the daily derived views have to stay daily -----------------------------
+
+def test_views_rebuilt_last_night_are_fresh(tmp_path):
+    got = findings(tmp_path, [run()], days=["2026-09-15", "2026-09-16", "2026-09-17"])
+    assert not any("derived views" in f for f in got), got
+
+
+def test_views_from_yesterday_are_still_fresh(tmp_path):
+    """Between midnight and the nightly pass the newest day is yesterday.
+    That is the healthy state, not a stale one."""
+    got = findings(tmp_path, [run()], days=["2026-09-15", "2026-09-16"])
+    assert not any("derived views" in f for f in got), got
+
+
+def test_views_the_nightly_stopped_rebuilding_are_reported(tmp_path):
+    """Since the views are rebuilt daily rather than hourly, a nightly that
+    fails leaves them a day old - behind continue-on-error, so silently.
+    A stale series has no gap, so the day-gap check cannot see it."""
+    got = findings(tmp_path, [run()], days=["2026-09-13", "2026-09-14", "2026-09-15"])
+    assert any("derived views" in f and "2026-09-15" in f for f in got), got
+    assert not any("missing from the series" in f for f in got), \
+        "the gap check should not be the one catching this"

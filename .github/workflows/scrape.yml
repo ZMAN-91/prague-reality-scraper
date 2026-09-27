@@ -221,14 +221,15 @@ jobs:
             --data-dir store/data \
             --logs-dir store/logs
 
-      - name: Export human-readable CSV views
-        # Cheap, offline, and makes the dataset browsable straight from the
-        # repo without loading the full listings.csv.
-        continue-on-error: true
-        run: |
-          python -m tools.export_csv --data-dir store/data
-          python -m tools.episodes --data-dir store/data
-          python -m tools.market --data-dir store/data
+      # No CSV export here. data/csv/ is derived entirely from listings.csv
+      # and the observations, and rebuilding and committing it every hour
+      # was a third of the data repository's growth - 166 MB of history in
+      # its first twelve days, for files anyone can regenerate in seconds.
+      # It is rebuilt once a day by the nightly pass (scrape-night.yml), and
+      # by the weekly report and the on-demand GPS workflow for themselves.
+      # tools/health.py's day-gap check reads it, and is unaffected: the
+      # series is computed from every observation, so a daily rebuild holds
+      # every day an hourly one would.
 
       - name: Commit and push data changes
         # The whole sequence lives in tools/commit_data.sh, which both
