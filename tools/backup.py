@@ -70,6 +70,15 @@ DATASET = (
     "data/state",
     "data/progress.json",
     "data/csv",
+    # The state address register, as built by tools/build_ruian_index.py.
+    # Not the dataset, and rebuildable from the public register - but only
+    # by a workflow that runs on days 1-7 of the month. Restored without it,
+    # the collection would go on for up to three weeks unable to give a new
+    # listing a house number, a postcode or a district, and the quality
+    # watchdog's district cross-check would have nothing to check against.
+    # 2.6 MB a week buys a restore that works the day it is restored.
+    "data/ruian_praha.csv.gz",
+    "data/ruian_praha.csv.gz.json",
     "logs",
     # The reports are not data - they are recomputed from the CSVs above and
     # could be rebuilt from a restore. They are in here anyway, because what

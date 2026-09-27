@@ -279,3 +279,25 @@ def test_a_tree_with_no_reports_yet_still_backs_up(repo):
     (repo / "reports").rmdir()
     _, manifest = build(repo)
     assert manifest["counts"]["listings"] == 2
+
+
+def test_the_address_index_travels_with_the_dataset(repo):
+    """A restore has to work the day it is restored. Without the register
+    the collection goes on for up to three weeks - until the monthly build
+    on days 1-7 - unable to give a new listing a house number, a postcode or
+    a district, and the district cross-check has nothing to check against."""
+    with gzip.open(repo / "data/ruian_praha.csv.gz", "wb") as f:
+        f.write(b"kod_adm,ulice,cislo_domovni\n1,nurmiho,1\n")
+    (repo / "data/ruian_praha.csv.gz.json").write_text('{"points": 1}', encoding="utf-8")
+    build(repo)
+    archive = next((repo / "backup").glob("*.tar.gz"))
+    with tarfile.open(archive, "r:gz") as tar:
+        names = {n.split("/", 1)[1] for n in tar.getnames() if "/" in n}
+    assert "data/ruian_praha.csv.gz" in names
+    assert "data/ruian_praha.csv.gz.json" in names
+
+
+def test_a_tree_without_the_address_index_still_backs_up(repo):
+    """The first run after a fresh setup predates the first monthly build."""
+    build(repo)
+    assert list((repo / "backup").glob("*.tar.gz"))
