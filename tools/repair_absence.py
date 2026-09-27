@@ -22,6 +22,20 @@ districts the narrowed walk actually covers. A row inside them was genuinely
 looked for, and if it was not found it is genuinely gone; resetting those
 would erase real disappearances to tidy up a different mistake.
 
+AND NOT WHAT A CITY WALK OBSERVED
+
+Since 23 September sreality is walked city-wide every night, and that walk
+marks absence across all of Prague - legitimately, because it covers all of
+Prague. This tool predates that and did not know it: on 27 September a dry
+run offered to "restore" 333 listings the city walk had looked for and not
+found, and the checklists said a non-zero dry run meant --apply.
+
+So a row is left alone when a sreality city walk that completed the row's
+category ran after the row was last seen. The run log says which walks
+completed which categories; that is what check_sweep_freshness reads too.
+The rows this tool was written for - marked by the narrowed hourly walk,
+with no city walk after them - still qualify, and only those do.
+
 WHAT IT RESTORES
 
 status back to active, and nothing else. last_seen_at is left alone: it says
@@ -50,7 +64,46 @@ def _fold(text) -> str:
     return address_mod.strip_diacritics(text or "").lower().strip()
 
 
-def repair(listings: dict, index) -> tuple:
+#: What the nightly walk writes into the run log. See
+#: tools/lend_gps_from_sreality.py.
+CITY_WALK_KIND = "sreality city walk"
+
+
+def city_walks(logs_dir) -> list:
+    """[(started_at, {"byt/prodej", ...})] for every sreality city walk in
+    the run log, with the categories it walked to completion."""
+    import json
+    walks = []
+    if logs_dir is None:
+        return walks
+    for path in sorted(Path(logs_dir).glob("*.jsonl")):
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue
+                if entry.get("kind") != CITY_WALK_KIND:
+                    continue
+                done = (entry.get("sources") or {}).get(SOURCE, {}) \
+                    .get("scopes_absence_marked") or []
+                if done:
+                    walks.append((str(entry.get("started_at") or ""), set(done)))
+    return walks
+
+
+def _observed_since(row: dict, walks: list) -> bool:
+    """Did a city walk covering this row's category run after it was last
+    seen? Then its absence was looked for, and is real."""
+    scope = f"{row.get('property_type')}/{row.get('transaction_type')}"
+    seen = str(row.get("last_seen_at") or "")[:10]
+    return any(started[:10] > seen and scope in done for started, done in walks)
+
+
+def repair(listings: dict, index, walks: list = ()) -> tuple:
     """Reset unjustified absence. Returns (restored, stats)."""
     stats: Counter = Counter()
     restored = 0
@@ -60,6 +113,10 @@ def repair(listings: dict, index) -> tuple:
         if not str(row.get("status") or "").startswith("missing"):
             continue
         stats["sreality rows marked missing"] += 1
+
+        if _observed_since(row, walks):
+            stats["looked for by a city walk since last seen - genuinely absent"] += 1
+            continue
 
         try:
             lat, lon = float(row["lat"]), float(row["lon"])
@@ -89,9 +146,13 @@ def repair(listings: dict, index) -> tuple:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-dir", default=str(storage.DATA_DIR))
+    parser.add_argument("--logs-dir", default=None,
+                        help="run log, for which city walks have covered "
+                             "which rows (default: logs/ beside data/)")
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
     data_dir = Path(args.data_dir)
+    logs_dir = Path(args.logs_dir) if args.logs_dir else data_dir.parent / "logs"
 
     index_path = data_dir / "ruian_praha.csv.gz"
     if not index_path.exists():
@@ -104,7 +165,9 @@ def main(argv=None) -> int:
         return 1
 
     index = ruian.Index.load(str(index_path))
-    restored, stats = repair(listings, index)
+    walks = city_walks(logs_dir)
+    print(f"{len(walks)} sreality city walks in the run log")
+    restored, stats = repair(listings, index, walks)
     for reason, count in stats.most_common():
         print(f"  {count:6d}  {reason}")
     print(f"\n{restored} rows restored to active.")
