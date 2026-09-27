@@ -531,6 +531,11 @@ def main(argv=None) -> int:
 
     session = net.build_session()
     budget = Budget(args.max_seconds)
+    # Taken before the walk, so the run log says when the sweep STARTED.
+    # It used to record the moment after the walk, which put started_at
+    # and finished_at on the same second and made the entry look like an
+    # instantaneous event at the end of the nightly.
+    started_iso = cas.now().replace(microsecond=0).isoformat()
     walked, errors, scopes = walk_city(session, budget=budget)
     donors = donors_from(walked)
     print(f"{len(walked)} sreality adverts walked, "
@@ -590,7 +595,7 @@ def main(argv=None) -> int:
     # the failure mode it was just rebuilt to avoid, arriving from the
     # other side.
     storage.write_run_log({
-        "started_at": now_iso,
+        "started_at": started_iso,
         "finished_at": cas.now().replace(microsecond=0).isoformat(),
         "kind": "sreality city walk",
         "scope": "city",

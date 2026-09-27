@@ -409,3 +409,36 @@ def test_a_dry_run_leaves_no_record(tmp_path):
         lend.main(["--data-dir", str(data_dir), "--logs-dir", str(logs_dir)])
 
     assert not logs_dir.exists() or not list(logs_dir.glob("*.jsonl"))
+
+
+def test_the_walk_logs_when_it_started_not_when_it_finished(tmp_path):
+    """started_at used to be taken after the walk, so it equalled
+    finished_at and the entry looked like an instant at the end of the
+    nightly. A walk that takes time has to say so."""
+    import json
+    from datetime import datetime
+    from common import storage
+
+    data_dir = tmp_path / "data"; logs_dir = tmp_path / "logs"
+    (data_dir / "state").mkdir(parents=True)
+    storage.write_listings(dataset("kept"), data_dir / "listings.csv")
+
+    clock = iter([datetime(2026, 9, 23, 0, 50, tzinfo=__import__("datetime").timezone.utc),
+                  datetime(2026, 9, 23, 1, 1, tzinfo=__import__("datetime").timezone.utc),
+                  datetime(2026, 9, 23, 1, 2, tzinfo=__import__("datetime").timezone.utc)])
+    last = {"t": None}
+    def fake_now():
+        try:
+            last["t"] = next(clock)
+        except StopIteration:
+            pass
+        return last["t"]
+
+    with patch.object(lend, "walk_city", return_value=([walked("kept")], [], {SCOPE})), \
+         patch.object(lend.net, "build_session", lambda *a, **k: object()), \
+         patch.object(lend.cas, "now", fake_now):
+        lend.main(["--data-dir", str(data_dir), "--logs-dir", str(logs_dir), "--apply"])
+
+    entry = json.loads(list(logs_dir.glob("*.jsonl"))[0].read_text(encoding="utf-8").splitlines()[0])
+    assert entry["started_at"].startswith("2026-09-23T00:50"), entry["started_at"]
+    assert entry["started_at"] < entry["finished_at"]

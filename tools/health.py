@@ -94,6 +94,28 @@ def of_kind(runs: list[dict], transaction: str) -> list[dict]:
     return [r for r in runs if transaction in (r.get("transactions") or [])]
 
 
+def sweeps(runs: list[dict]) -> list[dict]:
+    """Only the collection runs themselves - what run.py logs.
+
+    Other tools log too, and say so with a `kind`: the daily sreality city
+    walk writes an entry so that check_sweep_freshness can see sreality got
+    all the way round, because nothing else ever completes a sweep of it.
+    That entry is evidence of coverage, not a sweep the guard rations.
+
+    Counted as one, it failed the job on its first night: the walk logged
+    at 01:01:40, the hourly run queued behind the nightly started at
+    01:02:24, and check_spacing reported "two sweeps 1 minutes apart - the
+    portals are being swept harder than agreed". They were not; one of the
+    two was a bookkeeping line. It would also have let a dead waker hide
+    behind a nightly walk once a day in check_gap.
+
+    So the checks about the collection's rhythm - gap, spacing, rent, the
+    last run's own account - look at sweeps only, and the check about
+    coverage looks at everything.
+    """
+    return [r for r in runs if not r.get("kind")]
+
+
 def reserved_hours(start: datetime, end: datetime) -> float:
     """Hours between the two that the rent window is entitled to."""
     if end <= start:
@@ -297,8 +319,9 @@ def check_days(data_dir: Path, now: datetime) -> list[str]:
 def report(data_dir: Path, logs_dir: Path, now: Optional[datetime] = None) -> list[str]:
     now = now or datetime.now(timezone.utc)
     runs = load_runs(logs_dir)
-    return (check_gap(runs, now) + check_spacing(runs) + check_rent(runs, now)
-            + check_last_run(runs) + check_sweep_freshness(runs, now)
+    rhythm = sweeps(runs)
+    return (check_gap(rhythm, now) + check_spacing(rhythm) + check_rent(rhythm, now)
+            + check_last_run(rhythm) + check_sweep_freshness(runs, now)
             + check_days(data_dir, now))
 
 

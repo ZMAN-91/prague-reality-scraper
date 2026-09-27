@@ -349,3 +349,66 @@ def test_a_source_that_has_completed_nothing_at_all_is_still_surfaced(tmp_path):
             "scopes_absence_marked": []}}),
     ], days=["2026-09-16", "2026-09-17"])
     assert any("never completed a sweep" in f for f in got), got
+
+
+# --- the sreality city walk's log entry is not a sweep -----------------------
+
+def walk_entry(minutes_ago, complete=True):
+    """What tools.lend_gps_from_sreality logs after the nightly city walk."""
+    return run(minutes_ago=minutes_ago, transaction="prodej",
+               kind="sreality city walk", scope="city",
+               transactions=["prodej", "pronajem"],
+               sources={"sreality": {
+                   "fetched": 10000, "errors": [], "run_complete": complete,
+                   "scopes_absence_marked": ["byt/prodej", "byt/pronajem",
+                                             "dum/prodej", "dum/pronajem"]
+                   if complete else []}})
+
+
+def test_the_walk_entry_and_the_next_hourly_run_are_not_two_sweeps(tmp_path):
+    """The failure of 2026-09-23 01:42, reproduced.
+
+    The walk logged at 01:01:40; the hourly run, queued behind the nightly,
+    started at 01:02:24. check_spacing took them for two sweeps a minute
+    apart and failed the job - on a bookkeeping line added the day before,
+    whose tests only ever checked the one check it was added for.
+    """
+    got = findings(tmp_path, [
+        run(minutes_ago=100),
+        walk_entry(minutes_ago=41),
+        run(minutes_ago=40),
+    ], days=["2026-09-16", "2026-09-17"])
+    assert not any("minutes apart" in f for f in got), got
+    assert got == [], got
+
+
+def test_a_dead_waker_cannot_hide_behind_the_nightly_walk(tmp_path):
+    """The other way the entry could lie: the hourly collection stopped
+    five hours ago, and the only fresh line in the log is the walk."""
+    got = findings(tmp_path, [
+        run(minutes_ago=60 * 5),
+        walk_entry(minutes_ago=30),
+    ])
+    assert any("Nothing collected" in f for f in got), got
+
+
+def test_the_walk_still_counts_for_sweep_freshness(tmp_path):
+    """Keeping it out of the rhythm checks must not keep it out of the one
+    it was written for - sreality's hourly pass never completes a sweep,
+    so without this entry sreality reads as never swept."""
+    got = findings(tmp_path, [
+        run(minutes_ago=90, sources={"sreality": {
+            "fetched": 2900, "errors": [], "run_complete": False,
+            "scopes_absence_marked": []}}),
+        walk_entry(minutes_ago=60),
+        run(minutes_ago=30, sources={"sreality": {
+            "fetched": 2900, "errors": [], "run_complete": False,
+            "scopes_absence_marked": []}}),
+    ], days=["2026-09-16", "2026-09-17"])
+    assert not any("sweep" in f for f in got), got
+
+
+def test_two_real_sweeps_a_minute_apart_are_still_caught(tmp_path):
+    """The spacing check still does its job on the thing it is for."""
+    got = findings(tmp_path, [run(minutes_ago=31), run(minutes_ago=30)])
+    assert any("minutes apart" in f for f in got), got
