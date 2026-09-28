@@ -293,10 +293,19 @@ def test_the_series_does_not_get_quadratically_slower():
         return rows
 
     def seconds(count):
+        # The best of three, not one reading. A single measurement picked up
+        # whatever else the machine was doing and failed this once in a few
+        # dozen runs - and the backup and report workflows run the whole
+        # suite before they start, so a noisy neighbour on the runner would
+        # have cost a week's archive. Noise only ever adds time; the minimum
+        # is the honest figure, and quadratic still shows as 4x against 2x.
         rows = synthetic(count, 120)
-        started = time.perf_counter()
-        market.daily(rows)
-        return time.perf_counter() - started
+        best = float("inf")
+        for _ in range(3):
+            started = time.perf_counter()
+            market.daily(rows)
+            best = min(best, time.perf_counter() - started)
+        return best
 
     small = seconds(4_000)
     large = seconds(8_000)
