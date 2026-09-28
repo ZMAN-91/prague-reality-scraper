@@ -85,3 +85,28 @@ def test_cli_prints_the_github_output_line(tmp_path, capsys, monkeypatch):
     monkeypatch.setattr("sys.argv", ["report_due", "--data-dir", str(data)])
     assert report_due.main() == 0
     assert "go=true" in capsys.readouterr().out
+
+
+def test_a_report_filed_under_the_week_before_it_ended_is_not_that_weeks(tmp_path):
+    """reports/2026-W39.md was written on 21 September with data to the 20th,
+    under the old naming. On the 28th, when W39 had ended, its name alone
+    skipped the week's report."""
+    root = with_report(tmp_path, "2026-W39",
+                       "# Report trhu\n\nData k **2026-09-20** · vygenerováno 2026-09-21 07:39 UTC\n")
+    go, why = report_due.due(root, today=date(2026, 9, 28))
+    assert go is True
+    assert "2026-09-20" in why
+
+
+def test_a_report_through_the_weeks_sunday_is_that_weeks(tmp_path):
+    root = with_report(tmp_path, "2026-W39",
+                       "# Report trhu\n\nData k **2026-09-27** · vygenerováno 2026-09-28 06:10 UTC\n")
+    assert report_due.due(root, today=date(2026, 9, 28))[0] is False
+    assert report_due.due(root, today=date(2026, 9, 29))[0] is False
+
+
+def test_the_real_report_line_is_read(tmp_path):
+    """The marker is parsed from what tools.report actually renders."""
+    from tools import report
+    import inspect
+    assert "Data k **{latest}**" in inspect.getsource(report.render)

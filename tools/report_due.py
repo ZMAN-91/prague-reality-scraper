@@ -23,6 +23,7 @@ duplicate costs thirty seconds and overwrites itself.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -39,8 +40,29 @@ def due(root: Path, today: Optional[date] = None) -> tuple[bool, str]:
     except OSError as exc:
         return True, f"Could not look for {path.name} ({exc})."
     if exists:
+        # The name is not proof. reports/2026-W39.md was written on Monday
+        # 21 September, back when reports were named after the week they were
+        # rendered in, and holds data to the 20th - the week before. On
+        # 28 September, when W39 had really ended, the name alone said
+        # "already written" and the week got no report. A report states the
+        # last day it covers; one that stops before the week's Sunday is not
+        # that week's report.
+        try:
+            through = data_through(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError) as exc:
+            return True, f"Could not read {path.name} ({exc})."
+        end = cas.closed_week_end(today)
+        if through is not None and through < end:
+            return True, (f"{path.name} only covers data to {through}, before "
+                          f"{week} ended on {end} - it is not that week's report.")
         return False, f"The report on {week} is already written."
     return True, f"No report on {week} yet."
+
+
+def data_through(text: str) -> Optional[date]:
+    """The "Data k **YYYY-MM-DD**" day a rendered report states, if any."""
+    match = re.search(r"Data k \*\*(\d{4}-\d{2}-\d{2})\*\*", text)
+    return date.fromisoformat(match.group(1)) if match else None
 
 
 def main() -> int:
