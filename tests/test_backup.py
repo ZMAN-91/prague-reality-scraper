@@ -18,7 +18,8 @@ import pytest
 from tools import backup
 from tools.backup import BackupError
 
-WHEN = datetime(2026, 9, 16, 6, 0, tzinfo=timezone.utc)
+# Monday: the week that has ended, and that the archive is named after, is W38.
+WHEN = datetime(2026, 9, 21, 6, 0, tzinfo=timezone.utc)
 
 LISTINGS = (
     "internal_id,source,source_id,url,property_type,transaction_type,"
@@ -223,13 +224,34 @@ def test_an_archive_cannot_write_outside_its_destination(tmp_path):
 # --- the weekly part --------------------------------------------------------
 
 
-def test_the_week_comes_from_the_timestamp(repo):
-    """The tag is the ISO week, so a Sunday-night run and the Monday after it
-    must not collide - and must not be off by one at the year boundary."""
-    sunday = datetime(2027, 1, 3, 5, 30, tzinfo=timezone.utc)
-    path, manifest = backup.write_archive(repo, repo / "backup", now=sunday)
+def test_the_week_is_the_one_that_ended(repo):
+    """Named after the week it holds, not off by one at the year boundary."""
+    monday = datetime(2027, 1, 4, 5, 30, tzinfo=timezone.utc)
+    path, manifest = backup.write_archive(repo, repo / "backup", now=monday)
     assert manifest["week"] == "2026-W53"
     assert path.name == "prague-reality-2026-W53.tar.gz"
+
+
+@pytest.mark.parametrize("now", [
+    "2026-09-28T04:00:00+00:00",   # Monday, the scheduled attempt
+    "2026-09-29T04:00:00+00:00",   # Tuesday, the retry
+    "2026-09-27T22:30:00+00:00",   # Monday 00:30 in Prague, still Sunday in UTC
+])
+def test_the_archive_is_tagged_as_the_guard_asks(repo, now):
+    """tools/backup_due.sh decides by one tag and the workflow publishes under
+    the week this tool reports. They must be the same week, or the guard
+    never sees the archive it asked for and rebuilds it for ever."""
+    import os
+    import subprocess
+
+    guard = Path(__file__).resolve().parent.parent / "tools" / "backup_due.sh"
+    result = subprocess.run(["bash", str(guard), "--uploaded", ""],
+                            capture_output=True, text=True,
+                            env={**os.environ, "NOW": now[:19] + "Z"})
+    asked = result.stderr.split()[0]
+    _, manifest = backup.write_archive(repo, repo / "backup",
+                                       now=datetime.fromisoformat(now))
+    assert asked == f"backup-{manifest['week']}"
 
 
 def test_two_weeks_do_not_overwrite_each_other(repo):

@@ -61,6 +61,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from common import cas
+
 # What the archive holds, in the order it is written. A directory is taken
 # whole; a file is taken as itself. Anything missing is simply skipped - a
 # fresh repository has no observations yet, and that is not an error.
@@ -186,7 +188,14 @@ def build_manifest(root: Path, files: list[Path], now: datetime,
     return {
         "format": 1,
         "generated_at": now.astimezone(timezone.utc).isoformat(),
-        "week": now.strftime("%G-W%V"),
+        # The week the archive HOLDS - the one that ended last Sunday in
+        # Prague - not the week it was built in. tools/backup_due.sh asks
+        # about exactly this tag; when this said the current week instead,
+        # Monday's archive went up as W40 while the guard kept finding W39's
+        # stale mid-week file, answered "rebuild" on every attempt, and the
+        # week it was for never got its archive (28 September: five builds,
+        # all to W40).
+        "week": cas.closed_week(cas.to_prague(now).date()),
         "commit": commit,
         "files": entries,
         "total_bytes": sum(e["bytes"] for e in entries),
