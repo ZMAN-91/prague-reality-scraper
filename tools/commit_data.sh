@@ -75,6 +75,13 @@ for attempt in $(seq 1 "${ATTEMPTS}"); do
   if [ -f "${DATA_ROOT}/REPORT.md" ]; then
     git -C "${DATA_ROOT}" add --ignore-removal REPORT.md
   fi
+  # And the per-week copy beside it, reports/<week>.md. It was never staged:
+  # the report job wrote it, the runner threw it away, and the only weekly
+  # files in git were a hand-made backfill. tools/report_due.py decides by
+  # that file, so a stale backfill named W39 skipped the real W39 report.
+  if [ -d "${DATA_ROOT}/reports" ]; then
+    git -C "${DATA_ROOT}" add --ignore-removal reports/
+  fi
 
   if git -C "${DATA_ROOT}" diff --cached --quiet; then
     echo "No data changes to commit this run."

@@ -217,6 +217,18 @@ def test_the_report_is_committed_when_it_exists(world):
     assert "REPORT.md" in git(run, "ls-tree", "-r", "--name-only", "HEAD").stdout
 
 
+def test_the_weeks_report_copy_is_committed_too(world):
+    """reports/<week>.md is what tools/report_due.py looks for. Left out of
+    the commit, the week's report is never found and a stale file is."""
+    run, _ = world
+    collect(run, ["base1", "new1"])
+    (run / "REPORT.md").write_text("# Report trhu\n", encoding="utf-8")
+    (run / "reports").mkdir()
+    (run / "reports" / "2026-W39.md").write_text("# Report trhu\n", encoding="utf-8")
+    commit_data(run)
+    assert "reports/2026-W39.md" in git(run, "ls-tree", "-r", "--name-only", "HEAD").stdout
+
+
 def test_a_run_without_a_report_still_commits_its_data(world):
     run, _ = world
     collect(run, ["base1", "new1"])
