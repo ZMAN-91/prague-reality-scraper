@@ -174,3 +174,46 @@ def test_a_missing_week_marker_is_treated_as_a_new_week(monkeypatch):
         progress, datetime(2026, 9, 16, tzinfo=timezone.utc), monkeypatch)
     assert entry["week"] == "2026-W38"
     assert called["page_cursor"] == {}, "an unmarked cursor is not this week's"
+
+
+def test_the_nightly_pass_keeps_its_grace_across_monday(monkeypatch):
+    """The nightly city pass completes every night and is judged against the
+    previous night's start. Monday's reset used to wipe that start, so the
+    Monday pass was judged by itself alone and called every listing the
+    portal's paging hid from it missing - 1 051 of them on 28 September."""
+    from datetime import datetime, timezone
+
+    sunday = datetime(2026, 9, 27, 0, 1, tzinfo=timezone.utc)
+    monday = datetime(2026, 9, 28, 0, 1, tzinfo=timezone.utc)
+    progress = {"idnes": {"week": "2026-W39", "sweep_started": {"byt/prodej": "2026-09-26"}}}
+
+    import run as run_module
+    from common.budget import Budget
+    from scrapers import idnes
+
+    monkeypatch.setattr(idnes, "fetch_all",
+                        lambda *a, **k: ([], [], [], {("byt", "prodej")}, 0, {}))
+    since = []
+    for when in (sunday, monday):
+        *_, absence_since = run_module.fetch_idnes(
+            None, {}, Budget(max_seconds=1, max_new_details=1), when, ["prodej"], progress)
+        since.append(absence_since)
+
+    assert since[0] == {("byt", "prodej"): "2026-09-26"}
+    assert since[1] == {("byt", "prodej"): "2026-09-27"}, \
+        "Monday's pass must be judged against Sunday's start, not against nothing"
+    assert progress["idnes"]["week"] == "2026-W40"
+    assert progress["idnes"]["sweep_started"]["byt/prodej"] == "2026-09-28"
+
+
+def test_a_stale_unfinished_pass_is_still_dropped_on_monday(monkeypatch):
+    """A pass that began mid-week and never finished must not carry over:
+    judging absence against last Wednesday would excuse days of not being seen."""
+    from datetime import datetime, timezone
+
+    progress = {"idnes": {"week": "2026-W39", "sweep_started": {"byt/prodej": "2026-09-23"}}}
+    entry, called = _fetch_idnes_with(
+        progress, datetime(2026, 9, 28, 0, 1, tzinfo=timezone.utc), monkeypatch,
+        completed=[("byt", "prodej")])
+    assert called["page_cursor"] == {}
+    assert entry["sweep_started"]["byt/prodej"] == "2026-09-28"

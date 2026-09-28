@@ -38,7 +38,7 @@ import argparse
 import sys
 import traceback
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -311,7 +311,22 @@ def fetch_idnes(session, listings: dict, budget: Budget, now=None,
     # wherever the last one happened to stop.
     this_week = (now or datetime.now(timezone.utc)).strftime("%G-W%V")
     if entry.get("week") != this_week:
+        # The cursor goes back to page one, but a pass that began yesterday or
+        # today is still the pass the next completion is judged against. Wiping
+        # it too left Monday's nightly pass with no start to judge by, so it
+        # judged by itself alone: every listing the portal's shifting order
+        # hid from that one pass was called missing at once - 1 003 on
+        # 21 September, 1 051 on 28 September, both Mondays, where an ordinary
+        # night marks none on its first miss. An older start belongs to a pass
+        # that never finished, and is still dropped: judging absence against
+        # last Tuesday would excuse a week of not being seen.
+        yesterday = ((now or datetime.now(timezone.utc)).date() - timedelta(days=1)).isoformat()
+        recent = {key: started for key, started
+                  in (entry.get("sweep_started") or {}).items()
+                  if str(started) >= yesterday}
         entry = {"week": this_week}
+        if recent:
+            entry["sweep_started"] = recent
 
     cursors = entry.get("page_cursors", {})
     # When the current sweep of each scope began. A scope that has no recorded
