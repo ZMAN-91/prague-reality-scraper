@@ -249,3 +249,45 @@ def test_it_merges_a_data_repository_checked_out_somewhere_else(tmp_path, monkey
     assert any("data/listings.csv" in n for n in notes)
     assert not any("store/" in n for n in notes), \
         "the note names the file by its path inside the data repository"
+
+
+def test_an_observations_merge_only_appends_and_keeps_crlf():
+    """The csv module ends lines in \\r\\n. The merge used to re-join on \\n,
+    rewriting all 11 802 lines of the month to add four on 2026-10-05."""
+    from tools.reconcile import merge_appended
+
+    header = "internal_id,observed_at,price,price_per_m2,status\r\n"
+    base = header + "".join(f"id{i},2026-10-01T00:31:36+00:00,{i},,active\r\n" for i in range(50))
+    theirs = base + "x,2026-10-05T03:02:00+00:00,1,,active\r\n"
+    ours = base + "y,2026-10-05T03:40:00+00:00,2,,active\r\n"
+
+    merged = merge_appended(ours, theirs, True)
+
+    assert merged.startswith(theirs), "their file, byte for byte, then ours"
+    assert merged[len(theirs):] == "y,2026-10-05T03:40:00+00:00,2,,active\r\n"
+    assert "\n" not in merged.replace("\r\n", "")
+
+
+def test_the_whole_reconcile_keeps_crlf_on_disk(tmp_path):
+    """End to end through git and the file system, where text-mode reads
+    translate line endings without asking."""
+    import subprocess
+    from tools.reconcile import reconcile
+
+    repo = tmp_path / "repo"
+    (repo / "data" / "observations").mkdir(parents=True)
+    (repo / "logs").mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    _git(repo, "config", "user.email", "t@t")
+    _git(repo, "config", "user.name", "t")
+    path = repo / "data" / "observations" / "2026-10.csv"
+    header = b"internal_id,observed_at,price,price_per_m2,status\r\n"
+    path.write_bytes(header + b"a,2026-10-01,1,,active\r\nx,2026-10-05,1,,active\r\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "theirs")
+    path.write_bytes(header + b"a,2026-10-01,1,,active\r\ny,2026-10-05,2,,active\r\n")
+
+    reconcile("HEAD", repo / "data", repo / "logs", repo, {"data/observations/2026-10.csv"})
+
+    assert path.read_bytes() == (header + b"a,2026-10-01,1,,active\r\n"
+                                 b"x,2026-10-05,1,,active\r\ny,2026-10-05,2,,active\r\n")

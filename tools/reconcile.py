@@ -56,11 +56,13 @@ def read_committed(ref: str, path: str, repo: Path = Path(".")) -> "str | None":
     the code and the data live in separate repositories, this runs from the
     code checkout while the ref belongs to the data one.
     """
+    # Bytes, decoded by hand: text=True would translate \r\n to \n, and the
+    # CSVs this project writes end their lines in \r\n.
     result = subprocess.run(
         ["git", "-C", str(repo), "show", f"{ref}:{path}"],
-        capture_output=True, text=True,
+        capture_output=True,
     )
-    return result.stdout if result.returncode == 0 else None
+    return result.stdout.decode("utf-8") if result.returncode == 0 else None
 
 
 def merge_listings(ours_text: str, theirs_text: "str | None") -> str:
@@ -143,24 +145,36 @@ def reconcile_listings(base: str, path: Path, repo: Path) -> list:
 
 
 def merge_appended(ours_text: str, theirs_text: "str | None", has_header: bool) -> str:
-    """Union of the lines of an append-only file, order preserved."""
+    """The other run's file as it is, then the lines only this run added.
+
+    Byte for byte on their side, line endings included. This used to split
+    and re-join on "\n", which turned every \r\n the csv module writes into
+    \n - so each merge rewrote the whole monthly observations file (11 802
+    lines changed on 2026-10-05 to add four), the next append added \r\n
+    lines again, and the file ended up with both. Git stores every such
+    rewrite in full, for ever.
+    """
     if not theirs_text:
         return ours_text
-    ours_lines = ours_text.splitlines()
-    theirs_lines = theirs_text.splitlines()
-    header: list = []
-    if has_header and theirs_lines:
-        header = [theirs_lines[0]]
-        theirs_lines = theirs_lines[1:]
-        ours_lines = ours_lines[1:] if ours_lines else []
+    theirs_lines = theirs_text.splitlines(keepends=True)
+    ours_lines = ours_text.splitlines(keepends=True)
+    if has_header:
+        ours_lines = ours_lines[1:]
 
-    seen: set = set()
-    body: list = []
-    for line in theirs_lines + ours_lines:
-        if line and line not in seen:
-            seen.add(line)
-            body.append(line)
-    return "\n".join(header + body) + "\n"
+    def key(line: str) -> str:
+        return line.rstrip("\r\n")
+
+    ending = "\r\n" if theirs_lines and theirs_lines[0].endswith("\r\n") else "\n"
+    if theirs_lines and not theirs_lines[-1].endswith(("\n", "\r")):
+        theirs_lines[-1] += ending
+    seen = {key(line) for line in theirs_lines}
+    merged = list(theirs_lines)
+    for line in ours_lines:
+        content = key(line)
+        if content and content not in seen:
+            seen.add(content)
+            merged.append(line if line.endswith(("\n", "\r")) else line + ending)
+    return "".join(merged)
 
 
 def merge_json(ours_text: str, theirs_text: "str | None") -> str:
@@ -179,40 +193,54 @@ def merge_json(ours_text: str, theirs_text: "str | None") -> str:
 
 
 def reconcile(base: str, data_dir: Path, logs_dir: Path,
-              repo: Path = Path(".")) -> list:
+              repo: Path = Path("."), changed: "set | None" = None) -> list:
     """Rewrite the working tree so it contains both runs' work. Returns notes.
 
     `repo` is the data repository's checkout. It defaults to the working
     directory, which is the single-repository layout, and is set to the
     data checkout when the two are split.
+
+    `changed`, when given, is the set of repository paths this run itself
+    changed, and nothing else is merged. A file this run did not touch is
+    only a stale copy of what it checked out: merged with "ours wins" it
+    would put the stale rows back over the other run's. That is how the
+    hourly run of 2026-10-05 03:42 undid the weekly report committed forty
+    minutes earlier. The listings table counts as touched when any of its
+    files is, since a row moves between them.
     """
     notes: list = []
     repo = Path(repo)
 
-    def handle(path: Path, merge, *args):
-        if not path.exists():
-            return
+    def relative_of(path: Path) -> str:
         # The ref knows the file by its path inside the data repository, which
         # is not where this process sees it when the two are split.
         try:
-            relative = path.resolve().relative_to(repo.resolve()).as_posix()
+            return path.resolve().relative_to(repo.resolve()).as_posix()
         except ValueError:
-            relative = path.as_posix()
+            return path.as_posix()
+
+    def mine(path: Path) -> bool:
+        return changed is None or relative_of(path) in changed
+
+    def handle(path: Path, merge, *args):
+        if not path.exists() or not mine(path):
+            return
+        relative = relative_of(path)
         theirs = read_committed(base, relative, repo)
         if theirs is None:
             return
-        ours = path.read_text(encoding="utf-8")
+        with open(path, encoding="utf-8", newline="") as f:
+            ours = f.read()
         merged = merge(ours, theirs, *args)
         if merged != ours:
-            path.write_text(merged, encoding="utf-8")
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write(merged)
             notes.append(f"merged {relative}")
 
-    if (data_dir / "listings.csv").exists():
-        for changed in reconcile_listings(base, data_dir / "listings.csv", repo):
-            try:
-                notes.append(f"merged {changed.resolve().relative_to(repo.resolve()).as_posix()}")
-            except ValueError:
-                notes.append(f"merged {changed.as_posix()}")
+    listings = data_dir / "listings.csv"
+    if listings.exists() and any(mine(p) for p in storage.listing_files(listings)):
+        for written in reconcile_listings(base, listings, repo):
+            notes.append(f"merged {relative_of(written)}")
     for observations in sorted((data_dir / "observations").glob("*.csv")):
         handle(observations, merge_appended, True)
     for log in sorted(logs_dir.glob("*.jsonl")):
@@ -230,10 +258,17 @@ def main() -> int:
     parser.add_argument("--repo", default=".",
                         help="checkout the base ref lives in (the data "
                              "repository, when code and data are split)")
+    parser.add_argument("--changed", default=None,
+                        help="file listing the repository paths this run "
+                             "changed, one per line; only those are merged")
     args = parser.parse_args()
 
+    changed = None
+    if args.changed:
+        changed = {line.strip() for line in
+                   Path(args.changed).read_text(encoding="utf-8").splitlines() if line.strip()}
     notes = reconcile(args.base, Path(args.data_dir), Path(args.logs_dir),
-                      Path(args.repo))
+                      Path(args.repo), changed)
     for note in notes:
         print(f"[reconcile] {note}")
     if not notes:

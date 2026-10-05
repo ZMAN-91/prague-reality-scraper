@@ -328,3 +328,52 @@ def test_rows_only_the_other_run_archived_survive(world, tmp_path):
     assert set(listings) == {"base1", "rent1", "gone1", "gone2"}
     assert all(len(files) == 1 for files in where.values()), where
     assert where["gone1"] == ["2026-07.csv"]
+
+
+# --- rule 3: only what this run changed -------------------------------------
+#
+# 2026-10-05: the weekly report committed REPORT.md and data/csv/ at 03:02;
+# the hourly run that had checked out at 03:01 committed at 03:42 and put
+# last week's copies back, because `git add data/ REPORT.md` staged every
+# file that differed from the tip - including the stale ones it never wrote.
+
+
+def test_a_run_does_not_revert_files_it_never_touched(world):
+    run, other = world
+    (other / "REPORT.md").write_text("# report of last week\n", encoding="utf-8")
+    (other / "data" / "csv").mkdir(parents=True, exist_ok=True)
+    (other / "data" / "csv" / "trh_denne.csv").write_text("den\n2026-09-27\n", encoding="utf-8")
+    push(other, "last week's report")
+    git(run, "pull", "-q", "origin", "main")  # the hourly run checks out
+
+    # The weekly report lands while the hourly run is collecting.
+    (other / "REPORT.md").write_text("# report of this week\n", encoding="utf-8")
+    (other / "data" / "csv" / "trh_denne.csv").write_text("den\n2026-10-04\n", encoding="utf-8")
+    push(other, "this week's report")
+
+    collect(run, ["base1", "rent1"])
+    commit_data(run)
+
+    assert git(run, "show", "origin/main:REPORT.md").stdout == "# report of this week\n"
+    assert "2026-10-04" in git(run, "show", "origin/main:data/csv/trh_denne.csv").stdout
+    assert "rent1" in git(run, "show", "origin/main:data/listings.csv").stdout
+    # and the working tree now holds the current files for any later step
+    assert (run / "REPORT.md").read_text(encoding="utf-8") == "# report of this week\n"
+
+
+def test_listings_this_run_did_not_touch_are_not_merged_back_stale(world):
+    """A run that never wrote listings.csv must not put its checkout's rows
+    back over a row the other run changed - "ours wins" is only right for
+    rows this run actually refreshed."""
+    run, other = world
+    store(other, [full("base1", "missing_2", "2026-09-30")])
+    push(other, "the other run marked base1 missing")
+
+    (run / "logs" / "day.jsonl").write_text('{"run":"base"}\n{"run":"report"}\n', encoding="utf-8")
+    commit_data(run, "Weekly report")
+
+    check = run.parent / "check"
+    check.mkdir()
+    listings, _ = committed(run, check)
+    assert listings["base1"]["status"] == "missing_2"
+    assert '"report"' in git(run, "show", "origin/main:logs/day.jsonl").stdout

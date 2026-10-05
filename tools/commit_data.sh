@@ -49,6 +49,27 @@ RETRY_SLEEP="${RETRY_SLEEP:-5}"
 git -C "${DATA_ROOT}" config user.name "prague-reality-scraper-bot"
 git -C "${DATA_ROOT}" config user.email "actions@users.noreply.github.com"
 
+# Rule 3: commit what THIS run changed, and nothing else.
+#
+# After the reset below, every file that differs from the branch tip gets
+# staged by a plain `git add` - including files this run never touched, whose
+# working copies are simply what it checked out an hour ago. Those are
+# stale, and committing them reverts whoever changed them since. On
+# 2026-10-05 the hourly run that started at 03:01 committed at 03:42 and put
+# back the previous week's REPORT.md and data/csv/ over the weekly report
+# committed at 03:02. While the CSV views were rebuilt every hour nobody
+# noticed; once they were rebuilt nightly, every overlap lost them.
+#
+# So the list is taken once, here, before the first reset, against the
+# commit this run checked out: modified tracked files plus new ones. Only
+# those are staged, and only those are handed to reconcile.
+MINE="$(mktemp)"
+trap 'rm -f "${MINE}"' EXIT
+{
+  git -C "${DATA_ROOT}" diff --name-only HEAD
+  git -C "${DATA_ROOT}" ls-files --others --exclude-standard
+} | sort -u > "${MINE}"
+
 for attempt in $(seq 1 "${ATTEMPTS}"); do
   git -C "${DATA_ROOT}" fetch --quiet origin "${BRANCH}"
 
@@ -60,28 +81,37 @@ for attempt in $(seq 1 "${ATTEMPTS}"); do
   # merge, so git stops on a conflict and the retry loop re-runs the same
   # pull while a rebase is already in progress - which is how the first
   # weekly rent run threw away an hour of collection.
-  python -m tools.reconcile \
+  reconciled=$(python -m tools.reconcile \
     --base "origin/${BRANCH}" \
     --repo "${DATA_ROOT}" \
     --data-dir "${DATA_ROOT}/data" \
-    --logs-dir "${DATA_ROOT}/logs"
+    --logs-dir "${DATA_ROOT}/logs" \
+    --changed "${MINE}")
+  echo "${reconciled}"
 
-  # Rule 2: additions and modifications only.
-  git -C "${DATA_ROOT}" add --ignore-removal data/ logs/
-  # REPORT.md sits at the data repository's root rather than under data/,
-  # because it is the one file in there meant to be opened by a person. Named
-  # separately, and only when it exists: `git add` on a missing path is an
-  # error, and a run whose report step was skipped must still commit its data.
-  if [ -f "${DATA_ROOT}/REPORT.md" ]; then
-    git -C "${DATA_ROOT}" add --ignore-removal REPORT.md
-  fi
-  # And the per-week copy beside it, reports/<week>.md. It was never staged:
-  # the report job wrote it, the runner threw it away, and the only weekly
-  # files in git were a hand-made backfill. tools/report_due.py decides by
-  # that file, so a stale backfill named W39 skipped the real W39 report.
-  if [ -d "${DATA_ROOT}/reports" ]; then
-    git -C "${DATA_ROOT}" add --ignore-removal reports/
-  fi
+  # Rule 2: additions and modifications only - every path staged here exists.
+  # What is staged: this run's own changes, plus whatever reconcile rewrote
+  # (a listings archive month the other run touched, merged with ours). Only
+  # under data/, logs/, reports/ and REPORT.md - the places a run writes.
+  # REPORT.md and reports/<week>.md are the report job's; the weekly copy was
+  # once never staged at all, and report_due decides by it.
+  {
+    cat "${MINE}"
+    printf '%s\n' "${reconciled}" | sed -n 's/^\[reconcile\] merged //p'
+  } | sort -u | while IFS= read -r path; do
+    case "${path}" in
+      data/*|logs/*|reports/*|REPORT.md) ;;
+      *) continue ;;
+    esac
+    if [ -f "${DATA_ROOT}/${path}" ]; then
+      git -C "${DATA_ROOT}" add --ignore-removal -- "${path}"
+    fi
+  done
+
+  # Everything else in the working tree is a stale checkout copy of a file
+  # someone else has since changed. Bring it up to the branch, so later steps
+  # in this job read the current files and a retry starts from the truth.
+  git -C "${DATA_ROOT}" checkout -- .
 
   if git -C "${DATA_ROOT}" diff --cached --quiet; then
     echo "No data changes to commit this run."
