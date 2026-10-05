@@ -487,3 +487,15 @@ def test_reads_are_remembered_and_the_memory_stays_the_live_set(monkeypatch):
     _run_bz(monkeypatch, listings, progress, now, pages)
     stamp = now.isoformat()
     assert progress["bezrealitky"]["precteno"] == {"1": stamp, "5": stamp}
+
+
+def test_the_run_log_counts_the_per_advert_memories_rather_than_copying_them():
+    """Copied whole, the read memory made every log line ~70 KB."""
+    import run as run_module
+    progress = {"bezrealitky": {"precteno": {str(n): "t" for n in range(1300)},
+                                "vyrazene": {"1": "flatio"}},
+                "idnes": {"week": "2026-W41", "page_cursors": {"byt/prodej": 42}}}
+    logged = run_module.loggable_progress(progress)
+    assert logged == {"bezrealitky": {"precteno": 1300, "vyrazene": 1},
+                      "idnes": {"week": "2026-W41", "page_cursors": {"byt/prodej": 42}}}
+    assert len(progress["bezrealitky"]["precteno"]) == 1300, "the state itself is untouched"

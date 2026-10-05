@@ -350,6 +350,25 @@ def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
 
 
 
+def loggable_progress(progress: dict) -> dict:
+    """progress.json as the run log records it: cursors as they are, the
+    per-advert memories ("vyrazene", "precteno") as counts. Copied whole,
+    the read memory alone made every log line ~70 KB - a copy of state that
+    progress.json already holds, committed again with every run."""
+    out = {}
+    for source, entry in (progress or {}).items():
+        if not isinstance(entry, dict):
+            out[source] = entry
+            continue
+        out[source] = {key: (len(value) if key in PER_ADVERT_MEMORIES and isinstance(value, dict)
+                             else value)
+                       for key, value in entry.items()}
+    return out
+
+
+PER_ADVERT_MEMORIES = ("vyrazene", "precteno")
+
+
 def fetch_idnes(session, listings: dict, budget: Budget, now=None,
                 transactions=None, progress: Optional[dict] = None,
                 scope: str = SCOPE_CITY):
@@ -1108,7 +1127,7 @@ def run(
     run_stats["total_changes_written"] = len(all_change_rows)
     run_stats["budget"] = budget.summary()
     run_stats["sreality_collection_area"] = collection_area.describe()
-    run_stats["progress"] = progress
+    run_stats["progress"] = loggable_progress(progress)
     run_stats["ok"] = not any_errors
     storage.write_run_log(run_stats, logs_dir)
 
