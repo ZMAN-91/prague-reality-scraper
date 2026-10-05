@@ -250,8 +250,8 @@ def days_absent(row: dict, now_iso: str):
 
 
 def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
-                      transactions=None, scope: str = SCOPE_CITY
-                      ) -> tuple[list, list, list[str], set]:
+                      transactions=None, progress: Optional[dict] = None,
+                      scope: str = SCOPE_CITY):
     """bezrealitky is collected through its published sitemap and the
     listing pages its robots.txt permits (see scrapers/bezrealitky.py), so
     every listing costs one request. The run budget therefore caps how many
@@ -272,7 +272,12 @@ def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
         known_urls.add(row["url"])
         revisit_order[row["url"]] = row.get("last_seen_at") or ""
 
-    return bezrealitky.fetch_all(
+    # Adverts the dataset leaves out (FLATIO lets, anything outside Prague -
+    # see bezrealitky.exclusion_of), remembered so they are not read again.
+    entry = (progress if progress is not None else {}).setdefault(bezrealitky.SOURCE_NAME, {})
+    excluded = entry.setdefault("vyrazene", {})
+
+    normalized, raw_pages, errors, completed = bezrealitky.fetch_all(
         session,
         budget,
         known_urls=known_urls,
@@ -282,7 +287,18 @@ def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
         # separate cap only made the run stop early while time remained.
         max_listings=None,
         transactions=transactions,
+        excluded=excluded,
     )
+
+    # A stored advert that has turned out to be excluded leaves the dataset
+    # outright - deliberately, the way a change of scope should be handled -
+    # rather than being left to go missing and be counted as a departure
+    # from the market it was never part of. Its observation rows stay in the
+    # append-only log, keyed to an id nothing refers to any more.
+    for internal_id, row in list(listings.items()):
+        if row.get("source") == bezrealitky.SOURCE_NAME and row.get("source_id") in excluded:
+            del listings[internal_id]
+    return normalized, raw_pages, errors, completed, None
 
 
 
@@ -404,7 +420,7 @@ SOURCE_FETCHERS = {
 
 # Fetchers that need to remember where they stopped between runs get the
 # progress dict passed in; the rest do not need to know it exists.
-RESUMABLE_SOURCES = {"idnes"}
+RESUMABLE_SOURCES = {"idnes", "bezrealitky"}
 
 
 def _same_value(before, after) -> bool:

@@ -296,3 +296,63 @@ def test_the_enum_s_no_value_is_no_disposition():
 def test_an_area_of_zero_is_no_area():
     listing = parse_advert(advert(surface=0), "https://www.bezrealitky.cz/nemovitosti-byty-domy/1-x")
     assert listing.area_m2 is None
+
+
+# --- adverts the dataset leaves out (decided 2026-10-05) ----------------------
+
+
+def test_flatio_and_outside_prague_are_excluded_by_the_portal_s_own_word():
+    from scrapers.bezrealitky import exclusion_of
+    assert exclusion_of(advert(type="FLATIO")) == "flatio"
+    assert exclusion_of(advert(isPrague=False)) == "mimo-prahu"
+    assert exclusion_of(advert()) is None
+    assert exclusion_of(advert(isPrague=None)) is None, "not saying is not saying no"
+    listing = parse_advert(advert(type="FLATIO"), "https://www.bezrealitky.cz/nemovitosti-byty-domy/1-x")
+    assert listing.excluded == "flatio" and listing.in_target_area is False
+
+
+def _run_fetch_all(urls, adverts, excluded, known=()):
+    from scrapers import bezrealitky as bz
+    visited = []
+
+    def fake_sitemap(session, budget=None):
+        return list(urls), []
+
+    def fake_fetch(session, url):
+        visited.append(url)
+        source_id = bz.meta_from_url(url)[0]
+        listing = parse_advert(adverts[source_id], url)
+        return listing, adverts[source_id]
+
+    saved = bz.iter_sitemap_listing_urls, bz.fetch_listing, bz.net.polite_sleep
+    bz.iter_sitemap_listing_urls, bz.fetch_listing, bz.net.polite_sleep = (
+        fake_sitemap, fake_fetch, lambda *a, **k: None)
+    try:
+        normalized, *_ = bz.fetch_all(session=None, known_urls=set(known), due_urls=set(known),
+                                      excluded=excluded)
+    finally:
+        bz.iter_sitemap_listing_urls, bz.fetch_listing, bz.net.polite_sleep = saved
+    return normalized, visited
+
+
+def test_an_excluded_advert_is_remembered_and_never_read_again():
+    """Unstored, every excluded advert would look new every hour and jump
+    the queue - some 460 wasted requests an hour."""
+    url = lambda n: f"https://www.bezrealitky.cz/nemovitosti-byty-domy/{n}-nabidka-pronajem-bytu-praha"
+    adverts = {"1": advert(id=1, offerType="PRONAJEM", type="FLATIO"),
+               "2": advert(id=2, offerType="PRONAJEM")}
+    excluded = {}
+    normalized, visited = _run_fetch_all([url(1), url(2)], adverts, excluded)
+    assert excluded == {"1": "flatio"}
+    assert [l.source_id for l in normalized if not getattr(l, "presence_only", False)] == ["2"]
+
+    normalized, visited = _run_fetch_all([url(1), url(2)], adverts, excluded, known=[url(2)])
+    assert url(1) not in visited, "read again"
+    assert all(l.source_id != "1" for l in normalized), "not even as a presence sighting"
+
+
+def test_the_memory_forgets_what_the_sitemap_no_longer_lists():
+    url = lambda n: f"https://www.bezrealitky.cz/nemovitosti-byty-domy/{n}-nabidka-pronajem-bytu-praha"
+    excluded = {"1": "flatio", "9": "mimo-prahu"}
+    _run_fetch_all([url(1)], {"1": advert(id=1)}, excluded)
+    assert excluded == {"1": "flatio"}

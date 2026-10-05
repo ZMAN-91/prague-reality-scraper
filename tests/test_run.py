@@ -389,3 +389,29 @@ def test_a_placeholder_remembered_from_before_is_dropped():
     last_obs[internal_id]["price"] = 1  # as stored before 2026-10-05
     merge([make_listing("1", price=1)], listings, last_obs, "2026-10-02T00:00:00+00:00")
     assert last_obs[internal_id]["price"] is None
+
+
+def test_a_stored_advert_found_excluded_leaves_the_dataset_not_the_market(monkeypatch):
+    """A FLATIO let already stored must be removed deliberately, not left to
+    go missing and be counted as a departure from a market it was never in."""
+    import run as run_module
+    from common.budget import Budget
+    from scrapers import bezrealitky
+
+    listings = {
+        "b1": {"internal_id": "b1", "source": "bezrealitky", "source_id": "1", "url": "u1", "last_seen_at": "2026-10-04"},
+        "b2": {"internal_id": "b2", "source": "bezrealitky", "source_id": "2", "url": "u2", "last_seen_at": "2026-10-04"},
+        "s1": {"internal_id": "s1", "source": "sreality", "source_id": "1", "url": "x", "last_seen_at": "2026-10-04"},
+    }
+
+    def fake_fetch_all(session, budget, excluded=None, **kwargs):
+        excluded["1"] = "flatio"
+        return [], [], [], set()
+
+    monkeypatch.setattr(bezrealitky, "fetch_all", fake_fetch_all)
+    progress = {}
+    result = run_module.fetch_bezrealitky(None, listings, Budget(max_seconds=1), None,
+                                          ["pronajem"], progress)
+    assert len(result) == 5 and result[4] is None
+    assert set(listings) == {"b2", "s1"}, "only the bezrealitky advert with that id goes"
+    assert progress["bezrealitky"]["vyrazene"] == {"1": "flatio"}, "remembered across runs"

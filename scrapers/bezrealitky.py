@@ -336,7 +336,32 @@ def parse_advert(advert: dict, url: str) -> Optional[NormalizedListing]:
     )
     listing.in_target_area = is_in_target_area(lat, lon)
     listing.priority_zone = is_priority_zone(lat, lon)
+    listing.excluded = exclusion_of(advert)
+    if listing.excluded:
+        listing.in_target_area = False
     return listing
+
+
+#: Why an advert is left out of the dataset altogether, by the value the
+#: portal itself gives. Decided 2026-10-05 after the inventory:
+#:
+#: FLATIO   mid-term lets syndicated from flatio.cz - rooms as often as flats,
+#:          priced with fees, no floor area. 342 of them were 23 % of
+#:          bezrealitky's rentals and moved the median Prague rent by +1.5 %.
+#: mimo-prahu  bezrealitky reaches into the ring of towns around Prague
+#:          (Ricany, Uvaly, Brandys...); sreality and iDNES are Prague only,
+#:          so these mixed another market into Prague's figures. The portal
+#:          says so itself: isPrague is false on 116 of 2 608 adverts.
+EXCLUDED_TYPES = {"FLATIO": "flatio"}
+
+
+def exclusion_of(advert: dict) -> Optional[str]:
+    reason = EXCLUDED_TYPES.get(str(advert.get("type") or "").upper())
+    if reason:
+        return reason
+    if advert.get("isPrague") is False:
+        return "mimo-prahu"
+    return None
 
 
 def fetch_listing(session: requests.Session, url: str) -> tuple[Optional[NormalizedListing], Optional[dict]]:
@@ -364,6 +389,7 @@ def fetch_all(
     revisit_order: Optional[dict] = None,
     max_listings: Optional[int] = None,
     transactions: Optional[Iterable[str]] = None,
+    excluded: Optional[dict] = None,
 ) -> tuple[list[NormalizedListing], list[dict], list[str], set[tuple[str, str]]]:
     """Collect listings via the sitemap + permitted detail pages.
 
@@ -406,6 +432,19 @@ def fetch_all(
             )
             return normalized, raw_pages, errors, set()
 
+    # Adverts ruled out once (see exclusion_of) are not read again: unstored,
+    # each would otherwise look new every hour and jump the queue - some 460
+    # wasted requests an hour. The memory is pruned to what the sitemap still
+    # lists, so it cannot grow for ever, and only when the sitemap was read
+    # whole, so a partial read cannot make it forget.
+    if excluded is not None:
+        listed_ids = {meta[0] for meta in map(meta_from_url, urls) if meta}
+        if not sitemap_errors:
+            for source_id in list(excluded):
+                if source_id not in listed_ids:
+                    del excluded[source_id]
+        urls = [u for u in urls if (meta_from_url(u) or (None,))[0] not in excluded]
+
     known = set(known_urls or ())
     due = set(due_urls or ())
     fresh = [u for u in urls if u not in known]
@@ -447,6 +486,10 @@ def fetch_all(
                 "response": advert,
             })
         if listing is None:
+            continue
+        if getattr(listing, "excluded", None):
+            if excluded is not None:
+                excluded[listing.source_id] = listing.excluded
             continue
         normalized.append(listing)
 
