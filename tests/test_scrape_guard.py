@@ -287,3 +287,22 @@ def test_the_busy_check_reads_the_repository_wide_list(tmp_path):
     assert not went([run_row(1, SALE, status="in_progress")], tmp_path,
                     mine=[], MEASURE_WORKFLOW="scrape-rent.yml",
                     MIN_GAP_MINUTES=8640)
+
+
+def test_an_api_outage_stands_down_instead_of_failing(tmp_path):
+    """A 503 from GitHub on 2026-10-03 ended the guard with exit 1 - a failed
+    run, a failure e-mail - for something the next attempt fifteen minutes
+    later does not even notice. Not knowing whether a sweep is running is a
+    reason not to start one, not a fault."""
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "gh").write_text(
+        "#!/bin/sh\necho 'gh: No server is currently available (HTTP 503)' >&2\nexit 1\n")
+    (fake / "gh").chmod(0o755)
+    result = subprocess.run(
+        ["bash", str(GUARD)], capture_output=True, text=True,
+        env={"PATH": f"{fake}:/usr/bin:/bin", "NOW": iso(NOW), "EVENT_NAME": "schedule",
+             "GITHUB_RUN_ID": str(SELF_ID), "GITHUB_REPOSITORY": "o/r"})
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "go=false"
+    assert "GitHub API" in result.stderr

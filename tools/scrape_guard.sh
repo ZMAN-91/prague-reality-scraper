@@ -86,9 +86,20 @@ if [ -n "$runs_file" ]; then
     all_runs=$(cat "$runs_file")
     mine=$(cat "${mine_file:-$runs_file}")
 else
-    all_runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100")
-    mine=$(gh api \
-        "repos/${GITHUB_REPOSITORY}/actions/workflows/${MEASURE_WORKFLOW}/runs?per_page=50")
+    # An API that does not answer is not a reason to fail the run. On
+    # 2026-10-03 21:46 a 503 from GitHub ended this guard with exit 1, and a
+    # failed run is a failure e-mail - for a hiccup on GitHub's side, with the
+    # next attempt fifteen minutes away. Standing down is the safe answer:
+    # not knowing whether a sweep is running is exactly when not to start
+    # one, and an outage long enough to matter shows up in the health check
+    # as a gap in the sweeps, which is the signal that should reach a person.
+    if ! all_runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100"); then
+        decide false "Could not read the run history from the GitHub API - standing down; the next attempt asks again."
+    fi
+    if ! mine=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/${MEASURE_WORKFLOW}/runs?per_page=50"); then
+        decide false "Could not read this workflow's run history from the GitHub API - standing down; the next attempt asks again."
+    fi
 fi
 
 # Both scrape workflows write the same listings.csv, so either one holding it
