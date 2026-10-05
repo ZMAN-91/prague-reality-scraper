@@ -99,38 +99,12 @@ jobs:
       - name: Run tests
         run: python -m pytest -q
 
-      - name: Re-examine the coordinates borrowed earlier
-        # Once a week, every coordinate borrowed from a sreality advert is
-        # matched again against that day's adverts.
-        #
-        # A pair, once made, was otherwise never looked at again - the daily
-        # run skips any row that already has coordinates. That is right for
-        # the common case and wrong for the failure case: where exactly one
-        # candidate matched and it was the wrong flat, the row keeps a wrong
-        # coordinate for ever, and a wrong coordinate quietly becomes a wrong
-        # house number.
-        #
-        # Here rather than in the archive workflow itself, which lives in the
-        # data repository and should not be making network calls to a portal.
-        # The archive runs an hour after this one, so what it stores is the
-        # re-examined data - which is the point of doing it weekly at all.
-        #
-        # Never fails the report: a portal that is unreachable this morning
-        # is a reason to keep last week's coordinates, not to lose the week's
-        # report.
-        continue-on-error: true
-        env:
-          SCRAPER_ROBOTS_OVERRIDE_HOSTS: "www.sreality.cz"
-        run: |
-          python -m tools.lend_gps_from_sreality \
-            --data-dir store/data --logs-dir store/logs --repair --apply
-
-      - name: Fill house numbers for anything the re-examination moved
-        # A moved coordinate has its number cleared, because the old one
-        # named a building the row no longer points at. This puts the new one
-        # on before the archive is taken.
-        continue-on-error: true
-        run: python -m tools.backfill_cislo --data-dir store/data --apply
+      # The weekly re-examination of borrowed coordinates used to run here.
+      # It writes listings.csv, and this workflow is not in the scrape-data
+      # group, so it could overlap an hourly sweep and the later commit of the
+      # two would overwrite the other's rows. It now runs in Monday's nightly
+      # pass (scrape-night.yml), which holds that lock and finishes before
+      # this report and the archive.
 
       - name: Check the dataset's quality has not collapsed
         # AFTER the commit, deliberately. A quality fault is a reason to look

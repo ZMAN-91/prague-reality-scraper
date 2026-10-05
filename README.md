@@ -197,9 +197,9 @@ e-mail o selhání a skutečný výpadek vypadal úplně stejně
 | kdy | co | kde |
 |---|---|---|
 | **každou hodinu** | sběr prodeje i nájmu ze všech tří zdrojů; sreality jen Praha 4 + 10, bezrealitky a iDNES celá Praha; doplnění čísel popisných novým řádkům; commit (exporty v `data/csv/` jen jednou denně v noci — jsou odvozené a hodinové přepisování tvořilo třetinu růstu repozitáře) | `scrape.yml` |
-| **denně, 02:00–04:59** | celoměstský průchod iDNES a bezrealitky; pak celoměstská procházka indexu sreality, která **(a)** sbírá pražské inzeráty mimo sledovaný pás, **(b)** půjčuje GPS iDNES inzerátům a **(c)** jako jediná potvrzuje, jestli uložené sreality inzeráty mimo pás ještě visí; doplnění čísel a městských částí; **přestavba exportů v `data/csv/`**; zápis metrik kvality; commit; kontrola kvality | `scrape-night.yml` |
+| **denně, 02:00–04:59** | celoměstský průchod iDNES a bezrealitky; pak celoměstská procházka indexu sreality, která **(a)** sbírá pražské inzeráty mimo sledovaný pás, **(b)** půjčuje GPS iDNES inzerátům a **(c)** jako jediná potvrzuje, jestli uložené sreality inzeráty mimo pás ještě visí; v noci na pondělí navíc přepárování dříve půjčených souřadnic (`--repair`); doplnění čísel a městských částí; **přestavba exportů v `data/csv/`**; zápis metrik kvality; commit; kontrola kvality | `scrape-night.yml` |
 | **každých 6 hodin** | heartbeat — hlídá, že plánovač vůbec doručuje | `heartbeat.yml` |
-| **týdně, Po/Út 05:00** | přepárování dříve půjčených souřadnic (`--repair`), doplnění čísel, kontrola kvality, přestavba časových řad, týdenní report | `report.yml` |
+| **týdně, Po/Út 05:00** | kontrola kvality, přestavba časových řad, týdenní report — nic nezapisuje do inzerátů, protože neběží pod zámkem `scrape-data` | `report.yml` |
 | **týdně, Po/Út 06:00** | ověřený archiv datového repozitáře | `backup.yml` |
 | **měsíčně, 1.–7. den, 07:00** | přestavba adresního indexu RÚIAN | `build-ruian-index.yml` |
 

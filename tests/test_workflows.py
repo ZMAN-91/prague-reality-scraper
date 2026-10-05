@@ -875,28 +875,38 @@ def test_borrowing_still_takes_the_data_lock():
 def test_the_weekly_run_re_examines_borrowed_coordinates():
     """A pair, once made, is otherwise never revisited: the daily run skips
     any row that already has coordinates. Weekly is where a wrong one gets a
-    second look, before the archive stores it."""
-    steps = load(REPORT)["jobs"]["report"]["steps"]
+    second look - on the night into Monday, inside the scrape-data lock, and
+    before the house numbers are filled and the views rebuilt."""
+    steps = load(NIGHT)["jobs"]["scrape"]["steps"]
     runs = [s.get("run", "") for s in steps]
-    joined = " ".join(runs)
-    assert "--repair" in joined, "nothing re-examines the borrowed pairs"
-    assert "tools.backfill_cislo" in joined, (
-        "a moved coordinate has its house number cleared; without this the "
-        "archive stores rows with a coordinate and no number")
+    assert any("--repair" in r for r in runs), "nothing re-examines the borrowed pairs"
 
     repair_at = next(i for i, r in enumerate(runs) if "--repair" in r)
-    fill_at = next(i for i, r in enumerate(runs) if "backfill_cislo" in r)
-    report_at = next(i for i, r in enumerate(runs) if "tools.report" in r)
-    assert repair_at < fill_at < report_at, (
-        "the order has to be re-examine, then number, then report")
+    fill_at = next(i for i, r in enumerate(runs) if "backfill_cislo" in r and i > repair_at)
+    export_at = next(i for i, r in enumerate(runs) if "tools.export_csv" in r)
+    assert repair_at < fill_at < export_at, (
+        "the order has to be re-examine, then number, then the views")
+    repair = steps[repair_at]
+    assert "%u" in repair["run"] and "Europe/Prague" in repair["run"], "weekly, on Prague's Monday"
+    assert repair.get("if") == "steps.still_due.outputs.go == 'true'"
 
 
-def test_re_examining_never_fails_the_weekly_report():
+def test_re_examining_never_fails_the_night():
     """A portal unreachable this morning is a reason to keep last week's
-    coordinates, not to lose the week's report."""
-    steps = load(REPORT)["jobs"]["report"]["steps"]
+    coordinates, not to fail the night."""
+    steps = load(NIGHT)["jobs"]["scrape"]["steps"]
     step = next(s for s in steps if "--repair" in s.get("run", ""))
     assert step.get("continue-on-error") is True
+
+
+def test_the_weekly_report_does_not_write_listings():
+    """report.yml is not in the scrape-data group, so anything it wrote to
+    listings.csv could race an hourly sweep. It only renders."""
+    for job in load(REPORT)["jobs"].values():
+        for step in job.get("steps", []):
+            run = step.get("run", "")
+            assert "--apply" not in run, f"the report writes data: {run.strip()[:80]}"
+            assert "lend_gps_from_sreality" not in run
 
 
 def test_the_archive_is_taken_after_the_re_examination():

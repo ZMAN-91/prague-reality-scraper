@@ -39,7 +39,7 @@ kdyby to tiše nedělala.
 | `tools/report_due.py` | jeden report za uzavřený týden | `reports/<týden>.md` v gitu s „Data k“ = neděle týdne; skipped běhy po úspěchu |
 | `tools/ruian_due.py` | index se staví 1.–7. v měsíci, jen když je starší | `data/ruian_praha.csv.gz.json` datum; běhy build-ruian-index |
 | `heartbeat.yml` / `STATUS.md` | veřejné repo má commit častěji než 60 dní | datum posledního heartbeatu |
-| concurrency `scrape-data` | nic, co zapisuje listings, neběží souběžně | překryvy start–konec běhů zapisujících data; **report.yml má jinou skupinu a přitom zapisuje listings (`--repair --apply`)** |
+| concurrency `scrape-data` | nic, co zapisuje listings, neběží souběžně | překryvy start–konec běhů zapisujících data; report.yml má jinou skupinu, a proto do listings nesmí zapisovat (test `test_the_weekly_report_does_not_write_listings`) |
 
 ### Sběr
 
