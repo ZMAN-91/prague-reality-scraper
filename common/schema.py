@@ -53,7 +53,15 @@ MISSING_STATUS_PREFIX = "missing_"
 # state as `disappearing` with a day count instead of calling it active. So
 # a listing that has been gone two days is visible as such while still being
 # allowed to come back.
-REMOVAL_AFTER_DAYS = 3
+#
+# Five, not three, since 2026-10-05. The inventory measured how many adverts
+# called removed came back afterwards: at three days 5.6 % on iDNES, 7.8 % on
+# sreality and 4.1 % on bezrealitky; replayed on the same history, five days
+# brings that to 1.5 %, 5.1 % and 2.0 %. Each false removal is a departure
+# that never happened in the most recent days of the series - exactly the
+# days the weekly report reads. The price of waiting longer is only when a
+# departure is confirmed: its date is still the last sighting.
+REMOVAL_AFTER_DAYS = 5
 
 # --- Column layouts (must match README exactly) -------------------------
 

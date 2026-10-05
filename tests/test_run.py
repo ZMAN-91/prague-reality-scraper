@@ -160,7 +160,7 @@ def test_out_of_area_listing_is_never_stored():
 # --- disappearance / removal -------------------------------------------
 
 
-def test_a_listing_is_removed_only_after_three_days_of_absence():
+def test_a_listing_is_removed_only_after_removal_after_days_of_absence():
     """Two days of being missed is not a removal; the third is.
 
     The rule this replaces was three consecutive MISSES, which at an hourly
@@ -182,9 +182,11 @@ def test_a_listing_is_removed_only_after_three_days_of_absence():
         merge([], listings, last_obs, f"2026-03-{day:02d}T00:00:00+00:00")
         statuses.append(list(listings.values())[0]["status"])
 
-    assert statuses[:2] == ["missing_1", "missing_2"], \
-        "something was removed before the three days were up"
-    assert statuses[2] == STATUS_REMOVED, "three days absent must be removed"
+    from common.schema import REMOVAL_AFTER_DAYS
+    n = REMOVAL_AFTER_DAYS
+    assert statuses[:n - 1] == [f"missing_{d}" for d in range(1, n)], \
+        "something was removed before the days were up"
+    assert statuses[n - 1] == STATUS_REMOVED, f"{n} days absent must be removed"
 
 
 def test_each_missing_step_writes_exactly_one_observation():
@@ -194,8 +196,9 @@ def test_each_missing_step_writes_exactly_one_observation():
     for day in range(2, 10):
         _, obs = merge([], listings, last_obs, f"2026-03-{day:02d}T00:00:00+00:00")
         rows.extend(obs)
+    from common.schema import REMOVAL_AFTER_DAYS
     assert [r["status"] for r in rows] == \
-        ["missing_1", "missing_2", STATUS_REMOVED]
+        [f"missing_{d}" for d in range(1, REMOVAL_AFTER_DAYS)] + [STATUS_REMOVED]
     assert all(r["price"] == "" for r in rows)  # no price info at a disappearance
 
 

@@ -306,7 +306,7 @@ Sloupce:
 | `area_m2`, `floor`, `lat`, `lon`, `address`, `description` | viz zdroj |
 | `priority_zone` | `True`/`False` — leží v okruhu Spořilova nebo Hostivaře |
 | `first_seen_at`, `last_seen_at` | ISO-8601 UTC |
-| `status` | `active` \| `missing_1` \| `missing_2` \| `removed` (viz níže) |
+| `status` | `active` \| `missing_1` … `missing_4` \| `removed` (viz níže) |
 | `cluster_id` | sdílené ID pro pravděpodobně duplicitní inzeráty napříč zdroji/makléři |
 | `relisted_from` | `internal_id` staršího `removed` inzerátu, kterého toto je pravděpodobně nový inzerát |
 
@@ -363,14 +363,20 @@ desítky tisíc řádků, ne miliony) je to v řádu sekund. Existující
 `cluster_id` se nikdy nepřegenerovává, jen doplňuje o nové členy — takže ID
 jsou stabilní napříč lety provozu.
 
-**Zmizení a `removed` stav**: inzerát se označí jako `removed` až po **3**
-po sobě jdoucích *úspěšných* bězích, kdy chybí (`MAX_MISSING_STREAK` v
-`common/schema.py`, zakódováno přímo v `status` jako `missing_1` →
-`missing_2` → `removed`, takže není potřeba samostatný čítač). Zvoleno 3
-(horní hranice zadaného rozmezí 2–3): při hodinové kadenci je to pořád jen
-2–3hodinové zpoždění v odhalení skutečného smazání, ale bezpečně to přežije
-jednu špatnou odpověď API nebo blokaci trvající déle než jeden běh — přesně
-proti tomu má tahle ochrana chránit. Navíc: pokud běh skončí s chybou
+**Zmizení a `removed` stav**: inzerát se označí jako `removed`, až když ho
+zdroj **5 dní** po sobě nevidí (`REMOVAL_AFTER_DAYS` v `common/schema.py`).
+Rozhodují dny, ne počet běhů, aby to platilo stejně pro hodinový zdroj i pro
+ten, který Prahu projde jednou za noc. Mezitím je ve stavu `missing_N`, kde
+N je počet dní od posledního výskytu. Vrácený inzerát se reaktivuje pod
+stejným ID.
+
+Hranice byla do 5. 10. 2026 tři dny. Inventura ukázala, že se pak vrátilo
+5,6 % odstraněných z iDNES, 7,8 % ze sreality a 4,1 % z bezrealitky. Na
+stejné historii by s pěti dny šlo o 1,5 %, 5,1 % a 2,0 %. Datum zmizení se
+přitom dál měří posledním výskytem, takže doba na trhu se nezkresluje, jen se
+odchod potvrdí později.
+
+Navíc: pokud běh skončí s chybou
 (`errors` neprázdné), nebo pokud počet aktivních inzerátů u zdroje, který
 jich dřív měl aspoň 20, klesne o více než polovinu oproti minulému běhu
 (`SUSPICIOUS_DROP_*` v `run.py`), **žádné** absence se ten běh neoznačují —

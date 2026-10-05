@@ -242,7 +242,7 @@ def test_price_change_is_logged_once(no_sleep, paths):
     assert prices == ["5000000", "4500000"]
 
 
-def test_disappearance_takes_three_days_to_become_removed(no_sleep, paths):
+def test_disappearance_takes_removal_after_days_to_become_removed(no_sleep, paths):
     from datetime import datetime, timedelta, timezone
 
     data_dir, logs_dir = paths
@@ -257,9 +257,11 @@ def test_disappearance_takes_three_days_to_become_removed(no_sleep, paths):
         rows = {r["source_id"]: r for r in all_listings(data_dir)}
         statuses.append(rows["2"]["status"])
 
-    assert all(s.startswith("missing_") for s in statuses[:2]), \
-        f"removed before the three days were up: {statuses}"
-    assert statuses[2] == "removed"
+    from common.schema import REMOVAL_AFTER_DAYS
+    n = REMOVAL_AFTER_DAYS
+    assert all(s.startswith("missing_") for s in statuses[:n - 1]), \
+        f"removed before the days were up: {statuses}"
+    assert statuses[n - 1] == "removed"
     # ...and the surviving listing is untouched throughout.
     rows = {r["source_id"]: r for r in read_csv_rows(data_dir / "listings.csv")}
     assert rows["1"]["status"] == "active"
@@ -523,8 +525,9 @@ def _kill_and_revive(data_dir, logs_dir, start, gone_days):
     do_run(fake, data_dir, logs_dir, now=start)
     first = {r["source_id"]: r for r in all_listings(data_dir)}["2"]
 
+    from common.schema import REMOVAL_AFTER_DAYS
     fake.present = [1]
-    for day in range(1, 5):
+    for day in range(1, REMOVAL_AFTER_DAYS + 2):
         do_run(fake, data_dir, logs_dir, now=start + timedelta(days=day))
     archived = {r["source_id"]: r for r in all_listings(data_dir)}["2"]
     assert archived["status"] == "removed"
@@ -586,7 +589,8 @@ def test_a_revived_listing_that_dies_again_is_archived_again(no_sleep, paths):
     first, first_month = _kill_and_revive(data_dir, logs_dir, start, 70)
 
     fake = FakeSreality(present=[1])
-    for day in range(71, 76):
+    from common.schema import REMOVAL_AFTER_DAYS
+    for day in range(71, 72 + REMOVAL_AFTER_DAYS + 1):
         do_run(fake, data_dir, logs_dir, now=start + timedelta(days=day))
 
     from common import storage

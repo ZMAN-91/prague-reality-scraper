@@ -62,7 +62,9 @@ def test_the_number_says_how_many_days():
     assert next_missing_status("missing_1", days_absent=2) == "missing_2"
     # Past the threshold the ladder ends rather than counting on, which is
     # the one thing the day count must not hide.
-    assert next_missing_status("missing_2", days_absent=3) == STATUS_REMOVED
+    assert next_missing_status("missing_2", days_absent=3, removal_after_days=3) == STATUS_REMOVED
+    assert next_missing_status("missing_4", days_absent=REMOVAL_AFTER_DAYS) == STATUS_REMOVED
+    assert next_missing_status("missing_3", days_absent=REMOVAL_AFTER_DAYS - 1) == f"missing_{REMOVAL_AFTER_DAYS - 1}"
     # And the count is still a count when the threshold is lifted, so the
     # number means days and not "however far the ladder happens to go".
     assert next_missing_status("missing_1", days_absent=5,

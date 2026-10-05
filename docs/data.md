@@ -46,9 +46,9 @@ nezapsal, protože se nic neměnilo.
 
 ### Zmizení se zapisuje stejným kanálem
 
-Stav prochází `active → missing_1 → missing_2 → removed`. Inzerát se
-označí za zmizelý až po **třech** po sobě jdoucích úspěšných bězích, ve
-kterých ho zdroj neviděl — jeden výpadek portálu tak nesmaže půl datasetu.
+Stav prochází `active → missing_1 → … → missing_4 → removed`, kde N je počet
+dní od posledního výskytu. Inzerát se označí za zmizelý, až když ho zdroj
+**5 dní** nevidí — jeden výpadek portálu tak nesmaže půl datasetu.
 Řádek se nikdy nemaže, jen mění stav.
 
 U těchto řádků je `price` **prázdná**, protože se žádná cena nepozorovala.
