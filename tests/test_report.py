@@ -5,7 +5,7 @@ a change from zero, a chart drawn through two points, and the report quietly
 taking a side about whether a rise is good news.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -24,9 +24,13 @@ def days(n, start=1, **values):
     return [row(f"2026-01-{d:02d}", **values) for d in range(start, start + n)]
 
 
-def render(series, episodes_rows=(), when="2026-01-10"):
+def render(series, episodes_rows=(), when="2026-01-10", comparable_from=date(2025, 1, 1)):
+    """The fixtures are in January 2026, before the real collection had a
+    comparable day; they test the rendering, so the cut-off is moved out of
+    their way. The cut-off itself has its own tests below."""
     return report.render(list(series), list(episodes_rows),
-                         datetime.fromisoformat(when).replace(tzinfo=timezone.utc))
+                         datetime.fromisoformat(when).replace(tzinfo=timezone.utc),
+                         comparable_from)
 
 
 # --- the three windows -------------------------------------------------------
@@ -384,3 +388,51 @@ def test_the_series_is_cut_at_the_end_of_the_reported_week(tmp_path):
     # period's.
     assert "Data k **2026-01-11**" in header, header
     assert "11 dnů" in header, header
+
+
+
+# --- what the collection's own growth would otherwise report ----------------
+
+
+def test_windows_reaching_before_the_collection_was_complete_are_not_shown():
+    """W40 counted 8 577 "new" flats in 30 days against a stock of 7 308: the
+    window reached back to when iDNES and sreality were being widened to the
+    whole city. Those cells must say nothing rather than that."""
+    series = (days(10, nabidka=100) + [row("2026-01-10", okno=7, nove=20, nabidka=100),
+                                      row("2026-01-10", okno=30, nove=8577, nabidka=100)])
+    text = render(series, comparable_from=date(2026, 1, 5))
+    flows = text.split("### Tok")[1].split("###")[0]
+    nove = next(line for line in flows.splitlines() if line.startswith("| Nové |"))
+    assert "8 577" not in nove and nove.rstrip().endswith("| — |")
+    assert "„—“ znamená" in text
+
+
+def test_a_level_a_month_back_is_not_compared_across_the_widening():
+    series = [row(f"2026-01-{d:02d}", nabidka=100 + d) for d in range(1, 32)]
+    series += [row("2026-02-01", nabidka=5000)]
+    text = render(series, when="2026-02-01", comparable_from=date(2026, 1, 20))
+    supply = next(line for line in text.splitlines() if line.startswith("| Nabídka |"))
+    assert supply.rstrip().endswith("| — |"), supply
+
+
+def test_the_age_of_the_stock_gets_no_arrow_while_it_is_a_floor():
+    """It rises every day by construction while the history is short; an
+    arrow on it reports the calendar."""
+    series = [row(f"2026-01-{d:02d}", stari_median_dnu=d, uplnost_dnu=d) for d in range(1, 11)]
+    text = render(series)
+    age = next(line for line in text.splitlines() if line.startswith("| Medián stáří"))
+    assert "↑" not in age and "↓" not in age, age
+
+
+def test_charts_start_at_the_first_comparable_day():
+    series = [row(f"2026-01-{d:02d}", okno=30, nabidka=100 + d) for d in range(1, 11)]
+    series += [row(f"2026-01-{d:02d}", nabidka=100 + d) for d in range(1, 11)]
+    text = render(series, comparable_from=date(2026, 1, 6))
+    assert '"01-05"' not in text and '"01-06"' in text
+
+
+def test_the_confirmation_lag_is_stated_as_it_is():
+    """The caveat said "a week" long after the ladder became three days."""
+    from common.schema import REMOVAL_AFTER_DAYS
+    text = render(days(3, nabidka=100), when="2026-01-03")
+    assert f"po {REMOVAL_AFTER_DAYS} dnech" in text and "po týdnu" not in text

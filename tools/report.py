@@ -51,6 +51,22 @@ WINDOWS = (1, 7, 30)
 CHART_WINDOW = 30
 CHART_MAX_POINTS = 60
 
+# The first day on which every source was collected across the whole city.
+# Before it the collection was still being widened - iDNES to all of Prague
+# on 21 September, sreality on 23 September - and supply rose from 4 636 to
+# 7 262 flats for sale in a week without the market doing anything. Any
+# comparison or flow that reaches back before this day measures the
+# collection growing, not the market: the W40 report counted 8 577 "new"
+# flats for sale in 30 days against a stock of 7 308. Such cells are shown
+# as "—" with the reason; the 30-day window becomes comparable on its own
+# on 2026-10-23.
+COMPARABLE_FROM = date(2026, 9, 24)
+
+# Levels that are floors while the history is short: nothing can be older
+# than the dataset, so these rise every day by construction. An arrow on
+# them reports the calendar, not the market.
+CENSORED_LEVELS = {"stari_median_dnu"}
+
 # (column, label, unit, which windows it makes sense in)
 # A level is the same number whichever window you ask for, so it is shown once.
 LEVELS = [
@@ -203,7 +219,8 @@ def chart(by_day: dict[str, dict], field: str, label: str) -> list[str]:
     ]
 
 
-def caveats(latest_row: dict, partial: bool = False) -> list[str]:
+def caveats(latest_row: dict, partial: bool = False,
+            comparable_from: date = COMPARABLE_FROM) -> list[str]:
     """The things the numbers cannot say for themselves."""
     out = []
     if partial:
@@ -221,9 +238,17 @@ def caveats(latest_row: dict, partial: bool = False) -> list[str]:
             "Srovnatelné budou, až historie přesáhne typickou dobu prodeje, "
             "tedy měsíce."
         )
+    latest = latest_row.get("den")
+    if latest and date.fromisoformat(latest) - timedelta(days=max(WINDOWS) - 1) < comparable_from:
+        out.append(
+            f"- **„—“ znamená, že okno sahá před {comparable_from:%-d. %-m. %Y}.** Do té doby "
+            "se sběr rozšiřoval (iDNES na celou Prahu 21. 9., sreality 23. 9.), "
+            "takže nabídka i nové v něm rostou se sběrem, ne s trhem. Grafy "
+            "proto začínají až tímto dnem."
+        )
     out.append(
         f"- **Posledních {dny(market.CONFIRMATION_LAG_DAYS)} podhodnocuje odchody.** "
-        "Zmizení se potvrzuje až po týdnu nepřítomnosti, takže co odešlo "
+        f"Zmizení se potvrzuje až po {market.CONFIRMATION_LAG_DAYS} dnech nepřítomnosti, takže co odešlo "
         "včera, ještě čeká ve stavu `missing`. Sloupec `zmizele_potvrzeno` "
         "v datech označuje dny, kde se to už usadilo."
     )
@@ -231,7 +256,8 @@ def caveats(latest_row: dict, partial: bool = False) -> list[str]:
 
 
 def render(series: list[dict], episodes_rows: list[dict],
-           generated: Optional[datetime] = None) -> str:
+           generated: Optional[datetime] = None,
+           comparable_from: date = COMPARABLE_FROM) -> str:
     generated = generated or datetime.now(timezone.utc)
     if not series:
         return "# Report trhu\n\nZatím nejsou žádná data.\n"
@@ -267,19 +293,24 @@ def render(series: list[dict], episodes_rows: list[dict],
             continue
 
         out += [f"## {segment}", ""]
-        out += caveats(today, partial) + [""]
+        out += caveats(today, partial, comparable_from) + [""]
 
         out += ["### Stav", "",
                 "| ukazatel | teď | před 7 dny | před 30 dny |",
                 "|---|---:|---:|---:|"]
         by_day = windows[1]
+        censored = (as_num(today.get("uplnost_dnu")) or 0) < 90
         for field, label, unit in LEVELS:
             now = as_num(today.get(field))
             cells = [f"**{fmt(now, unit)}**"]
             for horizon in (7, 30):
-                then = value_on_or_before(
-                    by_day, date.fromisoformat(latest) - timedelta(days=horizon), field)
-                cells.append(f"{fmt(then, unit)} {arrow(now, then)}".strip())
+                when = date.fromisoformat(latest) - timedelta(days=horizon)
+                if when < comparable_from:
+                    cells.append("—")
+                    continue
+                then = value_on_or_before(by_day, when, field)
+                shown = "" if field in CENSORED_LEVELS and censored else arrow(now, then)
+                cells.append(f"{fmt(then, unit)} {shown}".strip())
             out.append(f"| {label} | " + " | ".join(cells) + " |")
         out.append("")
 
@@ -289,13 +320,19 @@ def render(series: list[dict], episodes_rows: list[dict],
         for field, label, unit in FLOWS:
             cells = []
             for window in WINDOWS:
+                starts = date.fromisoformat(latest) - timedelta(days=window - 1)
+                if starts < comparable_from:
+                    cells.append("—")
+                    continue
                 row = windows[window].get(latest) or {}
                 cells.append(fmt(as_num(row.get(field)), unit))
             out.append(f"| {label} | " + " | ".join(cells) + " |")
         out.append("")
 
+        comparable = {d: r for d, r in windows[CHART_WINDOW].items()
+                      if date.fromisoformat(d) >= comparable_from}
         drawn = [line for field, label in CHARTS
-                 for line in chart(windows[CHART_WINDOW], field, label)]
+                 for line in chart(comparable, field, label)]
         if drawn:
             out += ["### Vývoj", "",
                     f"Okno {CHART_WINDOW} dnů. Grafy porostou s řadou.", ""]

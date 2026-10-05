@@ -34,8 +34,9 @@ long as the typical listing lives, which here is months. `uplnost_dnu` says
 how many days of history a figure had to work with; until it passes the
 number being reported, the number is a floor, not a measurement.
 
-*Right censoring.* A departure is only confirmed after a week of absence, so
-the last seven days always under-count departures - the listings that left
+*Right censoring.* A departure is only confirmed after REMOVAL_AFTER_DAYS of
+absence (three days since 2026-09-21), so the last days always under-count
+departures - the listings that left
 yesterday are still sitting in missing_1. `zmizele_potvrzeno` marks the days
 where that has settled. Everything after it is provisional and rising.
 
