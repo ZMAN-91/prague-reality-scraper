@@ -436,3 +436,16 @@ def test_the_confirmation_lag_is_stated_as_it_is():
     from common.schema import REMOVAL_AFTER_DAYS
     text = render(days(3, nabidka=100), when="2026-01-03")
     assert f"po {REMOVAL_AFTER_DAYS} dnech" in text and "po týdnu" not in text
+
+
+def test_a_corrected_typo_is_not_ranked_as_the_biggest_discount():
+    """W40's biggest discounts were -91 %, -67 % and -56 %: prices typed with
+    a digit too many and fixed. They would outrank every real cut, always."""
+    def episode(n, discount):
+        return {"outcome": "active", "discount_pct": str(discount), "ulice": f"Ulice {n}",
+                "mestska_cast": "Chodov", "disposition": "2+kk", "last_price": "5000000",
+                "days_on_market": "10", "attribute_changes": "0"}
+    text = "\n".join(report.notable_tables([episode(1, 91.1), episode(2, 8.0), episode(3, 3.5)]))
+    table = text.split("### Největší slevy")[1].split("###")[0]
+    assert "Ulice 1" not in table and "Ulice 2" in table
+    assert "Vynecháno poklesů o víc než 50 %: 1" in table

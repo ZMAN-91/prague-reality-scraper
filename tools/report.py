@@ -62,6 +62,10 @@ CHART_MAX_POINTS = 60
 # on 2026-10-23.
 COMPARABLE_FROM = date(2026, 9, 24)
 
+# A fall in asking price beyond this is read as a corrected price, not a
+# discount (see notable_tables).
+CORRECTION_CUT_PCT = 50.0
+
 # Levels that are floors while the history is short: nothing can be older
 # than the dataset, so these rise every day by construction. An arrow on
 # them reports the calendar, not the market.
@@ -389,8 +393,17 @@ def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
         kept.sort(key=lambda r: as_num(r.get(key)), reverse=reverse)
         return kept[:limit]
 
+    # A cut of more than half is almost never a discount. The first clean W40
+    # table was led by -91 %, -67 % and -56 %: a price typed with an extra
+    # digit and then corrected, a listing re-used for a smaller unit. Ranked
+    # by depth, corrections always outrank every real discount, so they are
+    # counted and left out of the ranking instead.
+    corrections = [r for r in live
+                   if (as_num(r.get("discount_pct")) or 0) > CORRECTION_CUT_PCT]
+    discounts = [r for r in live
+                 if (as_num(r.get("discount_pct")) or 0) <= CORRECTION_CUT_PCT]
     groups = [
-        ("Největší slevy", top(live, "discount_pct")),
+        ("Největší slevy", top(discounts, "discount_pct")),
         ("Nejdéle na trhu", top(live, "days_on_market")),
         # Gone on the day it appeared is the fastest departure there is, so
         # zero belongs in this one.
@@ -402,6 +415,10 @@ def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
     out = []
     for title, rows in groups:
         out.append(f"### {title}")
+        if title == "Největší slevy" and corrections:
+            out += ["", f"_Vynecháno poklesů o víc než {CORRECTION_CUT_PCT:.0f} %: "
+                        f"{len(corrections)} — skoro vždy jde o opravu překlepu "
+                        "v ceně, ne o slevu._"]
         if not rows:
             out += ["", "_nic_", ""]
             continue
