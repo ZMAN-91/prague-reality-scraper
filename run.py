@@ -44,7 +44,7 @@ from typing import Optional
 
 from common import dedup, interruptions, net, storage
 from common.budget import Budget
-from common import address, collection_area, coords, progress as progress_state
+from common import address, attributes, collection_area, coords, progress as progress_state
 from common import ruian
 from common.geo import is_in_target_area, is_priority_zone
 from common.schema import (
@@ -194,6 +194,11 @@ def fetch_sreality(session, listings: dict, budget: Budget, now=None,
 
         if parsed.get("price") is not None:
             listing.price = parsed["price"]
+        # The detail says what the index row could not (ownership,
+        # construction, condition...); what it leaves empty the index keeps.
+        for name, value in (parsed.get("attributes") or {}).items():
+            if value not in ("", None):
+                listing.attributes[name] = value
         listing.area_m2 = parsed.get("area_m2")
         listing.floor = parsed.get("floor")
         listing.disposition = parsed.get("disposition")
@@ -681,6 +686,7 @@ def merge_source(
                 "cluster_id": "",
                 "dedup_confidence": "",
                 "relisted_from": "",
+                **{name: listing.attributes.get(name, "") for name in attributes.FIELDS},
             }
             listings[internal_id] = row
             new_internal_ids.append(internal_id)
@@ -732,6 +738,14 @@ def merge_source(
 
             update("disposition", listing.disposition)
             update("area_m2", listing.area_m2)
+            for name in attributes.EDITABLE_FIELDS:
+                update(name, listing.attributes.get(name))
+            for name in attributes.CIRCUMSTANCE_FIELDS:
+                # Kept current, not logged: a portal starting to show a
+                # discount badge is not the seller editing the advert.
+                value = listing.attributes.get(name)
+                if value not in (None, ""):
+                    row[name] = value
             update("floor", listing.floor)
             # Re-parsed from the portal's CURRENT string, not from a stored
             # copy of an older one. Applied with the same rule as everything

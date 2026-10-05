@@ -65,7 +65,7 @@ from typing import Iterable, Optional
 
 import requests
 
-from common import net, interruptions
+from common import attributes, net, interruptions
 from common.budget import Budget
 from common.geo import is_in_target_area, is_priority_zone
 from common.schema import NormalizedListing, safe_float, safe_int
@@ -368,6 +368,7 @@ def parse_estate(raw: dict) -> dict:
         "url": url,
         "property_type": property_type,
         "transaction_type": transaction_type,
+        "attributes": attributes.from_sreality(raw),
     }
 
 
@@ -493,6 +494,7 @@ def fetch_all(
                                 description=parsed["description"],
                                 price=parsed["price"],
                             )
+                            listing.attributes = parsed["attributes"]
                             listing.extra["index_complete"] = is_complete(parsed)
                             if parsed["lat"] is not None and parsed["lon"] is not None:
                                 # Tag geography here, while the coordinates

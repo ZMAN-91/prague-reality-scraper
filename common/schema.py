@@ -80,6 +80,17 @@ LISTING_FIELDS = [
     "disposition",
     "area_m2",
     "floor",
+    # What it is built of and in what state - see common/attributes.py for
+    # the vocabulary, shared by every portal. Added 2026-10-05; history was
+    # filled in from the raw archive.
+    "vlastnictvi",
+    "konstrukce",
+    "stav",
+    "penb",
+    "vybaveni",
+    # What a tenant pays on top of the rent, and the deposit.
+    "poplatky_kc",
+    "kauce_kc",
 
     # WHERE. The raw address the portal published is deliberately NOT stored
     # any more. It was kept because dedup matched on it in four places; those
@@ -109,6 +120,12 @@ LISTING_FIELDS = [
     "mestska_cast",
     "obec",
     "priority_zone",
+
+    # WHO SELLS IT, AND WHAT THE PORTAL SAYS ABOUT ITS PRICE.
+    "prodejce",
+    "rk_id",
+    "sleva_portal",
+    "puvodni_cena",
 
     # STILL ON THE MARKET?
     "status",
@@ -361,6 +378,10 @@ class NormalizedListing:
     # request on them, and a presence-only sighting must refresh last_seen_at
     # without being mistaken for "the price became unknown".
     presence_only: bool = False
+
+    # common/attributes.FIELDS, as far as this sighting tells them. Empty
+    # values are "not said" and never overwrite a stored one.
+    attributes: dict = field(default_factory=dict)
 
     extra: dict = field(default_factory=dict)
 

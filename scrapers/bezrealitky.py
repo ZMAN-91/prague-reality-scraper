@@ -52,7 +52,7 @@ from typing import Iterable, Optional
 
 import requests
 
-from common import collection_area, interruptions, net
+from common import attributes, collection_area, interruptions, net
 from common.budget import Budget
 from common.geo import is_in_target_area, is_priority_zone
 from common.schema import NormalizedListing, safe_float, safe_int
@@ -336,6 +336,7 @@ def parse_advert(advert: dict, url: str) -> Optional[NormalizedListing]:
     )
     listing.in_target_area = is_in_target_area(lat, lon)
     listing.priority_zone = is_priority_zone(lat, lon)
+    listing.attributes = attributes.from_bezrealitky(advert)
     listing.excluded = exclusion_of(advert)
     if listing.excluded:
         listing.in_target_area = False

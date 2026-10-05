@@ -305,6 +305,21 @@ Sloupce:
 | `disposition` | např. `2+kk` (normalizováno na malá písmena) |
 | `area_m2`, `floor`, `lat`, `lon`, `address`, `description` | viz zdroj |
 | `priority_zone` | `True`/`False` — leží v okruhu Spořilova nebo Hostivaře |
+| `vlastnictvi` | `osobni` \| `druzstevni` \| `obecni` \| `ostatni` — z bezrealitky a z detailu sreality |
+| `konstrukce` | `cihla` \| `panel` \| `smisena` \| `skelet` \| `drevostavba` \| … |
+| `stav` | `novostavba` \| `velmi dobry` \| `dobry` \| `po rekonstrukci` \| `pred rekonstrukci` \| … |
+| `penb` | energetická třída `A`–`G` |
+| `vybaveni` | `ano` \| `castecne` \| `ne` |
+| `poplatky_kc`, `kauce_kc` | měsíční poplatky navíc k ceně a kauce u nájmu (Kč) |
+| `prodejce` | `rk` (realitka) \| `soukromy` (majitel) \| `firma` (developer, správce) |
+| `rk_id` | která realitka nebo firma, jak ji portál označuje |
+| `sleva_portal` | `ano`/`ne` — portál sám ukazuje cenu jako zlevněnou (i sleva z doby před začátkem sběru) |
+| `puvodni_cena` | cena před tou slevou, pokud ji portál uvádí |
+
+Sloupce `vlastnictvi` až `puvodni_cena` přibyly 5. 10. 2026 (`common/attributes.py`)
+a historie se doplnila ze syrového archivu (`tools/backfill_attributes.py`).
+Prázdná hodnota znamená „portál neuvedl“, nikdy „ne“. iDNES je zatím neplní:
+jeho detail čteme jen z meta popisu.
 | `first_seen_at`, `last_seen_at` | ISO-8601 UTC |
 | `status` | `active` \| `missing_1` … `missing_4` \| `removed` (viz níže) |
 | `cluster_id` | sdílené ID pro pravděpodobně duplicitní inzeráty napříč zdroji/makléři |

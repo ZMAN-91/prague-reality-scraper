@@ -46,6 +46,13 @@ VIEW_FIELDS = [
     "disposition",
     "area_m2",
     "floor",
+    "vlastnictvi",
+    "konstrukce",
+    "stav",
+    "penb",
+    "vybaveni",
+    "poplatky_kc",
+    "kauce_kc",
 
     # No raw `address` column, and now there is not one to have: the record
     # itself stores the parsed fields only. It was never what a person
@@ -66,6 +73,10 @@ VIEW_FIELDS = [
     "price",
     "price_per_m2",
     "price_observed_at",
+    "sleva_portal",
+    "puvodni_cena",
+    "prodejce",
+    "rk_id",
 
     "status",
     "first_seen_at",

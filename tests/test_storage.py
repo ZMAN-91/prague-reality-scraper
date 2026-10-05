@@ -95,6 +95,8 @@ def test_listings_roundtrip(tmp_path):
         "dedup_confidence": "",
         "relisted_from": "",
     }
+    from common import attributes
+    row.update({name: "" for name in attributes.FIELDS})
     storage.write_listings({"abc123": row}, path)
 
     loaded = storage.read_listings(path)
