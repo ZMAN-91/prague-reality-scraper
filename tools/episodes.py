@@ -74,7 +74,7 @@ from pathlib import Path
 from typing import Optional
 
 from common import cas, storage
-from common.schema import STATUS_ACTIVE, STATUS_REMOVED, is_missing_status
+from common.schema import STATUS_ACTIVE, STATUS_REMOVED, is_missing_status, real_price
 
 # A property re-advertised within two weeks is still the same attempt to
 # sell; after longer, the seller has regrouped and it is a new one. The
@@ -194,11 +194,15 @@ def price_series(rows: list[dict]) -> list[tuple[str, int]]:
 
     Trap 4: a removal records an empty price, which is not a price of zero
     and not the last price either.
+
+    A placeholder is not a price either: sreality's "price on request" was
+    recorded as 1 Kc until 2026-10-05, and read as a price it made a -100 %
+    discount out of every such flat. See schema.real_price.
     """
     out = []
     for row in rows:
         price = as_int(row.get("price"))
-        if price is not None:
+        if price is not None and real_price(price) is not None:
             out.append((row.get("observed_at") or "", price))
     return out
 

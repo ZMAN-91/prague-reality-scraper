@@ -55,6 +55,7 @@ from common.schema import (
     make_internal_id,
     next_missing_status,
     price_per_m2,
+    real_price,
     utcnow_iso,
 )
 from scrapers import bezrealitky, idnes, sreality
@@ -604,7 +605,12 @@ def merge_source(
         # The observation row still records the absence with an empty price.
         # That is the honest reading: we did not see it, so we do not have a
         # price for it today.
-        known_price = price if price is not None else (prev or {}).get("price")
+        known_price = price
+        if known_price is None:
+            # A placeholder carried over from before real_price existed is
+            # not a known price either.
+            remembered = real_price((prev or {}).get("price"))
+            known_price = int(remembered) if remembered is not None and remembered == int(remembered) else remembered
         changed = (prev is None or prev.get("price") != known_price
                    or prev.get("status") != status)
         if not changed:
@@ -623,7 +629,12 @@ def merge_source(
     for source_id, listing in fetched_by_id.items():
         internal_id = make_internal_id(source_name, source_id)
         row = listings.get(internal_id)
-        pm2 = price_per_m2(listing.price, listing.area_m2)
+        # A placeholder such as "price on request" (1 Kc) is no price at all:
+        # observed as None it leaves the last known price standing.
+        price = real_price(listing.price)
+        if price is not None and price == int(price):
+            price = int(price)
+        pm2 = price_per_m2(price, listing.area_m2)
 
         if row is None:
             row = {
@@ -744,8 +755,8 @@ def merge_source(
             # Without this the same listing has a price per m2 in one
             # observation and a blank in the next, which reads as the figure
             # having changed when only the source of the area did.
-            pm2 = price_per_m2(listing.price, as_float(row.get("area_m2")))
-        record_observation(internal_id, STATUS_ACTIVE, listing.price, pm2)
+            pm2 = price_per_m2(price, as_float(row.get("area_m2")))
+        record_observation(internal_id, STATUS_ACTIVE, price, pm2)
 
     missing_count = 0
     removed_count = 0
@@ -992,7 +1003,7 @@ def run(
     # apart, and price can.
     dedup.cluster_listings(
         listings,
-        prices={i: state.get("price") for i, state in last_obs.items()},
+        prices={i: real_price(state.get("price")) for i, state in last_obs.items()},
     )
 
     # After clustering, because that is what knows which adverts are the same

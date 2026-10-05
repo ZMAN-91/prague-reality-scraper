@@ -365,3 +365,27 @@ def test_the_default_source_order_puts_the_biggest_source_last():
     import inspect
     source = inspect.getsource(run_module)
     assert 'default="sreality,idnes,bezrealitky"' in source
+
+
+# --- "price on request" ------------------------------------------------------
+
+
+def test_a_placeholder_price_is_not_recorded_as_a_price():
+    """sreality publishes "price on request" as 1 Kc. Recorded as a price it
+    became a -100 % discount in the weekly report and a pairing key."""
+    listings, last_obs = {}, {}
+    merge([make_listing("1", price=5_000_000)], listings, last_obs, "2026-10-01T00:00:00+00:00")
+    stats, obs = merge([make_listing("1", price=1)], listings, last_obs, "2026-10-02T00:00:00+00:00")
+
+    assert obs == [], "no price is not a price change"
+    assert list(last_obs.values())[0]["price"] == 5_000_000, "the last real price stands"
+
+
+def test_a_placeholder_remembered_from_before_is_dropped():
+    listings, last_obs = {}, {}
+    merge([make_listing("1", price=1)], listings, last_obs, "2026-10-01T00:00:00+00:00")
+    assert list(last_obs.values())[0]["price"] is None
+    internal_id = next(iter(last_obs))
+    last_obs[internal_id]["price"] = 1  # as stored before 2026-10-05
+    merge([make_listing("1", price=1)], listings, last_obs, "2026-10-02T00:00:00+00:00")
+    assert last_obs[internal_id]["price"] is None

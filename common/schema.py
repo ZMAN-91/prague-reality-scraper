@@ -246,6 +246,24 @@ def make_cluster_id(member_internal_ids: list[str]) -> str:
     return "clu_" + digest[:10]
 
 
+#: Below this an asking price is not a price. sreality publishes "price on
+#: request" as 1 Kc; recorded as a price, 28 observations of it made the
+#: weekly report's "biggest discounts" table a list of -100 % cuts and its
+#: mean discount -3 038 273 %, and two such flats at one address would pair
+#: on "the same price". No Prague flat or room rents for under 1 000 Kc.
+REAL_PRICE_MIN_CZK = 1000
+
+
+def real_price(price) -> Optional[float]:
+    """The price, or None where the figure is a placeholder rather than an
+    asking price."""
+    try:
+        value = float(price)
+    except (TypeError, ValueError):
+        return None
+    return value if value >= REAL_PRICE_MIN_CZK else None
+
+
 def price_per_m2(price: Optional[float], area_m2: Optional[float]) -> Optional[int]:
     if price is None or area_m2 is None or area_m2 <= 0:
         return None

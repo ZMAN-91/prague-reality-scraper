@@ -341,3 +341,13 @@ def test_a_property_that_never_moved_has_empty_day_lists():
     listings = {"a": listing("a", "2026-01-01", "2026-01-10", status="active")}
     row = one(episodes.build(listings, {}))
     assert row["cut_days"] == "" and row["edit_days"] == ""
+
+
+def test_a_placeholder_price_in_history_is_not_a_price():
+    """Observations recorded before 2026-10-05 carry sreality's 1 Kc "price
+    on request"; read as prices they made -100 % discounts."""
+    from tools.episodes import price_series
+    rows = [{"observed_at": "2026-09-20T10:00:00+00:00", "price": "1"},
+            {"observed_at": "2026-09-21T10:00:00+00:00", "price": "8500000"},
+            {"observed_at": "2026-09-22T10:00:00+00:00", "price": "1"}]
+    assert price_series(rows) == [("2026-09-21T10:00:00+00:00", 8500000)]
