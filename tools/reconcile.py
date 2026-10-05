@@ -82,11 +82,27 @@ def merge_listings(ours_text: str, theirs_text: "str | None") -> str:
     return out.getvalue()
 
 
-def merge_listing_rows(ours: dict, theirs: dict) -> dict:
-    """The rule behind merge_listings, on dicts keyed by internal_id."""
+def merge_listing_rows(ours: dict, theirs: dict, start: "dict | None" = None) -> dict:
+    """The rule behind merge_listings, on dicts keyed by internal_id.
+
+    `start` is the table as this run checked it out. Without it the merge is
+    a union, and a union cannot express a deletion: on 2026-10-05 a run that
+    removed 458 FLATIO and out-of-Prague rows committed all 458 straight
+    back, because the branch tip still had them. With it, the merge is
+    three-way for presence: a row the run's checkout had and the run no
+    longer has was removed by this run and stays removed; a row the other
+    side no longer has, which this run never touched, was removed there.
+    """
     merged = dict(theirs)
+    if start is not None:
+        for internal_id in list(merged):
+            if internal_id in start and internal_id not in ours:
+                del merged[internal_id]
     for internal_id, row in ours.items():
         other = theirs.get(internal_id)
+        if (other is None and start is not None and internal_id in start
+                and row == start[internal_id]):
+            continue
         if other is not None:
             # The other run may have seen this listing earlier, or more
             # recently, than we did. Everything else is ours: we just read it.
@@ -109,13 +125,9 @@ def committed_files(ref: str, directory: str, repo: Path = Path(".")) -> list:
     return result.stdout.split() if result.returncode == 0 else []
 
 
-def reconcile_listings(base: str, path: Path, repo: Path) -> list:
-    """Merge the other run's listings - live file and archives - into ours.
-
-    Returns the changed files. Months the other run has an archive for are
-    rewritten even when this run has no rows for them, so a month emptied
-    here does not keep its rows in git (the commit stages no deletions).
-    """
+def committed_listings(ref: str, path: Path, repo: Path) -> tuple:
+    """(rows by internal_id, archive months) of the listings table at `ref`;
+    (None, []) when the ref holds no table."""
     try:
         relative = path.resolve().relative_to(repo.resolve()).as_posix()
     except ValueError:
@@ -123,24 +135,39 @@ def reconcile_listings(base: str, path: Path, repo: Path) -> list:
     archive_rel = (PurePosixPath(relative).parent / storage.archive_dir_for(path).name).as_posix()
 
     texts = []
-    live = read_committed(base, relative, repo)
+    live = read_committed(ref, relative, repo)
     if live is not None:
         texts.append(live)
     months = []
-    for committed in committed_files(base, archive_rel, repo):
+    for committed in committed_files(ref, archive_rel, repo):
         month = PurePosixPath(committed).stem
         if not committed.endswith(".csv") or not storage.ARCHIVE_MONTH_RE.match(month):
             continue
-        text = read_committed(base, committed, repo)
+        text = read_committed(ref, committed, repo)
         if text is not None:
             texts.append(text)
             months.append(month)
     if not texts:
-        return []
+        return None, []
+    rows, _ = storage.union_rows(list(csv.DictReader(io.StringIO(t))) for t in texts)
+    return rows, months
 
-    theirs, _ = storage.union_rows(list(csv.DictReader(io.StringIO(t))) for t in texts)
+
+def reconcile_listings(base: str, path: Path, repo: Path,
+                       start_ref: "str | None" = None) -> list:
+    """Merge the other run's listings - live file and archives - into ours.
+
+    Returns the changed files. Months the other run has an archive for are
+    rewritten even when this run has no rows for them, so a month emptied
+    here does not keep its rows in git (the commit stages no deletions).
+    `start_ref` is the commit this run checked out; see merge_listing_rows.
+    """
+    theirs, months = committed_listings(base, path, repo)
+    if theirs is None:
+        return []
+    start = committed_listings(start_ref, path, repo)[0] if start_ref else None
     ours = storage.read_listings(path)
-    return storage.write_listings(merge_listing_rows(ours, theirs), path,
+    return storage.write_listings(merge_listing_rows(ours, theirs, start), path,
                                   keep_archives=months)
 
 
@@ -193,7 +220,8 @@ def merge_json(ours_text: str, theirs_text: "str | None") -> str:
 
 
 def reconcile(base: str, data_dir: Path, logs_dir: Path,
-              repo: Path = Path("."), changed: "set | None" = None) -> list:
+              repo: Path = Path("."), changed: "set | None" = None,
+              start_ref: "str | None" = None) -> list:
     """Rewrite the working tree so it contains both runs' work. Returns notes.
 
     `repo` is the data repository's checkout. It defaults to the working
@@ -239,7 +267,7 @@ def reconcile(base: str, data_dir: Path, logs_dir: Path,
 
     listings = data_dir / "listings.csv"
     if listings.exists() and any(mine(p) for p in storage.listing_files(listings)):
-        for written in reconcile_listings(base, listings, repo):
+        for written in reconcile_listings(base, listings, repo, start_ref):
             notes.append(f"merged {relative_of(written)}")
     for observations in sorted((data_dir / "observations").glob("*.csv")):
         handle(observations, merge_appended, True)
@@ -261,6 +289,9 @@ def main() -> int:
     parser.add_argument("--changed", default=None,
                         help="file listing the repository paths this run "
                              "changed, one per line; only those are merged")
+    parser.add_argument("--start-ref", default=None,
+                        help="the commit this run checked out, so rows it "
+                             "removed are not merged back")
     args = parser.parse_args()
 
     changed = None
@@ -268,7 +299,7 @@ def main() -> int:
         changed = {line.strip() for line in
                    Path(args.changed).read_text(encoding="utf-8").splitlines() if line.strip()}
     notes = reconcile(args.base, Path(args.data_dir), Path(args.logs_dir),
-                      Path(args.repo), changed)
+                      Path(args.repo), changed, args.start_ref)
     for note in notes:
         print(f"[reconcile] {note}")
     if not notes:

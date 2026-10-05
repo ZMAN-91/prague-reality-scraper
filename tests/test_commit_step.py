@@ -377,3 +377,73 @@ def test_listings_this_run_did_not_touch_are_not_merged_back_stale(world):
     listings, _ = committed(run, check)
     assert listings["base1"]["status"] == "missing_2"
     assert '"report"' in git(run, "show", "origin/main:logs/day.jsonl").stdout
+
+
+# --- removing rows -------------------------------------------------------------
+#
+# 2026-10-05: data maintenance removed 458 excluded bezrealitky rows and the
+# commit put every one of them back - the merge was a union with the branch
+# tip, and the tip still had them. Nothing can be removed through a union.
+
+
+def test_a_row_this_run_removed_stays_removed(world, tmp_path):
+    run, other = world
+    store(other, [full("base1"), full("flatio1"), full("keep1")])
+    push(other, "three rows")
+    git(run, "pull", "-q", "origin", "main")
+
+    store(run, [full("base1"), full("keep1")])        # this run removes flatio1
+    commit_data(run, "Data maintenance")
+
+    listings, _ = committed(run, tmp_path)
+    assert set(listings) == {"base1", "keep1"}
+
+
+def test_removed_here_and_added_there_both_hold(world, tmp_path):
+    run, other = world
+    store(other, [full("base1"), full("flatio1")])
+    push(other, "two rows")
+    git(run, "pull", "-q", "origin", "main")
+
+    store(other, [full("base1"), full("flatio1"), full("sale1")])
+    push(other, "another run adds sale1 meanwhile")
+
+    store(run, [full("base1")])
+    commit_data(run, "Data maintenance")
+
+    listings, _ = committed(run, tmp_path)
+    assert set(listings) == {"base1", "sale1"}, "flatio1 removed, sale1 kept"
+
+
+def test_a_row_the_other_run_removed_is_not_put_back_by_a_run_that_never_touched_it(world, tmp_path):
+    run, other = world
+    store(other, [full("base1"), full("flatio1")])
+    push(other, "two rows")
+    git(run, "pull", "-q", "origin", "main")
+
+    store(other, [full("base1")])
+    push(other, "maintenance removed flatio1")
+
+    store(run, [full("base1", last_seen="2026-10-05"), full("flatio1")])  # flatio1 untouched
+    commit_data(run)
+
+    listings, _ = committed(run, tmp_path)
+    assert set(listings) == {"base1"}
+    assert listings["base1"]["last_seen_at"] == "2026-10-05"
+
+
+def test_a_row_the_other_run_removed_but_this_run_saw_again_is_kept(world, tmp_path):
+    """Fresh evidence beats an old removal: this run read it today."""
+    run, other = world
+    store(other, [full("base1"), full("x1")])
+    push(other, "two rows")
+    git(run, "pull", "-q", "origin", "main")
+
+    store(other, [full("base1")])
+    push(other, "removed x1")
+
+    store(run, [full("base1"), full("x1", last_seen="2026-10-05")])
+    commit_data(run)
+
+    listings, _ = committed(run, tmp_path)
+    assert "x1" in listings

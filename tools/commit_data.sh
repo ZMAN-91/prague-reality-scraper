@@ -65,6 +65,9 @@ git -C "${DATA_ROOT}" config user.email "actions@users.noreply.github.com"
 # those are staged, and only those are handed to reconcile.
 MINE="$(mktemp)"
 trap 'rm -f "${MINE}"' EXIT
+# And the commit itself, so reconcile can tell a row this run removed from a
+# row the other run added (tools/reconcile.merge_listing_rows).
+START="$(git -C "${DATA_ROOT}" rev-parse HEAD)"
 {
   git -C "${DATA_ROOT}" diff --name-only HEAD
   git -C "${DATA_ROOT}" ls-files --others --exclude-standard
@@ -86,7 +89,8 @@ for attempt in $(seq 1 "${ATTEMPTS}"); do
     --repo "${DATA_ROOT}" \
     --data-dir "${DATA_ROOT}/data" \
     --logs-dir "${DATA_ROOT}/logs" \
-    --changed "${MINE}")
+    --changed "${MINE}" \
+    --start-ref "${START}")
   echo "${reconciled}"
 
   # Rule 2: additions and modifications only - every path staged here exists.
