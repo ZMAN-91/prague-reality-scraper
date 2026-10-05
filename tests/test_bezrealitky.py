@@ -282,3 +282,17 @@ def test_new_listings_in_the_watched_area_are_fetched_before_the_rest():
         "https://www.bezrealitky.cz/nemovitosti-byty-domy/1-nabidka-prodej-bytu-nurmiho-praha")
     assert not collection_area.name_suggests_area(
         "https://www.bezrealitky.cz/nemovitosti-byty-domy/2-nabidka-prodej-bytu-modrany-praha")
+
+
+def test_the_enum_s_no_value_is_no_disposition():
+    """"UNDEFINED" was stored as the word "undefined" on 342 adverts - every
+    FLATIO let - a disposition no other portal could ever match."""
+    assert normalize_disposition("UNDEFINED") is None
+    listing = parse_advert(advert(disposition="UNDEFINED", type="FLATIO"),
+                           "https://www.bezrealitky.cz/nemovitosti-byty-domy/1066276-x")
+    assert listing.disposition is None
+
+
+def test_an_area_of_zero_is_no_area():
+    listing = parse_advert(advert(surface=0), "https://www.bezrealitky.cz/nemovitosti-byty-domy/1-x")
+    assert listing.area_m2 is None

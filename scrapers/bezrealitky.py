@@ -273,6 +273,11 @@ def normalize_disposition(raw) -> Optional[str]:
     if not raw:
         return None
     text = str(raw)
+    # The enum's "no value". Stored as the word "undefined", it was the
+    # disposition of 342 adverts - every one of the FLATIO mid-term lets the
+    # portal syndicates - and a string no other portal ever matches.
+    if text.strip().upper() in ("UNDEFINED", "DISP_UNDEFINED"):
+        return None
     match = _DISPOSITION_RE.search(text.replace("DISP_", ""))
     if match:
         return f"{match.group(1)}+{match.group(2).lower()}"
@@ -319,7 +324,9 @@ def parse_advert(advert: dict, url: str) -> Optional[NormalizedListing]:
         property_type=property_type,
         transaction_type=transaction_type,
         disposition=normalize_disposition(advert.get("disposition")),
-        area_m2=safe_float(advert.get("surface")),
+        # 0 is the portal's "not given" (all 20 such adverts were FLATIO
+        # lets); as an area it is a flat of no size.
+        area_m2=safe_float(advert.get("surface")) or None,
         floor=safe_int(advert.get("etage")),
         lat=lat,
         lon=lon,
