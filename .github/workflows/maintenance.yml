@@ -1,0 +1,88 @@
+name: Data maintenance (on demand)
+
+# One-off changes to the stored data that must not race a scrape: removing
+# rows, filling columns. Each holds the scrape-data lock for the same reason
+# the scrapes do - a row removed here and still held by a concurrent run
+# would be merged straight back by tools/reconcile.py.
+#
+# Dispatched by hand (Actions -> this workflow -> Run workflow). Dry runs
+# print what they would do and commit nothing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "What to do"
+        required: true
+        type: choice
+        options:
+          - all
+          - exclude-bezrealitky
+          - backfill-attributes
+      apply:
+        description: "Write and commit (false = report only)"
+        required: false
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: scrape-data
+      cancel-in-progress: false
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+
+      - name: Checkout the dataset
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague_reality_sector_analysis
+          ssh-key: ${{ secrets.DATA_REPO_KEY }}
+          ref: claude/real-estate-market-scraper-1tgiei
+          path: store
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Remove excluded bezrealitky adverts (FLATIO, outside Prague)
+        if: ${{ github.event.inputs.task == 'all' || github.event.inputs.task == 'exclude-bezrealitky' }}
+        env:
+          APPLY: ${{ github.event.inputs.apply }}
+        run: |
+          python -m tools.exclude_bezrealitky --data-dir store/data \
+            $([ "$APPLY" = "true" ] && echo --apply)
+
+      - name: Fill the attribute columns from the raw archive
+        if: ${{ github.event.inputs.task == 'all' || github.event.inputs.task == 'backfill-attributes' }}
+        env:
+          APPLY: ${{ github.event.inputs.apply }}
+        run: |
+          python -m tools.backfill_attributes --data-dir store/data \
+            $([ "$APPLY" = "true" ] && echo --apply)
+
+      - name: Rebuild the views so they carry the change
+        if: ${{ github.event.inputs.apply == 'true' }}
+        run: |
+          python -m tools.export_csv --data-dir store/data
+          python -m tools.episodes --data-dir store/data
+          python -m tools.market --data-dir store/data
+
+      - name: Commit
+        if: ${{ github.event.inputs.apply == 'true' }}
+        env:
+          DATA_ROOT: store
+        run: bash tools/commit_data.sh claude/real-estate-market-scraper-1tgiei "Data maintenance (${{ github.event.inputs.task }})"

@@ -1074,3 +1074,13 @@ def test_nothing_that_touches_a_portal_or_the_data_runs_when_it_is_not_due():
         assert "still_due" in str(step.get("if", "")), must
     walk = next(s for s in steps if "lend_gps_from_sreality" in str(s.get("run", "")))
     assert "still_due" in str(walk.get("if", "")), "the sreality walk would run twice"
+
+
+def test_data_maintenance_holds_the_scrape_lock():
+    """Removing rows while a scrape holds them gets them merged straight
+    back by reconcile; the maintenance job must queue behind scrapes."""
+    job = load(WORKFLOWS / "maintenance.yml")["jobs"]["maintain"]
+    assert job["concurrency"]["group"] == "scrape-data"
+    assert job["concurrency"]["cancel-in-progress"] is False
+    runs = " ".join(str(s.get("run", "")) for s in job["steps"])
+    assert "tools/commit_data.sh" in runs
