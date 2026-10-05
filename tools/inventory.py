@@ -417,7 +417,7 @@ def prices(listings: dict, data_dir: Path) -> dict:
         if lat is None or lon is None or area is None or not row.get("disposition"):
             continue
         spots[(round(lat, 4), round(lon, 4), row["disposition"], row.get("transaction_type"))].append(row)
-    near_miss = []
+    near_miss, isolated = [], []
     for rows in spots.values():
         for i, a in enumerate(rows):
             for b in rows[i + 1:]:
@@ -429,7 +429,18 @@ def prices(listings: dict, data_dir: Path) -> dict:
                     continue
                 pa, pb = price_of(a), price_of(b)
                 if pa and pb and pa != pb:
-                    near_miss.append(abs(pa - pb) / min(pa, pb) * 100)
+                    gap = abs(pa - pb) / min(pa, pb) * 100
+                    near_miss.append(gap)
+                    # A sibling on the same portal at the same spot, layout and
+                    # size means a development with several such units - where
+                    # the price is the only thing telling them apart and must
+                    # not be relaxed. Without one, the pair is far more likely
+                    # one flat priced differently on each portal.
+                    siblings = sum(1 for x in rows if x is not a and x is not b
+                                   and x.get("source") in (a.get("source"), b.get("source"))
+                                   and abs(as_float(x["area_m2"]) - as_float(a["area_m2"])) <= 1)
+                    if not siblings:
+                        isolated.append(gap)
     return {
         "segments": {s: {"price": quantiles(v["price"]), "price_per_m2": quantiles(v["pm2"])}
                      for s, v in sorted(segments.items())},
@@ -446,6 +457,8 @@ def prices(listings: dict, data_dir: Path) -> dict:
             "price_difference_pct": quantiles(near_miss, (0.1, 0.25, 0.5, 0.75, 0.9)),
             "note": "same coordinates (4 decimals), layout, transaction and area "
                     "within 1 m2 on two portals, not paired because the price differs",
+            "isolated_pairs": len(isolated),
+            "isolated_within_3_pct": sum(1 for g in isolated if g <= 3),
         },
     }
 
@@ -464,6 +477,9 @@ def series_quality(data_dir: Path) -> dict:
     for r in rows:
         groups[(r["segment"], r["okno_dnu"])].append(r)
     for (segment, window), group in sorted(groups.items()):
+        # Levels are the same in every window; one is enough.
+        if str(window) != "1":
+            continue
         group.sort(key=lambda r: r["den"])
         entry = {"days": len(group), "complete_days": sum(r.get("den_uplny") == "ano" for r in group)}
         for field in ("nabidka", "cena_median", "cena_m2_median", "nove_denne", "zmizele_denne"):
@@ -474,7 +490,7 @@ def series_quality(data_dir: Path) -> dict:
                 "last": values[-1] if values else None,
                 "day_to_day_change_pct": quantiles(changes, (0.5, 0.9)),
             }
-        out[f"{segment}@{window}d"] = entry
+        out[segment] = entry
     return {
         "per_segment": out,
         "note": "The median day-to-day move of a median price is roughly the "
