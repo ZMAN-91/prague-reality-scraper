@@ -418,3 +418,72 @@ def test_a_stored_advert_found_excluded_leaves_the_dataset_not_the_market(monkey
     assert len(result) == 5 and result[4] is None
     assert set(listings) == {"b2", "s1"}, "only the bezrealitky advert with that id goes"
     assert progress["bezrealitky"]["vyrazene"] == {"1": "flatio"}, "remembered across runs"
+
+
+# --- bezrealitky: one read per three-hour cycle ------------------------------
+
+
+def _bz_row(n, status="active"):
+    return {"internal_id": f"b{n}", "source": "bezrealitky", "source_id": str(n),
+            "url": f"u{n}", "last_seen_at": "2026-10-05", "status": status}
+
+
+def _run_bz(monkeypatch, listings, progress, now, pages=()):
+    import run as run_module
+    from common.budget import Budget
+    from scrapers import bezrealitky
+
+    seen = {}
+
+    def fake_fetch_all(session, budget, known_urls=None, due_urls=None,
+                       revisit_order=None, excluded=None, **kwargs):
+        seen.update(known=set(known_urls), due=set(due_urls),
+                    order=sorted(due_urls, key=lambda u: revisit_order.get(u, "")))
+        return [], list(pages), [], set()
+
+    monkeypatch.setattr(bezrealitky, "fetch_all", fake_fetch_all)
+    run_module.fetch_bezrealitky(None, listings, Budget(max_seconds=1), now,
+                                 ["prodej"], progress)
+    return seen
+
+
+def test_an_advert_read_this_cycle_is_not_read_again(monkeypatch):
+    """The night pass starts an hour after an area pass has read every
+    advert; reading them all again an hour later is what the limit stops."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
+    listings = {f"b{n}": _bz_row(n) for n in (1, 2, 3)}
+    progress = {"bezrealitky": {"precteno": {
+        "1": "2026-10-05T11:00:00+00:00",   # an hour ago: not due
+        "2": "2026-10-05T09:00:00+00:00",   # three hours ago: due
+    }}}                                      # 3 never read: due
+    seen = _run_bz(monkeypatch, listings, progress, now)
+    assert seen["known"] == {"u1", "u2", "u3"}, "known still - the sitemap keeps it alive"
+    assert seen["due"] == {"u2", "u3"}
+    assert seen["order"] == ["u3", "u2"], "longest unread first"
+
+
+def test_the_limit_is_one_cycle_not_one_in_two():
+    """The area pass comes round 170-185 minutes later and reads an advert
+    at about the same point each time; a limit at or over that would make
+    every other run skip it."""
+    import run as run_module
+    assert run_module.BEZREALITKY_REREAD_AFTER.total_seconds() / 60 < 170
+
+
+def test_reads_are_remembered_and_the_memory_stays_the_live_set(monkeypatch):
+    from datetime import datetime, timezone
+    now = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
+    listings = {"b1": _bz_row(1), "b2": _bz_row(2, status="removed")}
+    progress = {"bezrealitky": {"precteno": {
+        "1": "2026-10-05T06:00:00+00:00",
+        "2": "2026-10-05T06:00:00+00:00",   # removed since: forgotten
+        "9": "2026-10-04T06:00:00+00:00",   # no longer stored: forgotten
+    }, "vyrazene": {"7": "flatio"}}}
+    pages = [{"kind": "index"},
+             {"kind": "detail", "url": "u1", "source_id": "1"},
+             {"kind": "detail", "url": "u5", "source_id": "5"},   # new, not stored yet
+             {"kind": "detail", "url": "u7", "source_id": "7"}]   # excluded
+    _run_bz(monkeypatch, listings, progress, now, pages)
+    stamp = now.isoformat()
+    assert progress["bezrealitky"]["precteno"] == {"1": stamp, "5": stamp}

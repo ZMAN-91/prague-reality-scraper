@@ -17,17 +17,17 @@ podmínky o sbírání dat nemluví vůbec.** Detaily a přesné citace níže.
 |---|---|---|
 | Vstupní bod | interní JSON API `/api/v1/estates/search` | `sitemap.xml`, který portál sám zveřejňuje |
 | Požadavků na jeden kompletní sken Prahy | **33** (změřeno: `data/raw/sreality/2026-09-15/index-13.json.gz`) | procházka sitemapou + 1 stránka na nově viděný inzerát |
-| Detail inzerátu | jednou za život inzerátu, nikdy znovu | jednou za život inzerátu, nikdy znovu |
+| Detail inzerátu | jednou za život inzerátu, nikdy znovu | nový hned; uložený znovu nejvýš jednou za tříhodinový cyklus (od 5. 10. 2026) |
 | Pauza mezi požadavky | 1–2 s | 1–2 s |
 | User-Agent | pravdivý, jmenuje projekt i účel; nepředstírá prohlížeč | totéž |
-| Frekvence | každou hodinu → ~800 požadavků na index za den | totéž |
+| Frekvence | sledovaná oblast každé 3 hodiny (do 5. 10. 2026 každou hodinu), celá Praha jednou denně | totéž |
 | Co neděláme | fotky, kontakty, přihlašování, obcházení captchy, paralelní stahování | totéž |
 
 Pro srovnání: kdyby stejných ~12 500 pražských inzerátů chtěl jednou projít
 člověk ve webovém rozhraní (20 inzerátů na stránku), je to zhruba **625 načtení
 stránky** — a každá je mnohonásobně těžší než jedna JSON odpověď. Jeden náš sken
 je tedy pro server řádově *lehčí* než totéž udělané ručně. Jenže my ho děláme
-24× denně, což ručně nikdo nedělá.
+8× denně (do 5. 10. 2026 24×), což ručně nikdo nedělá.
 
 **Tohle je ale ta méně důležitá část.** Zátěž serveru je věc, kterou umíme
 technicky ladit donekonečna. Zákazy níže na zátěž vůbec necílí — cílí na

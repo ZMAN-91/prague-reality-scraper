@@ -1,17 +1,26 @@
-name: Hourly sale scrape
+name: Area scrape (every 3 hours)
 
 on:
   schedule:
-    # Every hour, all week.
+    # Every three hours, all week (until 2026-10-05: every hour).
+    #
+    # Why three: absence is decided once a day by the night pass whatever
+    # this cadence is, so the hourly runs bought no faster removal dates -
+    # only earlier first sightings and finer price timing. The collected
+    # data showed adverts gone within three hours of appearing, and prices
+    # changed twice within three hours, both too rare to matter, while
+    # every hour tripled the portals' load and the repository's growth.
+    # The figures are in the data repository (inventura/kadence-2026-10-05.md),
+    # not in this public one.
     #
     # There is no weekly rent window to keep out of any more. Rent was a
     # separate Sunday workflow because it walked the whole city and needed
     # four hours; this pass walks two boroughs, which is small enough that
-    # sale and rent fit in one hourly run together. Rent is therefore seen
-    # every hour rather than once a week, and the Sunday hole in this
+    # sale and rent fit in one run together. Rent is therefore seen every
+    # area cycle rather than once a week, and the Sunday hole in this
     # schedule - which existed only to leave that window clear - is gone.
     #
-    # Four attempts an hour, for one run an hour.
+    # Four attempts an hour, for one run every three hours.
     #
     # GitHub's schedule event is best effort and drops most of them: asking
     # for 24 runs a day at minute 0 got three (13:17, 18:01, 21:58 UTC), and
@@ -21,15 +30,15 @@ on:
     # when the last real one is over MIN_GAP_MINUTES old and nothing is
     # running now.
     #
-    # The portals see the same one sweep an hour either way. What changes is
-    # only how many chances GitHub has to deliver it.
+    # The portals see the same one sweep per three hours either way. What
+    # changes is only how many chances GitHub has to deliver it.
     - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       transactions:
         # Both. Rent used to have its own weekly workflow with a different
-        # scope; it does not any more - it rides this hourly area pass and
-        # the nightly city pass, so it is seen every hour instead of once a
+        # scope; it does not any more - it rides this area pass and the
+        # nightly city pass, so it is seen every three hours instead of once a
         # week. See the schedule note above.
         description: "Transaction types (prodej / pronajem)"
         required: false
@@ -56,6 +65,10 @@ on:
         # listings (~29 min), sreality's watched area ~35 requests (~1 min),
         # iDNES a few hundred (~4 min). About 34 minutes of fetching, so 40
         # is a real budget with real slack - not a number that merely fits.
+        #
+        # Kept at 40 when the cadence went to three hours (2026-10-05): the
+        # night pass can start within the hour after an area pass, and the
+        # budget is also what keeps one run's load on the portals modest.
         description: "Wall-clock budget for fetching (seconds)"
         required: false
         default: "2400"
@@ -115,10 +128,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ (github.event_name == 'workflow_dispatch' && inputs.as_schedule == 'true') && 'schedule' || github.event_name }}
           # How old the last real run must be before another one starts.
-          # Fifty, not sixty: attempts land every fifteen minutes, so a
-          # sixty-minute floor would push each run to the attempt after the
-          # hour and drift the cadence later every time.
-          MIN_GAP_MINUTES: "50"
+          # 170, not 180: attempts land every fifteen minutes, so a floor of
+          # exactly three hours would push each run to the attempt after the
+          # mark and drift the cadence later every time. (Fifty, for one run
+          # an hour, until 2026-10-05.)
+          MIN_GAP_MINUTES: "170"
           # Below this a "run" was this guard saying no, not a sweep. See
           # tools/scrape_guard.sh - getting this wrong stops the collection
           # silently and forever.

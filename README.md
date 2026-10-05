@@ -2,7 +2,8 @@
 
 Víceletý, bez zásahu běžící sběrač dat o realitním trhu v Praze a jejím
 těsném okolí ze **sreality.cz**, **bezrealitky.cz** a **Reality.iDNES.cz**.
-Prodej i pronájem běží každou hodinu přes GitHub Actions, ukládá vše do
+Prodej i pronájem běží každé 3 hodiny (sledovaná oblast) a jednou denně
+(celá Praha) přes GitHub Actions, ukládá vše do
 plain-text CSV/JSON a je navržený tak, aby přežil roky provozu bez jediného
 lidského zásahu.
 
@@ -192,11 +193,11 @@ e-mail o selhání a skutečný výpadek vypadal úplně stejně
 
 ## Co se sbírá odkud a jak často
 
-### Přehled: co běží každou hodinu, denně a týdně
+### Přehled: co běží každé 3 hodiny, denně a týdně
 
 | kdy | co | kde |
 |---|---|---|
-| **každou hodinu** | sběr prodeje i nájmu ze všech tří zdrojů; sreality jen Praha 4 + 10, bezrealitky a iDNES celá Praha; doplnění čísel popisných novým řádkům; commit (exporty v `data/csv/` jen jednou denně v noci — jsou odvozené a hodinové přepisování tvořilo třetinu růstu repozitáře) | `scrape.yml` |
+| **každé 3 hodiny** (do 5. 10. 2026 každou hodinu) | sběr prodeje i nájmu ze všech tří zdrojů; sreality jen Praha 4 + 10, bezrealitky a iDNES celá Praha (uložený inzerát z bezrealitky se znovu čte nejvýš jednou za cyklus); doplnění čísel popisných novým řádkům; commit (exporty v `data/csv/` jen jednou denně v noci — jsou odvozené a hodinové přepisování tvořilo třetinu růstu repozitáře) | `scrape.yml` |
 | **denně, 02:00–04:59** | celoměstský průchod iDNES a bezrealitky; pak celoměstská procházka indexu sreality, která **(a)** sbírá pražské inzeráty mimo sledovaný pás, **(b)** půjčuje GPS iDNES inzerátům a **(c)** jako jediná potvrzuje, jestli uložené sreality inzeráty mimo pás ještě visí; v noci na pondělí navíc přepárování dříve půjčených souřadnic (`--repair`); doplnění čísel a městských částí; **přestavba exportů v `data/csv/`**; zápis metrik kvality; commit; kontrola kvality | `scrape-night.yml` |
 | **každých 6 hodin** | heartbeat — hlídá, že plánovač vůbec doručuje | `heartbeat.yml` |
 | **týdně, Po/Út 05:00** | kontrola kvality, přestavba časových řad, týdenní report — nic nezapisuje do inzerátů, protože neběží pod zámkem `scrape-data` | `report.yml` |
@@ -205,12 +206,36 @@ e-mail o selhání a skutečný výpadek vypadal úplně stejně
 
 **Prodej a pronájem se sbírají zvlášť**, na jiném rozvrhu a v jiném rozsahu.
 
-### Prodej — každou hodinu mimo nedělní okno (`.github/workflows/scrape.yml`)
+### Proč každé 3 hodiny, a ne každou hodinu
+
+Rozhodnuto 5. 10. 2026 podle dosud sebraných dat (čísla jsou v datovém
+repozitáři, `inventura/kadence-2026-10-05.md`, ne v tomhle veřejném):
+
+- **Zmizení se vyhodnocuje jednou denně**, v nočním celoměstském průchodu,
+  ať běží denní sběr jakkoli často. Hodinové běhy tedy datum zmizení
+  nezpřesňovaly ani o hodinu.
+- Inzerát, který by se objevil a zmizel mezi dvěma tříhodinovými běhy,
+  je v datech **vzácnost** — a většinou jde o tentýž byt, který dál visí
+  jinde (repost, druhý portál), takže se nic neztratí.
+- Dvě změny ceny téhož inzerátu do tří hodin jsou také vzácné; poslední
+  cena se zachytí vždy, ztratit se může jen mezikrok.
+- Proti tomu hodinový rytmus znamenal **trojnásobek** zátěže portálů a
+  růstu repozitáře.
+
+Cyklus drží `MIN_GAP_MINUTES: 170` v `scrape.yml` (170, ne 180: pokusy
+chodí po čtvrthodinách a přesná tříhodinová hranice by každý běh posunula
+o pokus později). Uložený inzerát z bezrealitky se znovu čte nejvýš jednou
+za 150 minut (`BEZREALITKY_REREAD_AFTER` v `run.py`) — tedy jednou za cyklus;
+noční průchod tak nečte znovu, co tříhodinový běh právě přečetl. Mezi
+čteními inzerát drží naživu sitemapa, takže limit detekci zmizení nic
+nebere. Nové inzeráty se čtou hned.
+
+### Prodej — každé 3 hodiny (`.github/workflows/scrape.yml`)
 
 | zdroj | rozsah | jak |
 |---|---|---|
 | **sreality.cz** | **jen sledovaná oblast** (Spořilov ↔ Horní Měcholupy, `common/collection_area.py`) | index API, ~35 požadavků na kompletní sken |
-| **Reality.iDNES.cz** | všechny pražské **byty** | nejnovější stránky, sledovaná oblast, pak **celý index** — každou hodinu |
+| **Reality.iDNES.cz** | všechny pražské **byty** | nejnovější stránky, sledovaná oblast, pak **celý index** — každý běh |
 | **bezrealitky.cz** | **celá Praha** | sitemapa + detailové stránky, které robots.txt povoluje |
 
 Celý index iDNES každou hodinu je změna oproti původní dvacetičtvrtině
@@ -226,16 +251,17 @@ Kurzor se **v pondělí vrací na stránku jedna** (ISO týden v
 `data/progress.json`). Týden, který kompletní průjezd nestihl, prostě
 skončí; další začne odpředu, ne tam, kde se náhodou zastavil.
 
-### Nájem — každou hodinu, spolu s prodejem
+### Nájem — každé 3 hodiny, spolu s prodejem
 
 Samostatný týdenní průchod nájmů **už neexistuje** (`scrape-rent.yml` byl
 zrušen). Existoval proto, že procházel celou Prahu a potřeboval na to čtyři
 hodiny. Hodinový sken dnes prochází jen Prahu 4 a 10, což se vejde do jedné
-hodiny i s nájmy — takže **nájem se sbírá každou hodinu místo jednou týdně**.
+hodiny i s nájmy — takže **nájem se sbírá s každým během prodeje (dnes každé
+3 hodiny) místo jednou týdně**.
 
 Nájem jede ve dvou průchodech, stejně jako prodej:
 
-- **hodinový**, Praha 4 + 10 (`--scope area`)
+- **tříhodinový**, Praha 4 + 10 (`--scope area`)
 - **noční**, celá Praha (`--scope city`)
 
 Zmizení se pořád vyhodnocuje **jen z nočního celoměstského** průchodu — ten
@@ -479,9 +505,9 @@ je to jen booleovský příznak pro pozdější filtrování/prioritizaci.
 
 ## Automatizace (GitHub Actions)
 
-`.github/workflows/scrape.yml` — cron `0 * * * 1-6` a `0 5-23 * * 0`
-(každou hodinu kromě nedělního okna pronájmů), plus `workflow_dispatch`
-pro ruční spuštění s vlastním rozpočtem. Kroky:
+`.github/workflows/scrape.yml` — cron `*/15 * * * *` (a waker), z čehož
+guard pustí jeden běh za 3 hodiny (do 5. 10. 2026 za hodinu), plus
+`workflow_dispatch` pro ruční spuštění s vlastním rozpočtem. Kroky:
 
 1. Checkout, instalace závislostí, **spuštění testů** (scraper, který
    zapisuje do sdíleného datasetu, nemá běžet, když je rozbitý).
@@ -602,7 +628,7 @@ docs/podminky.md         # hodnocení: jak moc projekt jde proti podmínkám por
 docs/robots/             # doslovné robots.txt + smluvní podmínky všech portálů
 docs/geo/                # rozřešené referenční souřadnice, i se zdrojem
 docs/sources/            # skutečný markup, proti kterému jsou psané parsery
-.github/workflows/scrape.yml   # sběr prodeje, každou hodinu
+.github/workflows/scrape.yml   # sběr prodeje i nájmu, každé 3 hodiny
 .github/workflows/backup.yml   # týdenní ověřený archiv datasetu
 .github/workflows/probe.yml    # obnova docs/, jen ručně
 tests/                   # 324 testů, běží plně offline
@@ -657,9 +683,9 @@ All the work still happens here, where the Actions minutes are free. What
 crosses the network from outside is one request an hour's worth of bytes.
 
 `as_schedule` is the load-bearing part: it sends the waker through the guard
-(`tools/scrape_guard.sh`), which allows one sweep per fifty minutes. Without
-it every firing would scrape and the portals would see four sweeps an hour
-instead of the one this project takes.
+(`tools/scrape_guard.sh`), which allows one sweep per 170 minutes (fifty until
+2026-10-05). Without it every firing would scrape and the portals would see
+twelve sweeps in three hours instead of the one this project takes.
 
 The `*/15` cron stays in the workflow. It costs nothing, and on the rare
 occasion GitHub does deliver, the guard rations it the same way - a delivered
@@ -675,14 +701,14 @@ Od nasazení pražské verze budí waker všechna okna sám:
 | pražský čas | workflow |
 |---|---|
 | 02:00–04:59 denně | `scrape-night.yml` (celá Praha) |
-| zbytek dne, každou hodinu | `scrape.yml` (Praha 4 + 10) |
+| zbytek dne, každých 15 minut pokus; guard pustí jeden běh za 3 hodiny | `scrape.yml` (Praha 4 + 10) |
 | Po a Út 05:00 | `report.yml` |
 | Po a Út 06:00 | `backup.yml` (datový repozitář) |
 | 1.–7. den v měsíci, 07:00 | `build-ruian-index.yml` |
 
 Dřív tu stálo, že waker nebudí týdenní průchod nájmů a ten proto jako jediný
-stojí na plánovači GitHubu. Obojí je překonané: nájem se sbírá každou hodinu
-spolu s prodejem a samostatný workflow byl zrušen.
+stojí na plánovači GitHubu. Obojí je překonané: nájem se sbírá s každým během
+prodeje a samostatný workflow byl zrušen.
 
 Crony ve workflow souborech zůstávají jako záloha pro případ, že waker
 nedoručí. Jsou UTC-only, a tedy půl roku o hodinu vedle — což je přesně ten

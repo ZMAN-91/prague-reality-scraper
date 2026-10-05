@@ -536,12 +536,21 @@ def test_the_decision_reaches_the_scrape_job():
     assert guard_job()["outputs"]["go"] == "${{ steps.decide.outputs.go }}"
 
 
-def test_the_guard_keeps_the_hourly_floor():
+def test_the_guard_keeps_the_three_hour_floor():
+    """Decided 2026-10-05: one area sweep every three hours."""
     env = decide_step()["env"]
-    assert 45 <= int(env["MIN_GAP_MINUTES"]) < 60, (
-        "under an hour so the cadence does not drift later every run, but "
-        "close enough to it that the portals still see one sweep an hour"
+    assert 165 <= int(env["MIN_GAP_MINUTES"]) < 180, (
+        "under three hours so the cadence does not drift later every run, "
+        "but close enough to it that the portals see one sweep per three hours"
     )
+
+
+def test_the_bezrealitky_reread_limit_fits_the_guard_floor():
+    """A limit at or over the floor would read each advert every OTHER area
+    sweep: it is read at about the same point of each run."""
+    import run as run_module
+    floor = int(decide_step()["env"]["MIN_GAP_MINUTES"])
+    assert run_module.BEZREALITKY_REREAD_AFTER.total_seconds() / 60 < floor
 
 
 def test_a_run_the_guard_stopped_does_not_count_as_a_run():

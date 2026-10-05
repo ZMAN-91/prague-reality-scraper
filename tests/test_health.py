@@ -72,11 +72,12 @@ def test_a_long_silence_is_reported(tmp_path):
     assert any("Nothing collected for 9.0 hours" in f for f in got), got
 
 
-def test_an_ordinary_hourly_gap_is_not_reported(tmp_path):
-    assert findings(tmp_path, [run(minutes_ago=65)]) == []
+def test_an_ordinary_gap_is_not_reported(tmp_path):
+    """One area sweep every three hours, give or take an attempt."""
+    assert findings(tmp_path, [run(minutes_ago=195)]) == []
 
 
-@pytest.mark.parametrize("hours,reported", [(2.5, False), (3.5, True)])
+@pytest.mark.parametrize("hours,reported", [(4.5, False), (5.5, True)])
 def test_the_silence_threshold(hours, reported, tmp_path):
     got = findings(tmp_path, [run(minutes_ago=hours * 60)])
     assert bool(got) is reported
@@ -250,15 +251,16 @@ def test_the_sunday_rent_window_is_not_a_broken_waker(tmp_path):
 def test_a_waker_that_dies_during_the_rent_window_is_still_caught(tmp_path):
     """The window excuses its own five hours and not one minute more."""
     last = datetime(2026, 9, 20, 1, 24, tzinfo=timezone.utc)
-    # Four hours past the window's close, so four hours unaccounted for.
-    got = gap_findings(last, datetime(2026, 9, 20, 9, 0, tzinfo=timezone.utc))
+    # Six hours past the window's close, so six hours unaccounted for - over
+    # the five-hour threshold, which the window alone would not explain.
+    got = gap_findings(last, datetime(2026, 9, 20, 11, 0, tzinfo=timezone.utc))
     assert any("not waking it" in f for f in got), got
 
 
 def test_a_saturday_gap_gets_no_such_excuse(tmp_path):
     """Same hours, wrong day."""
     last = datetime(2026, 9, 19, 1, 24, tzinfo=timezone.utc)
-    got = gap_findings(last, datetime(2026, 9, 19, 5, 30, tzinfo=timezone.utc))
+    got = gap_findings(last, datetime(2026, 9, 19, 7, 30, tzinfo=timezone.utc))
     assert any("not waking it" in f for f in got), got
 
 
@@ -383,10 +385,10 @@ def test_the_walk_entry_and_the_next_hourly_run_are_not_two_sweeps(tmp_path):
 
 
 def test_a_dead_waker_cannot_hide_behind_the_nightly_walk(tmp_path):
-    """The other way the entry could lie: the hourly collection stopped
-    five hours ago, and the only fresh line in the log is the walk."""
+    """The other way the entry could lie: the area collection stopped six
+    hours ago, and the only fresh line in the log is the walk."""
     got = findings(tmp_path, [
-        run(minutes_ago=60 * 5),
+        run(minutes_ago=60 * 6),
         walk_entry(minutes_ago=30),
     ])
     assert any("Nothing collected" in f for f in got), got

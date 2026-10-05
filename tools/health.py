@@ -35,9 +35,10 @@ from typing import Optional
 
 from common import cas, storage
 
-# The waker aims for one sweep an hour. Three hours means roughly three
-# missed attempts in a row, which is a broken waker rather than bad luck.
-MAX_GAP_HOURS = 3.0
+# The waker aims for one area sweep every three hours (one an hour until
+# 2026-10-05). Five hours is that cycle missed by two hours - eight missed
+# attempts in a row - which is a broken waker rather than bad luck.
+MAX_GAP_HOURS = 5.0
 
 # Two sweeps closer than this means the guard let one through it should have
 # stopped, and the portals are being swept harder than this project agreed to.

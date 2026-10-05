@@ -83,6 +83,15 @@ from scrapers.idnes import SEARCH_URLS as SEARCH_SCOPES
 SCOPE_CITY = "city"
 SCOPE_AREA = "area"
 
+# A stored bezrealitky advert is read again at most this often (see
+# fetch_bezrealitky). Decided 2026-10-05: one read per three-hour area cycle.
+# Deliberately a little under three hours, not three: the area pass starts
+# 170-185 minutes after the last one (MIN_GAP_MINUTES in scrape.yml) and
+# reads an advert at about the same point of its run each time, so a limit
+# of exactly three hours would skip it every other run - one read per six
+# hours. The cycle is what is meant; this is the cycle less its jitter.
+BEZREALITKY_REREAD_AFTER = timedelta(minutes=150)
+
 SUSPICIOUS_DROP_MIN_PREV_COUNT = 20
 SUSPICIOUS_DROP_RATIO = 0.5
 
@@ -269,24 +278,43 @@ def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
     # leftovers the ones seen most recently, so the rotation comes round
     # evenly rather than re-reading the same head of the list every hour and
     # never reaching the tail.
+    #
+    # A stored advert is re-read at most once per BEZREALITKY_REREAD_AFTER
+    # (decided 2026-10-05). Between reads the sitemap keeps it alive, as it
+    # does for anything a run does not get round to, so the limit costs
+    # removal detection nothing; what it saves is the night pass re-reading,
+    # an hour after the area pass, every advert that pass has just read. New
+    # adverts are not limited: they are read the first run that sees them.
+    # When each was last read is kept in progress.json ("precteno"), because
+    # last_seen_at is day-granular and moves on a sitemap sighting alone.
+    now = now or datetime.now(timezone.utc)
+    entry = (progress if progress is not None else {}).setdefault(bezrealitky.SOURCE_NAME, {})
+    read_at = entry.setdefault("precteno", {})
+    not_before = (now - BEZREALITKY_REREAD_AFTER).isoformat()
+
     known_urls: set[str] = set()
+    due_urls: set[str] = set()
     revisit_order: dict[str, str] = {}
     for row in listings.values():
         if row["source"] != bezrealitky.SOURCE_NAME or not row.get("url"):
             continue
         known_urls.add(row["url"])
-        revisit_order[row["url"]] = row.get("last_seen_at") or ""
+        last_read = read_at.get(row.get("source_id"), "")
+        if last_read < not_before:
+            due_urls.add(row["url"])
+        # Longest unread first; an advert with no read on record (stored
+        # before the memory existed) counts as never read.
+        revisit_order[row["url"]] = last_read
 
     # Adverts the dataset leaves out (FLATIO lets, anything outside Prague -
     # see bezrealitky.exclusion_of), remembered so they are not read again.
-    entry = (progress if progress is not None else {}).setdefault(bezrealitky.SOURCE_NAME, {})
     excluded = entry.setdefault("vyrazene", {})
 
     normalized, raw_pages, errors, completed = bezrealitky.fetch_all(
         session,
         budget,
         known_urls=known_urls,
-        due_urls=known_urls,
+        due_urls=due_urls,
         revisit_order=revisit_order,
         # No count cap: the wall-clock budget is the honest limit here, and a
         # separate cap only made the run stop early while time remained.
@@ -303,6 +331,21 @@ def fetch_bezrealitky(session, listings: dict, budget: Budget, now=None,
     for internal_id, row in list(listings.items()):
         if row.get("source") == bezrealitky.SOURCE_NAME and row.get("source_id") in excluded:
             del listings[internal_id]
+
+    # Every page this run actually read, whatever it held, counts as read.
+    stamp = now.isoformat()
+    for page in raw_pages:
+        if page.get("kind") == "detail" and page.get("source_id"):
+            read_at[str(page["source_id"])] = stamp
+    # Only adverts still stored and not excluded are worth remembering, so
+    # the memory stays the size of the live set rather than growing for ever.
+    # A new advert read this run is not stored yet, so it is kept by its read.
+    keep = {row.get("source_id") for row in listings.values()
+            if row.get("source") == bezrealitky.SOURCE_NAME
+            and row.get("status") != STATUS_REMOVED}
+    for source_id in list(read_at):
+        if (source_id not in keep and read_at[source_id] != stamp) or source_id in excluded:
+            del read_at[source_id]
     return normalized, raw_pages, errors, completed, None
 
 
