@@ -1,0 +1,60 @@
+name: Half-yearly history compaction
+
+# Lives in the DATA repository (copied from deploy/ in the code repository,
+# like backup.yml): it publishes a release there, which only that
+# repository's own token can do.
+#
+# Twice a year the data branch's history is bundled into a release asset and
+# replaced by one commit holding the current data - see
+# tools/compact_history.sh for the order of steps and why nothing can be
+# lost. Decided 2026-10-05: the repository grew 4.6 MB a day, ~5 GB in
+# three years, almost all of it old deltas of listings.csv.
+#
+# 2 January and 2 July at 03:17 UTC - every six months rather than once a
+# year, because a year of history (~1.7 GB at the measured rate) would come
+# close to the 2 GiB limit on the release asset. Before the backup's 04:00
+# window when the day is a Monday or Tuesday, so that week's archive is
+# tagged on the new root. Run by hand with confirm=yes; anything else is a dry run.
+
+on:
+  schedule:
+    - cron: "17 3 2 1,7 *"
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type yes to compact; anything else is a dry run"
+        required: false
+        default: "no"
+
+concurrency:
+  group: history-compaction
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  compact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout the dataset, with its whole history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Checkout the code
+        uses: actions/checkout@v4
+        with:
+          repository: ZMAN-91/prague-reality-scraper
+          path: code
+
+      - name: Compact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ (github.event_name == 'schedule' || github.event.inputs.confirm == 'yes') && '0' || '1' }}
+        run: |
+          git config user.name "prague-reality-scraper-bot"
+          git config user.email "actions@users.noreply.github.com"
+          bash code/tools/compact_history.sh "${GITHUB_REF_NAME}"
