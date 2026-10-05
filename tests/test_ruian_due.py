@@ -116,3 +116,9 @@ def test_the_command_prints_what_a_workflow_step_reads(tmp_path, capsys):
     assert ruian_due.main(["--index", str(index),
                            "--today", "2026-09-21"]) == 0
     assert "go=false" in capsys.readouterr().out
+
+
+def test_the_guard_finds_the_sidecar_where_the_builder_writes_it():
+    from tools import build_ruian_index
+    for path in ("store/data/ruian_praha.csv.gz", "x.gz"):
+        assert ruian_due.meta_path_for(path) == build_ruian_index.meta_path_for(path)

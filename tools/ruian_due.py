@@ -39,6 +39,12 @@ from datetime import date, timedelta
 
 from common import cas
 
+def meta_path_for(index_path: str) -> str:
+    """Where the builder writes the sidecar; build_ruian_index.meta_path_for
+    must agree, and a test holds them to it."""
+    return index_path + ".json"
+
+
 def previous_month_end(today: date) -> date:
     return today.replace(day=1) - timedelta(days=1)
 
@@ -89,8 +95,14 @@ def main(argv=None) -> int:
                         help="ISO date, for the tests")
     args = parser.parse_args(argv)
 
-    from tools import build_ruian_index
-    meta_path = build_ruian_index.meta_path_for(args.index)
+    # Not build_ruian_index.meta_path_for: that module imports common.net,
+    # which needs `requests`, and the guard job installs nothing. Importing
+    # it failed every guard attempt from 1 October - 29 failed runs, each an
+    # e-mail - while the September index had only ever been built with
+    # force=true, which never runs the guard. tests/test_guards_import.py
+    # now walks every guard's imports, and test_ruian_due pins the two paths
+    # together.
+    meta_path = meta_path_for(args.index)
     try:
         with open(meta_path, encoding="utf-8") as handle:
             meta_text = handle.read()
