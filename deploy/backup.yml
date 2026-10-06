@@ -55,7 +55,7 @@ jobs:
     steps:
       - name: Checkout the code
         # Public repository, so no key - this needs one script.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ZMAN-91/prague-reality-scraper
           path: code
@@ -73,17 +73,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout the dataset
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Checkout the code
         # Public, so no key is needed in this direction.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ZMAN-91/prague-reality-scraper
           path: code
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: "pip"

@@ -22,8 +22,8 @@ kterému se projekt cíleně vyhýbá (`podminky.md`).
 Workflow ve veřejném repu si privátní data naklonuje deploy keyem do `store/`:
 
 ```yaml
-- uses: actions/checkout@v4                       # kód
-- uses: actions/checkout@v4                       # data
+- uses: actions/checkout@v5                       # kód
+- uses: actions/checkout@v5                       # data
   with:
     repository: ZMAN-91/prague_reality_sector_analysis
     ssh-key: ${{ secrets.DATA_REPO_KEY }}

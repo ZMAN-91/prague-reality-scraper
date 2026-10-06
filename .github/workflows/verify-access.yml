@@ -54,7 +54,7 @@ jobs:
 
       - name: Can it read the data repository?
         id: read
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         continue-on-error: true
         with:
           repository: ${{ env.DATA_REPO }}

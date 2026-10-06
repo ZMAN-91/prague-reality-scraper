@@ -36,10 +36,10 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Checkout the dataset
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ZMAN-91/prague_reality_sector_analysis
           ssh-key: ${{ secrets.DATA_REPO_KEY }}
@@ -47,7 +47,7 @@ jobs:
           path: store
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: "pip"

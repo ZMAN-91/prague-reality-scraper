@@ -92,8 +92,8 @@ Aktivně hledat, co se rozbije tiše:
   dlouho to health uvidí (počet hodin)?
 - Co když worker přestane budit? Jak dlouho trvá, než přijde e-mail?
 - Co když vyprší nebo se odvolá deploy key, token workeru nebo GitHub token?
-- Závislosti: verze Pythonu, akcí (`actions/checkout@v4`,
-  `setup-python@v5`), pinning `requirements*.txt`, deprecace Node runtime
+- Závislosti: verze Pythonu, akcí (`actions/checkout@v5`,
+  `setup-python@v6`, obě Node 24 od 6. 10. 2026), pinning `requirements*.txt`, deprecace Node runtime
   v akcích.
 - Jediné body selhání: jeden účet, jeden deploy key, jeden worker.
 - Reconcile („ours wins“) u souběžného reportu a hodinového běhu.
