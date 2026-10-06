@@ -8,12 +8,14 @@
 # does not need. This is the throwing-away.
 #
 #   scrape_guard.sh                 # ask the API (what the workflow does)
-#   scrape_guard.sh --runs ALL [--mine MINE]
+#   scrape_guard.sh --runs ALL [--mine MINE] [--jobs DIR]
 #                                   # read fixtures instead (what tests do).
 #                                   # ALL stands in for the repository-wide
 #                                   # query, MINE for this workflow's own
 #                                   # history; without --mine they are the
-#                                   # same file.
+#                                   # same file. DIR/<run id>.json stands in
+#                                   # for that run's job list; a run with no
+#                                   # file there is judged by duration alone.
 #
 # Writes "go=true" or "go=false" to stdout, and the reason to stderr. The
 # workflow appends stdout to $GITHUB_OUTPUT.
@@ -24,6 +26,9 @@
 #   EVENT_NAME              github.event_name; anything but "schedule" runs
 #   MIN_GAP_MINUTES         how old the last real run must be (default 50)
 #   MIN_REAL_RUN_SECONDS    below this a run was a guard saying no (default 300)
+#   SCRAPE_JOB              the job that sweeps; a run where it was skipped
+#                           was a guard saying no, however long it took
+#                           (default scrape)
 #   MEASURE_WORKFLOW        whose last run sets the floor (default scrape.yml).
 #                           The rent pass measures itself, on a weekly floor;
 #                           what counts as "too soon" differs per workflow, but
@@ -42,16 +47,22 @@ set -euo pipefail
 
 MIN_GAP_MINUTES="${MIN_GAP_MINUTES:-50}"
 MIN_REAL_RUN_SECONDS="${MIN_REAL_RUN_SECONDS:-300}"
+SCRAPE_JOB="${SCRAPE_JOB:-scrape}"
+# Sixteen: four hours of fifteen-minute attempts. On 2026-10-05 eight long
+# guard-only runs in a row sat on top of the real sweep; five was too few.
+MAX_RUNS_CHECKED="${MAX_RUNS_CHECKED:-16}"
 MEASURE_WORKFLOW="${MEASURE_WORKFLOW:-scrape.yml}"
 EVENT_NAME="${EVENT_NAME:-schedule}"
 GITHUB_RUN_ID="${GITHUB_RUN_ID:-0}"
 
 runs_file=""
 mine_file=""
+jobs_dir=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --runs) runs_file="${2:?--runs needs a file}"; shift 2 ;;
         --mine) mine_file="${2:?--mine needs a file}"; shift 2 ;;
+        --jobs) jobs_dir="${2:?--jobs needs a directory}"; shift 2 ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
@@ -118,7 +129,20 @@ fi
 
 # The most recent run that actually swept. Nulls are skipped rather than
 # crashing the guard: a malformed row must not stop the collection.
-last=$(printf '%s' "$mine" | jq -r "
+#
+# Duration alone is not enough. On 2026-10-05 GitHub left guard jobs waiting
+# ten and fifteen minutes for a runner; each then said no (or was cancelled
+# unstarted), and each counted as a sweep because the run had lasted over
+# MIN_REAL_RUN_SECONDS. The floor was measured from the last of those, and
+# the 22:00 sweep never happened. So the long runs, newest first, are checked
+# against their job list: one whose scrape job was skipped did not sweep.
+# Only the newest MAX_RUNS_CHECKED are checked, and a run whose jobs
+# cannot be read counts as a sweep - holding the floor closed for one cycle
+# is the safe way to be wrong.
+# For the same reason, if every run checked turns out not to have swept, the
+# newest of them still sets the floor, as duration alone used to: running
+# out of runs to check is not evidence that nothing swept.
+candidates=$(printf '%s' "$mine" | jq -r "
     [ .workflow_runs[]
       | select(.id != ${GITHUB_RUN_ID})
       | select(.path == \".github/workflows/${MEASURE_WORKFLOW}\")
@@ -126,9 +150,37 @@ last=$(printf '%s' "$mine" | jq -r "
       | select(.run_started_at != null and .updated_at != null)
       | select((.updated_at | fromdateiso8601)
                - (.run_started_at | fromdateiso8601)
-               > ${MIN_REAL_RUN_SECONDS})
-      | .run_started_at ]
-    | sort | last // empty")
+               > ${MIN_REAL_RUN_SECONDS}) ]
+    | sort_by(.run_started_at) | reverse | .[:${MAX_RUNS_CHECKED}][]
+    | \"\\(.id) \\(.run_started_at)\"")
+
+swept() {
+    local jobs
+    if [ -n "$runs_file" ]; then
+        [ -n "$jobs_dir" ] && [ -f "${jobs_dir}/$1.json" ] || return 0
+        jobs=$(cat "${jobs_dir}/$1.json")
+    else
+        jobs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/$1/jobs") || return 0
+    fi
+    skipped=$(printf '%s' "$jobs" | jq -r "
+        [ .jobs[]? | select(.name == \"${SCRAPE_JOB}\")
+          | select(.conclusion == \"skipped\" or .conclusion == \"cancelled\" and .started_at == null) ]
+        | length" 2>/dev/null) || return 0
+    [ "${skipped:-0}" -eq 0 ]
+}
+
+last=""
+newest=""
+while read -r run_id started; do
+    [ -n "$run_id" ] || continue
+    [ -n "$newest" ] || newest="$started"
+    if swept "$run_id"; then
+        last="$started"
+        break
+    fi
+    say "Run ${run_id} (${started}) lasted long but its ${SCRAPE_JOB} job never ran - not a sweep."
+done <<< "$candidates"
+[ -n "$last" ] || last="$newest"
 
 if [ -z "$last" ]; then
     decide true "No previous real run on record - running."

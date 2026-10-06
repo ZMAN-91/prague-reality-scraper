@@ -48,10 +48,12 @@ def run_row(run_id=1, path=SALE, status="completed", started_min_ago=120,
     }
 
 
-def guard(rows, tmp_path, event="schedule", mine=None, **env):
+def guard(rows, tmp_path, event="schedule", mine=None, jobs=None, **env):
     payload = tmp_path / "runs.json"
     payload.write_text(json.dumps({"workflow_runs": list(rows)}))
     argv = ["bash", str(GUARD), "--runs", str(payload)]
+    if jobs is not None:
+        argv += ["--jobs", str(jobs)]
     if mine is not None:
         own = tmp_path / "mine.json"
         own.write_text(json.dumps({"workflow_runs": list(mine)}))
@@ -306,3 +308,76 @@ def test_an_api_outage_stands_down_instead_of_failing(tmp_path):
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "go=false"
     assert "GitHub API" in result.stderr
+
+
+# --- a long run is not necessarily a sweep -----------------------------------
+#
+# 2026-10-05 evening: GitHub left guard jobs waiting ten and fifteen minutes
+# for a runner. Each then said no, or was cancelled unstarted - and each
+# counted as a sweep, because the run had lasted over MIN_REAL_RUN_SECONDS.
+# The floor was measured from the last of them and the 22:00 sweep never ran.
+
+
+def jobs_file(tmp_path, run_id, scrape_conclusion, started=True):
+    directory = tmp_path / "jobs"
+    directory.mkdir(exist_ok=True)
+    (directory / f"{run_id}.json").write_text(json.dumps({"jobs": [
+        {"name": "guard", "conclusion": "success", "started_at": iso(NOW)},
+        {"name": "scrape", "conclusion": scrape_conclusion,
+         "started_at": iso(NOW) if started else None},
+    ]}))
+    return directory
+
+
+def test_a_long_run_whose_scrape_was_skipped_does_not_set_the_floor(tmp_path):
+    rows = [run_row(1, started_min_ago=200),                 # the real sweep
+            run_row(2, started_min_ago=100, duration_s=900)]  # guard, queued 15 min
+    jobs_file(tmp_path, 1, "success")
+    directory = jobs_file(tmp_path, 2, "skipped")
+    ok, reason = guard(rows, tmp_path, jobs=directory, MIN_GAP_MINUTES=170)
+    assert ok, reason
+    assert "never ran" in reason
+
+
+def test_without_the_job_check_it_would_have_stood_down(tmp_path):
+    """The same history judged by duration alone - the bug."""
+    rows = [run_row(1, started_min_ago=200),
+            run_row(2, started_min_ago=100, duration_s=900)]
+    assert not went(rows, tmp_path, MIN_GAP_MINUTES=170)
+
+
+def test_a_run_whose_scrape_ran_and_failed_still_counts(tmp_path):
+    """A sweep that crashed still touched the portals."""
+    rows = [run_row(1, started_min_ago=100)]
+    directory = jobs_file(tmp_path, 1, "failure")
+    assert not guard(rows, tmp_path, jobs=directory, MIN_GAP_MINUTES=170)[0]
+
+
+def test_a_scrape_cancelled_unstarted_is_not_a_sweep(tmp_path):
+    rows = [run_row(1, started_min_ago=200),
+            run_row(2, started_min_ago=100, duration_s=900)]
+    jobs_file(tmp_path, 1, "success")
+    directory = jobs_file(tmp_path, 2, "cancelled", started=False)
+    assert guard(rows, tmp_path, jobs=directory, MIN_GAP_MINUTES=170)[0]
+
+
+def test_when_no_checked_run_swept_the_newest_still_sets_the_floor(tmp_path):
+    """Running out of runs to check is not evidence that nothing swept."""
+    rows = [run_row(n, started_min_ago=100 + n, duration_s=900) for n in range(1, 7)]
+    directory = None
+    for n in range(1, 7):
+        directory = jobs_file(tmp_path, n, "skipped")
+    assert not guard(rows, tmp_path, jobs=directory, MIN_GAP_MINUTES=170)[0]
+
+
+def test_eight_guard_only_runs_on_top_of_the_sweep_are_seen_through(tmp_path):
+    """The actual evening: the sweep at 19:00, then eight long runs that
+    never scraped. Five checked runs was too few to reach the sweep."""
+    rows = [run_row(1, started_min_ago=181, duration_s=2488)]
+    jobs_file(tmp_path, 1, "success")
+    directory = None
+    for n in range(2, 10):
+        rows.append(run_row(n, started_min_ago=181 - 10 * n, duration_s=900))
+        directory = jobs_file(tmp_path, n, "skipped")
+    ok, reason = guard(rows, tmp_path, jobs=directory, MIN_GAP_MINUTES=170)
+    assert ok, reason
