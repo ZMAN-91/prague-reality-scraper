@@ -135,6 +135,20 @@ for attempt in $(seq 1 "${ATTEMPTS}"); do
   # retrying it just buries the real error under five copies of itself. That
   # is exactly what the rent run did: five attempts, one cause, two minutes
   # spent proving it.
+  #
+  # Except GitHub failing on its own side, which a retry usually does fix. On
+  # 2026-10-07 14:31 a push came back "remote: fatal error in commit_refs" -
+  # GitHub's server, nothing wrong with the push - and was given up as
+  # unfixable; forty minutes of collection were thrown away. These are the
+  # server and network failures: retried like a lost race, never confused
+  # with a refusal (an SSH key refused says "Permission denied", a protected
+  # branch says "protected", neither matches here).
+  if printf '%s' "${output}" |
+       grep -qE 'fatal error in commit_refs|Internal Server Error|RPC failed|remote end hung up unexpectedly|Connection (reset|timed out|closed)|Could not resolve host|early EOF|HTTP 5[0-9][0-9]|try again later|temporarily unavailable'; then
+    echo "Push attempt ${attempt} failed on GitHub's side; trying again."
+    sleep $((attempt * RETRY_SLEEP))
+    continue
+  fi
   if ! printf '%s' "${output}" |
        grep -qE 'fetch first|non-fast-forward|behind its remote|stale info'; then
     echo "::error::Push was rejected for a reason retrying cannot fix. See above." >&2

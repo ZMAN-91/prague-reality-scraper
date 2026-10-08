@@ -447,3 +447,27 @@ def test_a_row_the_other_run_removed_but_this_run_saw_again_is_kept(world, tmp_p
 
     listings, _ = committed(run, tmp_path)
     assert "x1" in listings
+
+
+def test_a_failure_on_githubs_side_is_retried(world):
+    """2026-10-07 14:31: "remote: fatal error in commit_refs" - GitHub's
+    server failing, not the push - was given up as unfixable and forty
+    minutes of collection were lost. The next attempt has to go through."""
+    run, _ = world
+    collect(run, ["base1", "new1"])
+
+    remote = Path(git(run, "config", "--get", "remote.origin.url").stdout.strip())
+    hooks = remote / "hooks"
+    hooks.mkdir(exist_ok=True)
+    marker = remote / "failed-once"
+    hook = hooks / "pre-receive"
+    hook.write_text(
+        "#!/bin/sh\n"
+        f"if [ ! -f '{marker}' ]; then touch '{marker}'; "
+        "echo 'fatal error in commit_refs' >&2; exit 1; fi\nexit 0\n",
+        encoding="utf-8")
+    hook.chmod(0o755)
+
+    result = commit_data(run)
+    assert "failed on GitHub's side" in result.stdout
+    assert "new1" in git(run, "show", "origin/main:data/listings.csv").stdout
