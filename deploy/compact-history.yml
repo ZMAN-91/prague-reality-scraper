@@ -10,15 +10,17 @@ name: Half-yearly history compaction
 # lost. Decided 2026-10-05: the repository grew 4.6 MB a day, ~5 GB in
 # three years, almost all of it old deltas of listings.csv.
 #
-# 2 January and 2 July at 03:17 UTC - every six months rather than once a
-# year, because a year of history (~1.7 GB at the measured rate) would come
-# close to the 2 GiB limit on the release asset. Before the backup's 04:00
+# 2 January, April, July and October at 03:17 UTC - every quarter. First
+# set to every six months (a year of history, ~1.7 GB, would come close to
+# the 2 GiB limit on the release asset); moved to quarterly on 2026-10-12,
+# when the week after the switch to three-hour runs still added ~56 MB,
+# which puts half a year at ~1.5 GB and rising. Before the backup's 04:00
 # window when the day is a Monday or Tuesday, so that week's archive is
 # tagged on the new root. Run by hand with confirm=yes; anything else is a dry run.
 
 on:
   schedule:
-    - cron: "17 3 2 1,7 *"
+    - cron: "17 3 2 1,4,7,10 *"
   workflow_dispatch:
     inputs:
       confirm:

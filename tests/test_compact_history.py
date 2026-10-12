@@ -118,7 +118,8 @@ def test_the_workflow_runs_on_a_full_history_and_is_a_dry_run_by_default():
     assert spec["permissions"]["contents"] == "write"
     compact_step = next(s for s in steps if "compact_history.sh" in s.get("run", ""))
     assert "confirm == 'yes'" in compact_step["env"]["DRY_RUN"]
-    assert spec[True]["schedule"][0]["cron"].split()[2:4] == ["2", "1,7"], "2 January and 2 July"
+    assert spec[True]["schedule"][0]["cron"].split()[2:4] == ["2", "1,4,7,10"], \
+        "the 2nd of January, April, July and October"
 
 
 def test_a_bundle_too_large_to_publish_stops_before_anything_changes(world):

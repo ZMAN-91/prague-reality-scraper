@@ -17,7 +17,9 @@
 # archives hold complete snapshots - but it is all cloned by every run.
 # Decided 2026-10-05: compact once a year; run every six months, because a
 # year of history at that rate (~1.7 GB) would come close to the 2 GiB limit
-# on a release asset the bundle has to fit in.
+# on a release asset the bundle has to fit in. Since 2026-10-12 quarterly:
+# a week still added ~56 MB after the move to three-hour runs, so half a
+# year would reach ~1.5 GB and grow with the dataset.
 #
 # ORDER, AND WHY NOTHING CAN BE LOST
 #
