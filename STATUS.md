@@ -1,6 +1,6 @@
 # Stav
 
-Sběr běží. Poslední heartbeat: **2026-10-12 05:54 UTC**.
+Sběr běží. Poslední heartbeat: **2026-10-19 04:37 UTC**.
 
 Tenhle soubor existuje z jednoho technického důvodu: GitHub
 vypne naplánovaná workflow ve veřejném repozitáři po 60 dnech
