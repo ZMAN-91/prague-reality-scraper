@@ -499,3 +499,18 @@ def test_the_run_log_counts_the_per_advert_memories_rather_than_copying_them():
     assert logged == {"bezrealitky": {"precteno": 1300, "vyrazene": 1},
                       "idnes": {"week": "2026-W41", "page_cursors": {"byt/prodej": 42}}}
     assert len(progress["bezrealitky"]["precteno"]) == 1300, "the state itself is untouched"
+
+
+def test_an_empty_source_is_called_a_parser_failure_only_without_an_error():
+    """2026-10-22: the sitemap could not be fetched, and the log said both
+    that and "reported no error - the parser has most likely stopped
+    matching". The error explains the zero; the guess must not be added."""
+    listings, last_obs = {}, {}
+    merge([make_listing("1")], listings, last_obs, "2026-10-21T00:00:00+00:00")
+
+    stats, _ = merge([], listings, last_obs, "2026-10-22T00:00:00+00:00",
+                     errors=["sreality: could not fetch the index"])
+    assert stats["errors"] == ["sreality: could not fetch the index"]
+
+    stats, _ = merge([], listings, last_obs, "2026-10-23T00:00:00+00:00")
+    assert any("parser has most likely stopped" in e for e in stats["errors"])

@@ -653,8 +653,11 @@ def merge_source(
     # below protects the *stored* data from that, but says nothing to anyone.
     #
     # Only meaningful once there is something to compare against: on the
-    # first ever run of a source, zero is simply where it starts.
-    if not normalized and not _planned and existing_for_source:
+    # first ever run of a source, zero is simply where it starts. And only
+    # when nothing else explains the zero: on 2026-10-22 bezrealitky's
+    # sitemap could not be fetched, and this added "reported no error - the
+    # parser has most likely stopped matching" beside that very error.
+    if not normalized and not _planned and not real_errors and existing_for_source:
         real_errors = real_errors + [
             f"{source_name} returned no listings at all while {len(existing_for_source)} "
             "are already stored, and reported no error - the parser has most "
