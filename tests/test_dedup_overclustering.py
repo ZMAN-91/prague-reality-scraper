@@ -16,6 +16,13 @@ import pytest
 
 from common.dedup import MAX_CLUSTER_SIZE, cluster_listings
 
+# The day the fixtures below were last seen. Clustering only considers
+# listings seen within CLUSTER_RECENT_WINDOW_DAYS of `now`, so without a
+# fixed `now` these tests judged September fixtures by the wall clock - and
+# on 2026-10-31, 45 days on, two of them started failing and the test step
+# stopped every scrape for three days. A test's clock is part of its input.
+AS_OF = datetime(2026, 9, 16, 12, 0, tzinfo=timezone.utc)
+
 NOW = datetime(2026, 9, 16, tzinfo=timezone.utc)
 
 
@@ -210,7 +217,8 @@ def test_two_cliques_that_split_apart_do_not_keep_one_id(monkeypatch):
 
     dedup.cluster_listings(rows, prices={i: r["area_m2"] and None for i, r in rows.items()}
                            | {"a1": 3_890_000, "a2": 3_890_000,
-                              "b1": 2_250_000, "b2": 2_250_000})
+                              "b1": 2_250_000, "b2": 2_250_000},
+                           now=AS_OF)
 
     a_id = rows["a1"]["cluster_id"]
     b_id = rows["b1"]["cluster_id"]
@@ -243,7 +251,7 @@ def test_a_priceless_advert_clusters_with_nothing():
             "url": f"https://x/{internal_id}", "price": price,
         }
 
-    dedup.cluster_listings(rows, prices={i: r["price"] for i, r in rows.items()})
+    dedup.cluster_listings(rows, prices={i: r["price"] for i, r in rows.items()}, now=AS_OF)
 
     assert rows["bridge"]["cluster_id"] == "", \
         "a priceless advert must not be grouped with anything"
@@ -268,7 +276,7 @@ def test_two_adverts_for_one_flat_still_cluster():
             "url": f"https://x/{internal_id}", "price": 6_500_000,
         }
 
-    dedup.cluster_listings(rows, prices={i: 6_500_000 for i in rows})
+    dedup.cluster_listings(rows, prices={i: 6_500_000 for i in rows}, now=AS_OF)
     assert rows["a"]["cluster_id"] and rows["a"]["cluster_id"] == rows["b"]["cluster_id"]
 
 
