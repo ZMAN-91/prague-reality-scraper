@@ -899,8 +899,11 @@ DEFAULT_TRANSACTIONS = ("prodej",)
 
 # Index pages iDNES may read in one run, high enough to cover the whole thing
 # and still be a cap rather than a target: the walk stops on its own at the
-# first empty page, and the run budget can stop it sooner.
-IDNES_PAGES_PER_RUN = 400
+# first empty page, and the run budget can stop it sooner. 500 since
+# 2026-11-11: in November sale took ~210 pages and rent ~125, 335 of the 400
+# there were - too little headroom for a growing market. At one request a
+# second the extra 100 is under two minutes of the night pass.
+IDNES_PAGES_PER_RUN = 500
 
 
 def fill_house_numbers(listings: dict, data_dir) -> int:

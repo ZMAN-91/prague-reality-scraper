@@ -573,16 +573,30 @@ def fetch_all(
     # how the end is discovered - iDNES does not say how many pages there are
     # - and it is also what proves a full pass happened, so the scope is only
     # marked complete when an empty page is actually reached.
-    per_scope = max(1, (max_pages or MAX_PAGES_SAFETY) // max(1, len(scopes)))
+    #
+    # The pages are shared out in two rounds. First each scope gets an equal
+    # share; then whatever a scope did not need goes to the ones that ran out.
+    # An equal split alone stopped working on 2026-11-10: sale passed 200
+    # pages, the night pass gave it exactly 200 of its 400, rent finished in
+    # about 120 - and sale completed only every other night, so its removals
+    # were recorded a day late and the health check fired all day.
+    total = max(1, max_pages or MAX_PAGES_SAFETY)
     new_cursors = dict(page_cursor) if isinstance(page_cursor, dict) else {}
-    for scope in scopes:
+    used = 0
+
+    def walk(scope, allowance):
+        """Walk one scope up to `allowance` pages. Returns (pages walked,
+        "done" | "limit" | "stopped")."""
+        nonlocal pages_consumed
         key = f"{scope[0]}/{scope[1]}" + (f"@{scope[2]}" if scope[2] else "")
         page = max(1, int(new_cursors.get(key, 1) or 1))
         walked = 0
-        while walked < per_scope and page <= MAX_PAGES_SAFETY:
+        outcome = "limit"
+        while walked < allowance and page <= MAX_PAGES_SAFETY:
             if budget is not None and budget.time_exhausted():
                 errors.append(interruptions.interruption(
                     f"idnes {key}: index rotation stopped at page {page} - time budget exhausted"))
+                outcome = "stopped"
                 break
             net.polite_sleep()
             try:
@@ -591,15 +605,18 @@ def fetch_all(
             except EndOfIndex:
                 # The same thing an empty page means, said with a status code.
                 pages_consumed += 1
+                walked += 1
                 if walked_whole_city:
                     completed.add(scope[:2])
                 page = 1
+                outcome = "done"
                 break
             pages_consumed += 1
             walked += 1
             if error:
                 errors.append(error)
                 page += 1
+                outcome = "stopped"
                 break
             if raw is not None:
                 raw_pages.append(raw)
@@ -607,9 +624,28 @@ def fetch_all(
                 if walked_whole_city:
                     completed.add(scope[:2])
                 page = 1  # wrap: the next run starts the pass again
+                outcome = "done"
                 break
             take(batch)
             page += 1
+        if page > MAX_PAGES_SAFETY:
+            outcome = "stopped"
         new_cursors[key] = page
+        return walked, outcome
+
+    short = []
+    for scope in scopes:
+        walked, outcome = walk(scope, max(1, total // max(1, len(scopes))))
+        used += walked
+        if outcome == "limit":
+            short.append(scope)
+    # Second round: the pages the others did not need, shared among the
+    # scopes that ran out of their first share.
+    for index, scope in enumerate(short):
+        left = total - used
+        if left <= 0:
+            break
+        walked, _ = walk(scope, max(1, left // (len(short) - index)))
+        used += walked
 
     return listings, raw_pages, errors, completed, pages_consumed, new_cursors

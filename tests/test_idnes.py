@@ -635,3 +635,39 @@ def test_branch_walks_keep_their_own_page_cursors(fake_idnes):
     assert any("@praha-4" in key for key in cursors), cursors
     assert any("@praha-10" in key for key in cursors), cursors
     assert not any(key in ("byt/prodej", "byt/pronajem") for key in cursors), cursors
+
+
+def test_pages_one_scope_does_not_need_go_to_the_one_that_ran_out(monkeypatch):
+    """2026-11-10: sale passed 200 pages, the night pass gave it exactly half
+    of its 400 and rent finished in about 120 - so sale completed only every
+    other night. What rent leaves over must let sale finish."""
+
+    class Uneven(FakeIdnes):
+        def fetch_text(self, session, url, **kwargs):
+            self.pages_per_scope = 7 if "/prodej/" in url else 2
+            return super().fetch_text(session, url, **kwargs)
+
+    fake = Uneven()
+    monkeypatch.setattr(idnes.net, "fetch_text", fake.fetch_text)
+    monkeypatch.setattr(idnes.net, "polite_sleep", lambda *a, **k: None)
+
+    # 12 pages: an equal share is 6, too few for sale's 7 plus its end page;
+    # rent needs 3 (2 and its end page), which leaves 3 over.
+    _, _, _, completed, _, cursors = fetch_all(
+        None, Budget(max_seconds=600, max_new_details=None), known={}, page_cursor={},
+        max_pages=12)
+    assert ("byt", "pronajem") in completed
+    assert ("byt", "prodej") in completed, "sale must be finished with rent's unused pages"
+    assert cursors["byt/prodej"] == 1
+
+
+def test_the_page_limit_still_holds_across_both_rounds(fake_idnes):
+    """Sharing out what is left must not walk more than the run was given."""
+    fake_idnes.pages_per_scope = 50
+    _, _, _, completed, _, _ = fetch_all(
+        None, Budget(max_seconds=600, max_new_details=None), known={}, page_cursor={},
+        max_pages=10)
+    index = [u for u in fake_idnes.requested if "/detail/" not in u]
+    newest = 2 * idnes.NEWEST_PAGES_PER_RUN  # read first, outside the rotation
+    assert len(index) - newest <= 10
+    assert completed == set()
