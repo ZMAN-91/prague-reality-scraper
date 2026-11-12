@@ -147,6 +147,7 @@ candidates=$(printf '%s' "$mine" | jq -r "
       | select(.id != ${GITHUB_RUN_ID})
       | select(.path == \".github/workflows/${MEASURE_WORKFLOW}\")
       | select(.status == \"completed\")
+      | select(.conclusion != \"startup_failure\")
       | select(.run_started_at != null and .updated_at != null)
       | select((.updated_at | fromdateiso8601)
                - (.run_started_at | fromdateiso8601)
@@ -162,11 +163,17 @@ swept() {
     else
         jobs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/$1/jobs") || return 0
     fi
-    skipped=$(printf '%s' "$jobs" | jq -r "
+    # A sweep is a run whose scrape job exists and actually started. A run
+    # with no scrape job at all is not one either: on 2026-11-11 GitHub
+    # failed to start two runs (startup_failure, no jobs, eight minutes
+    # "long"), this check found nothing skipped in an empty job list, called
+    # them sweeps, and the 20:46 sweep was measured away.
+    ran=$(printf '%s' "$jobs" | jq -r "
         [ .jobs[]? | select(.name == \"${SCRAPE_JOB}\")
-          | select(.conclusion == \"skipped\" or .conclusion == \"cancelled\" and .started_at == null) ]
+          | select(.started_at != null)
+          | select(.conclusion != \"skipped\") ]
         | length" 2>/dev/null) || return 0
-    [ "${skipped:-0}" -eq 0 ]
+    [ "${ran:-0}" -gt 0 ]
 }
 
 last=""

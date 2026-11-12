@@ -381,3 +381,27 @@ def test_eight_guard_only_runs_on_top_of_the_sweep_are_seen_through(tmp_path):
         directory = jobs_file(tmp_path, n, "skipped")
     ok, reason = guard(rows, tmp_path, jobs=directory, MIN_GAP_MINUTES=170)
     assert ok, reason
+
+
+# 2026-11-11 20:30 and 20:45: GitHub failed to start two runs. Each was
+# "completed" with conclusion startup_failure, no jobs, and lasted eight
+# minutes - long enough to be counted a sweep, so the floor was measured from
+# 20:30 and the 20:46 sweep never came.
+
+
+def test_a_run_github_never_started_is_not_a_sweep(tmp_path):
+    rows = [run_row(1, started_min_ago=200),
+            dict(run_row(2, started_min_ago=100, duration_s=460), conclusion="startup_failure")]
+    jobs_file(tmp_path, 1, "success")
+    ok, reason = guard(rows, tmp_path, jobs=tmp_path / "jobs", MIN_GAP_MINUTES=170)
+    assert ok, reason
+
+
+def test_a_run_with_no_scrape_job_at_all_is_not_a_sweep(tmp_path):
+    """Whatever the conclusion says: an empty job list swept nothing."""
+    rows = [run_row(1, started_min_ago=200),
+            run_row(2, started_min_ago=100, duration_s=460)]
+    directory = jobs_file(tmp_path, 1, "success")
+    (directory / "2.json").write_text(json.dumps({"jobs": []}))
+    ok, reason = guard(rows, tmp_path, jobs=directory, MIN_GAP_MINUTES=170)
+    assert ok, reason
