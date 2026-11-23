@@ -98,7 +98,7 @@ def test_a_chart_is_drawn_once_there_is_a_line():
                for d in range(1, 11)] + days(10, nabidka=100))
     text = render(series)
     assert "```mermaid" in text and "xychart-beta" in text
-    assert '"01-01"' in text and '"01-10"' in text
+    assert '"1.1."' in text and '"10.1."' in text
 
 
 def test_two_points_are_not_a_trend():
@@ -111,12 +111,11 @@ def test_two_points_are_not_a_trend():
 
 
 def test_a_long_series_is_thinned_rather_than_drawn_point_by_point():
-    series = ([row(f"2026-{m:02d}-{d:02d}", okno=30, nabidka=100 + d)
-               for m in range(1, 13) for d in range(1, 29)]
-              + [row("2026-12-28", nabidka=100)])
+    series = [row(f"2026-{m:02d}-{d:02d}", nabidka=100 + d)
+              for m in range(1, 13) for d in range(1, 29)]
     text = render(series, when="2026-12-28")
     labels = [l for l in text.splitlines() if l.strip().startswith("x-axis")][0]
-    assert labels.count('"') // 2 <= report.CHART_MAX_POINTS + 1
+    assert labels.count('"') // 2 <= report.CHART_MAX_POINTS
 
 
 def test_a_chart_axis_never_collapses_to_a_single_value():
@@ -336,8 +335,10 @@ def test_every_report_is_kept_under_the_week_it_is_about(tmp_path):
 def test_the_kept_copy_is_the_report_itself(tmp_path):
     data = write_series(tmp_path, days(3))
     report.export(data, generated=at("2026-09-21T07:39"))
-    assert ((tmp_path / "reports" / "2026-W38.md").read_text(encoding="utf-8")
-            == (tmp_path / "REPORT.md").read_text(encoding="utf-8"))
+    # The one difference: each links the interactive page from where it is.
+    kept = (tmp_path / "reports" / "2026-W38.md").read_text(encoding="utf-8")
+    current = (tmp_path / "REPORT.md").read_text(encoding="utf-8")
+    assert kept == current.replace("(reports/trh.html)", "(trh.html)")
 
 
 def test_the_tuesday_retry_produces_the_same_report_not_a_second_one(tmp_path):
@@ -356,7 +357,7 @@ def test_the_tuesday_retry_produces_the_same_report_not_a_second_one(tmp_path):
 
     report.export(data, generated=at("2026-09-22T07:39"))
     tuesday = (tmp_path / "reports" / "2026-W38.md").read_text(encoding="utf-8")
-    assert [p.name for p in (tmp_path / "reports").iterdir()] == ["2026-W38.md"]
+    assert [p.name for p in (tmp_path / "reports").glob("*.md")] == ["2026-W38.md"]
     # The generation stamp belongs to the run and legitimately differs; the
     # day the figures are as of belongs to the week and must not.
     assert data_line(tuesday).split("·")[0] == data_line(monday).split("·")[0]
@@ -366,7 +367,7 @@ def test_two_different_weeks_are_two_files(tmp_path):
     data = write_series(tmp_path, days(3))
     report.export(data, generated=at("2026-09-21T07:39"))
     report.export(data, generated=at("2026-09-28T07:39"))
-    assert sorted(p.name for p in (tmp_path / "reports").iterdir()) == [
+    assert sorted(p.name for p in (tmp_path / "reports").glob("*.md")) == [
         "2026-W38.md", "2026-W39.md"]
 
 
@@ -428,7 +429,7 @@ def test_charts_start_at_the_first_comparable_day():
     series = [row(f"2026-01-{d:02d}", okno=30, nabidka=100 + d) for d in range(1, 11)]
     series += [row(f"2026-01-{d:02d}", nabidka=100 + d) for d in range(1, 11)]
     text = render(series, comparable_from=date(2026, 1, 6))
-    assert '"01-05"' not in text and '"01-06"' in text
+    assert '"5.1."' not in text and '"6.1."' in text
 
 
 def test_the_confirmation_lag_is_stated_as_it_is():
@@ -449,3 +450,96 @@ def test_a_corrected_typo_is_not_ranked_as_the_biggest_discount():
     table = text.split("### Největší slevy")[1].split("###")[0]
     assert "Ulice 1" not in table and "Ulice 2" in table
     assert "Vynecháno poklesů o víc než 50 %: 1" in table
+
+
+# --- 2026-11-23: a week, a month, a quarter and a year; the whole series ------
+
+
+def test_the_tables_show_a_week_a_month_a_quarter_and_a_year():
+    text = render(days(10, nabidka=100))
+    assert "| ukazatel | teď | před 7 dny | před 30 dny | před 90 dny | před rokem |" in text
+    assert "| ukazatel | poslední den | 7 dnů | 30 dnů | 90 dnů | 365 dnů |" in text
+
+
+def test_a_long_series_is_drawn_whole_a_point_per_week():
+    """The chart is the whole history, thinned so its labels can be read."""
+    from datetime import timedelta
+    start = date(2026, 1, 1)
+    series = [row((start + timedelta(days=i)).isoformat(), nabidka=100 + i)
+              for i in range(100)]
+    text = render(series, when=(start + timedelta(days=99)).isoformat())
+    axis = [l for l in text.splitlines() if l.strip().startswith("x-axis")][0]
+    assert '"4.1.26"' in axis, "the first week, by the day it ended"
+    assert "jeden bod = týden" in text
+    assert axis.count('"') // 2 <= report.CHART_MAX_POINTS
+
+
+def test_a_day_without_the_night_pass_is_left_out_of_the_charts():
+    """31 Oct - 2 Nov: the line dipped by 200 flats that never left."""
+    series = days(10, nabidka=100, den_sebran="ano")
+    series[5]["nabidka"] = 10
+    series[5]["den_sebran"] = "ne"
+    text = render(series)
+    line = [l for l in text.splitlines() if l.strip().startswith("line")][0]
+    assert "10.00" not in line
+    assert "Dny bez celoměstského sběru: 6. 1. 2026" in text
+
+
+def test_a_comparison_never_lands_on_a_day_without_the_night_pass():
+    series = days(10, nabidka=100, den_sebran="ano")
+    series[2]["nabidka"] = 10  # 3 January, seven days before the 10th
+    series[2]["den_sebran"] = "ne"
+    supply = [l for l in render(series).splitlines() if l.startswith("| Nabídka |")][0]
+    assert "| 10 " not in supply
+
+
+def test_a_flow_chart_starts_when_its_window_is_full():
+    """The share discounted 'rose' from 7 % to 20 % while its window filled."""
+    from datetime import timedelta
+    start = date(2026, 1, 1)
+    series = []
+    for i in range(40):
+        d = (start + timedelta(days=i)).isoformat()
+        series += [row(d, nabidka=100), row(d, okno=30, zlevnilo_pct=i, nabidka=100)]
+    text = render(series, when="2026-02-09", comparable_from=start)
+    blocks = text.split("```mermaid")
+    block = [b for b in blocks if 'title "Podíl zlevněných za 30 dnů (%)"' in b][0]
+    values = [l for l in block.splitlines() if l.strip().startswith("line")][0]
+    assert values.split("[")[1].startswith("29.00"), \
+        "the line starts on the first full window (day 30), not before"
+    assert '"30.1."' in block
+
+
+def test_the_report_links_to_the_interactive_charts():
+    text = report.render(days(10, nabidka=100), [],
+                         datetime(2026, 1, 10, tzinfo=timezone.utc),
+                         date(2025, 1, 1), dashboard_link="https://example.invalid/trh")
+    assert "[Interaktivní grafy](https://example.invalid/trh)" in text
+
+
+def test_the_interactive_page_is_written_beside_the_reports(tmp_path):
+    data = write_series(tmp_path, days(3))
+    report.export(data, generated=at("2026-09-21T07:39"))
+    page = (tmp_path / "reports" / "trh.html").read_text(encoding="utf-8")
+    assert page.startswith("<!doctype html>")
+    assert "/*__DATA__*/" not in page, "the data must be filled in"
+    assert "(reports/trh.html)" in (tmp_path / "REPORT.md").read_text(encoding="utf-8")
+
+
+def test_a_published_page_is_linked_by_its_address(tmp_path):
+    data = write_series(tmp_path, days(3))
+    (tmp_path / "reports").mkdir()
+    (tmp_path / "reports" / "dashboard_url.txt").write_text("https://example.invalid/trh\n")
+    report.export(data, generated=at("2026-09-21T07:39"))
+    for path in (tmp_path / "REPORT.md", tmp_path / "reports" / "2026-W38.md"):
+        assert "(https://example.invalid/trh)" in path.read_text(encoding="utf-8")
+
+
+def test_a_longer_series_is_drawn_a_point_per_month():
+    from datetime import timedelta
+    start = date(2026, 1, 1)
+    series = [row((start + timedelta(days=i)).isoformat(), nabidka=100 + i)
+              for i in range(300)]
+    text = render(series, when=(start + timedelta(days=299)).isoformat())
+    axis = [l for l in text.splitlines() if l.strip().startswith("x-axis")][0]
+    assert '"1/26"' in axis and "jeden bod = měsíc" in text

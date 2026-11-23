@@ -44,12 +44,22 @@ from typing import Optional
 from common import cas, storage
 from tools import market
 
-WINDOWS = (1, 7, 30)
+WINDOWS = market.WINDOWS
+# The comparison horizons of the state table: a week, a month, a quarter and
+# a year back (90 and 365 since 2026-11-23).
+HORIZONS = (7, 30, 90, 365)
+WINDOW_HEADS = {1: "poslední den", 7: "7 dnů", 30: "30 dnů", 90: "90 dnů",
+                365: "365 dnů"}
+HORIZON_HEADS = {7: "před 7 dny", 30: "před 30 dny", 90: "před 90 dny",
+                 365: "před rokem"}
 
-# The chart window. Thirty days of a market that turns over in months is the
-# shortest line that means anything.
+# The window the flow charts are drawn from. Thirty days of a market that
+# turns over in months is the shortest line that means anything.
 CHART_WINDOW = 30
-CHART_MAX_POINTS = 60
+# Points per chart. Mermaid prints every x label, so a daily chart over the
+# whole series became an unreadable smear of 60 labels by November; past this
+# the series is drawn a point per week, then per month, then per quarter.
+CHART_MAX_POINTS = 16
 
 # The first day on which every source was collected across the whole city.
 # Before it the collection was still being widened - iDNES to all of Prague
@@ -104,11 +114,16 @@ FLOWS = [
 
 # What is worth a picture. Four, deliberately: a page of charts is a page
 # nobody reads.
+# (column, title, window): levels from the one-day rows, flows from the
+# thirty-day window - and those only from the day the window is full of
+# comparable days, or the line climbs while the window fills: the share of
+# discounted listings "rose" from 7 % to 20 % in October because the window
+# was filling, not because sellers were cutting.
 CHARTS = [
-    ("nabidka", "Nabídka"),
-    ("cena_m2_median", "Medián Kč/m²"),
-    ("mesicu_zasoby", "Měsíců zásoby"),
-    ("zlevnilo_pct", "Podíl zlevněných (%)"),
+    ("nabidka", "Nabídka", 1),
+    ("cena_m2_median", "Medián Kč/m²", 1),
+    ("mesicu_zasoby", "Měsíců zásoby (okno 30 dnů)", CHART_WINDOW),
+    ("zlevnilo_pct", "Podíl zlevněných za 30 dnů (%)", CHART_WINDOW),
 ]
 
 
@@ -177,30 +192,70 @@ def value_on_or_before(by_day: dict[str, dict], when: date, field: str):
     shorter window than the column claims."""
     for offset in range(0, 8):
         row = by_day.get((when - timedelta(days=offset)).isoformat())
-        if row is not None:
+        if row is not None and row.get("den_sebran") != "ne":
             got = as_num(row.get(field))
             if got is not None:
                 return got
     return None
 
 
+def bucketed(points: list[tuple[str, float]],
+             max_points: int = CHART_MAX_POINTS) -> tuple[list[tuple[str, float]], str]:
+    """Thin a daily series to at most `max_points` readable points.
+
+    A day per point while that fits, then the last day of each week, month
+    or quarter - the value the period ended on, not an average, so a level
+    reads the same as in the tables. Returns the points with their labels
+    and the name of the step, for the caption.
+    """
+    if len(points) <= max_points:
+        return [(f"{int(d[8:])}.{int(d[5:7])}.", v) for d, v in points], "den"
+
+    def period(d: str, step: str) -> str:
+        day = date.fromisoformat(d)
+        if step == "týden":
+            year, week, _ = day.isocalendar()
+            return f"{year}-{week:02d}"
+        if step == "měsíc":
+            return d[:7]
+        return f"{day.year}-Q{(day.month - 1) // 3 + 1}"
+
+    for step in ("týden", "měsíc", "čtvrtletí"):
+        last: dict[str, tuple[str, float]] = {}
+        for d, v in points:
+            last[period(d, step)] = (d, v)
+        kept = [last[k] for k in sorted(last)]
+        if len(kept) <= max_points or step == "čtvrtletí":
+            break
+
+    def label(d: str) -> str:
+        day = date.fromisoformat(d)
+        if step == "týden":
+            return f"{day.day}.{day.month}.{day.year % 100:02d}"
+        if step == "měsíc":
+            return f"{day.month}/{day.year % 100:02d}"
+        return f"Q{(day.month - 1) // 3 + 1}/{day.year % 100:02d}"
+
+    return [(label(d), v) for d, v in kept], step
+
+
 def chart(by_day: dict[str, dict], field: str, label: str) -> list[str]:
     """A Mermaid line chart of one indicator over the whole series.
 
-    Returns [] when there is not enough of a line to be worth drawing: two
-    points joined up look like a trend and are not one.
+    Days without the night pass are left out: on them departures and
+    arrivals had not been seen yet, and the line dipped by hundreds of flats
+    that never left. Returns [] when there is not enough of a line to be
+    worth drawing: two points joined up look like a trend and are not one.
     """
     days = sorted(by_day)
-    points = [(d, as_num(by_day[d].get(field))) for d in days]
+    points = [(d, as_num(by_day[d].get(field))) for d in days
+              if by_day[d].get("den_sebran") != "ne"]
     points = [(d, v) for d, v in points if v is not None]
     if len(points) < 3:
         return []
 
-    if len(points) > CHART_MAX_POINTS:
-        step = len(points) // CHART_MAX_POINTS + 1
-        points = points[::step] + [points[-1]]
-
-    labels = ", ".join(f'"{d[5:]}"' for d, _ in points)
+    points, _ = bucketed(points)
+    labels = ", ".join(f'"{d}"' for d, _ in points)
     values = ", ".join(f"{v:.2f}" for _, v in points)
     low = min(v for _, v in points)
     high = max(v for _, v in points)
@@ -259,9 +314,29 @@ def caveats(latest_row: dict, partial: bool = False,
     return out
 
 
+def gap_ranges(series: list[dict]) -> list[tuple[date, date]]:
+    """Runs of days without the night pass, as (first, last)."""
+    gaps = sorted({date.fromisoformat(r["den"]) for r in series
+                   if r.get("den_sebran") == "ne"})
+    out: list[tuple[date, date]] = []
+    for day in gaps:
+        if out and (day - out[-1][1]).days == 1:
+            out[-1] = (out[-1][0], day)
+        else:
+            out.append((day, day))
+    return out
+
+
+def span_text(first: date, last: date) -> str:
+    if first == last:
+        return f"{first.day}. {first.month}."
+    return f"{first.day}. {first.month}.–{last.day}. {last.month}."
+
+
 def render(series: list[dict], episodes_rows: list[dict],
            generated: Optional[datetime] = None,
-           comparable_from: date = COMPARABLE_FROM) -> str:
+           comparable_from: date = COMPARABLE_FROM,
+           dashboard_link: Optional[str] = None) -> str:
     generated = generated or datetime.now(timezone.utc)
     if not series:
         return "# Report trhu\n\nZatím nejsou žádná data.\n"
@@ -289,6 +364,19 @@ def render(series: list[dict], episodes_rows: list[dict],
         "tom, na které straně trhu stojíš.",
         "",
     ]
+    if dashboard_link:
+        out += [f"**[Interaktivní grafy]({dashboard_link})** — libovolný ukazatel, "
+                "segment a období, celá historie.", ""]
+    gaps = [g for g in gap_ranges(series) if g[0].isoformat() <= latest]
+    if gaps:
+        out += [
+            "**Dny bez celoměstského sběru: "
+            + ", ".join(span_text(a, b) for a, b in gaps)
+            + f" {gaps[-1][1].year}.** Zmizení a nové inzeráty z těch dnů se "
+            "zapsaly až první den po nich; grafy tyto dny vynechávají a "
+            "srovnání s nimi berou nejbližší předchozí sebraný den.",
+            "",
+        ]
 
     for segment in segments:
         windows = {w: rows_for(series, segment, w) for w in WINDOWS}
@@ -300,14 +388,14 @@ def render(series: list[dict], episodes_rows: list[dict],
         out += caveats(today, partial, comparable_from) + [""]
 
         out += ["### Stav", "",
-                "| ukazatel | teď | před 7 dny | před 30 dny |",
-                "|---|---:|---:|---:|"]
+                "| ukazatel | teď | " + " | ".join(HORIZON_HEADS[h] for h in HORIZONS) + " |",
+                "|---|---:|" + "---:|" * len(HORIZONS)]
         by_day = windows[1]
         censored = (as_num(today.get("uplnost_dnu")) or 0) < 90
         for field, label, unit in LEVELS:
             now = as_num(today.get(field))
             cells = [f"**{fmt(now, unit)}**"]
-            for horizon in (7, 30):
+            for horizon in HORIZONS:
                 when = date.fromisoformat(latest) - timedelta(days=horizon)
                 if when < comparable_from:
                     cells.append("—")
@@ -319,8 +407,8 @@ def render(series: list[dict], episodes_rows: list[dict],
         out.append("")
 
         out += ["### Tok", "",
-                "| ukazatel | poslední den | posledních 7 dnů | posledních 30 dnů |",
-                "|---|---:|---:|---:|"]
+                "| ukazatel | " + " | ".join(WINDOW_HEADS[w] for w in WINDOWS) + " |",
+                "|---|" + "---:|" * len(WINDOWS)]
         for field, label, unit in FLOWS:
             cells = []
             for window in WINDOWS:
@@ -333,13 +421,26 @@ def render(series: list[dict], episodes_rows: list[dict],
             out.append(f"| {label} | " + " | ".join(cells) + " |")
         out.append("")
 
-        comparable = {d: r for d, r in windows[CHART_WINDOW].items()
-                      if date.fromisoformat(d) >= comparable_from}
-        drawn = [line for field, label in CHARTS
-                 for line in chart(comparable, field, label)]
+        drawn = []
+        steps = set()
+        for field, label, window in CHARTS:
+            full_from = comparable_from + timedelta(days=window - 1)
+            usable = {d: r for d, r in windows[window].items()
+                      if date.fromisoformat(d) >= full_from and d <= latest}
+            lines = chart(usable, field, label)
+            if lines:
+                drawn += lines
+                points = [d for d, r in usable.items()
+                          if r.get("den_sebran") != "ne" and as_num(r.get(field)) is not None]
+                steps.add(bucketed([(d, 0.0) for d in sorted(points)])[1])
         if drawn:
+            step = {"den": "den", "týden": "týden (hodnota posledního dne týdne)",
+                    "měsíc": "měsíc (hodnota posledního dne)",
+                    "čtvrtletí": "čtvrtletí (hodnota posledního dne)"}
             out += ["### Vývoj", "",
-                    f"Okno {CHART_WINDOW} dnů. Grafy porostou s řadou.", ""]
+                    f"Celá řada od {comparable_from.day}. {comparable_from.month}. "
+                    f"{comparable_from.year}; jeden bod = "
+                    + " / ".join(step[s] for s in sorted(steps)) + ".", ""]
             out += drawn
         else:
             out += ["### Vývoj", "",
@@ -422,6 +523,15 @@ def notable_tables(episodes_rows: list[dict], limit: int = 5) -> list[str]:
         if not rows:
             out += ["", "_nic_", ""]
             continue
+        if title == "Nejdéle na trhu":
+            oldest = max((as_num(r.get("days_on_market")) or 0) for r in live)
+            tied = sum(1 for r in live if (as_num(r.get("days_on_market")) or 0) >= oldest)
+            if tied > limit:
+                # W47 listed five at 67 days - the age of the dataset, not of
+                # the listings. Which five of the tied was file order.
+                out += ["", f"_V nabídce od začátku sběru ({int(oldest)} dnů) je "
+                            f"{tied} inzerátů; jak dlouho doopravdy, nevíme. "
+                            "Tabulka ukazuje jen pět z nich._"]
         out += ["", "| adresa | dispozice | cena | dnů | změna ceny | úprav |",
                 "|---|---|---:|---:|---:|---:|"]
         for r in rows:
@@ -459,11 +569,23 @@ def export(data_dir: Path = storage.DATA_DIR,
         generated).date() if generated else None)
     series = [row for row in series if (row.get("den") or "") <= through.isoformat()]
 
-    text = render(series, episodes_rows, generated)
     root = data_dir.parent
 
+    # The interactive charts, rebuilt with the report so the two agree. Where
+    # they are published (a private page) is kept in reports/dashboard_url.txt
+    # in the data repository; without it the report links the file itself,
+    # which opens when the repository is on disk.
+    from tools import dashboard
+    dashboard.export(data_dir, generated, through)
+    url_file = root / "reports" / "dashboard_url.txt"
+    url = url_file.read_text(encoding="utf-8").strip() if url_file.exists() else ""
+
+    text = render(series, episodes_rows, generated,
+                  dashboard_link=url or "reports/trh.html")
     path = root / "REPORT.md"
     path.write_text(text, encoding="utf-8")
+    if not url:
+        text = render(series, episodes_rows, generated, dashboard_link="trh.html")
 
     # And a copy that nothing ever overwrites. REPORT.md is the current
     # week's, by definition, so every week it replaces the one before it -

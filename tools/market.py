@@ -99,10 +99,19 @@ from common import cas, storage
 from common.schema import REMOVAL_AFTER_DAYS
 from tools import episodes
 
-# 1 is "today", 7 and 30 are what the report shows. A window of one day is
-# kept because it is the only one that can say "right now", not because it
-# measures anything on its own.
-WINDOWS = (1, 7, 30)
+# 1 is "today"; 7, 30, 90 and 365 are what the report shows - a week, a
+# month, a quarter and a year (90 and 365 since 2026-11-23). A window of one
+# day is kept because it is the only one that can say "right now", not
+# because it measures anything on its own.
+WINDOWS = (1, 7, 30, 90, 365)
+
+# A fall in asking price beyond this is read as a corrected price, not a
+# discount: a price typed with an extra digit and then put right, a listing
+# re-used for a smaller unit. tools/report.py leaves them out of its ranking
+# for the same reason. Rises are left out too - the discount statistics are
+# about discounts. Averaged in, both made "průměr slevy" for rent read
+# -105 % and -143 % in the W47 report.
+CORRECTION_CUT_PCT = 50.0
 
 # A departure inside a fortnight is the strongest evidence available that
 # something sold rather than being withdrawn: a seller who gives up rarely
@@ -121,7 +130,7 @@ MIN_SAMPLE = 5
 
 FIELDS = [
     "den", "segment", "okno_dnu",
-    "uplnost_dnu", "zmizele_potvrzeno", "den_uplny",
+    "uplnost_dnu", "zmizele_potvrzeno", "den_uplny", "den_sebran",
     "nabidka", "nabidka_prumer",
     "cena_median", "cena_prumer", "cena_m2_median", "cena_m2_prumer",
     "stari_median_dnu",
@@ -238,7 +247,10 @@ def levels_on(day: date, on_market: list[dict]) -> dict:
 def measure(day: date, window: int, segment: str, first_day: date,
             on_market: list[dict], arrived: list[dict], left: list[dict],
             supply_mean: float, levels: dict, covered: int,
-            complete_through: date) -> dict:
+            complete_through: date,
+            cut_counts: Optional[list[tuple[dict, int]]] = None,
+            edited: Optional[list[dict]] = None,
+            collected: Optional[bool] = None) -> dict:
     """Every indicator for one (day, window, segment).
 
     The caller does the slicing. It used to be done here, by scanning every
@@ -250,12 +262,23 @@ def measure(day: date, window: int, segment: str, first_day: date,
 
     quick = [r for r in left if (r["days"] or 0) <= QUICK_DAYS]
 
-    cut_in_window = [r for r in on_market
-                     if any(since <= d <= day for d in r["cuts"])]
-    cuts_each = [sum(1 for d in r["cuts"] if since <= d <= day)
-                 for r in cut_in_window]
-    edited_in_window = [r for r in on_market
-                        if any(since <= d <= day for d in r["edits"])]
+    # The caller passes who cut and edited inside the window when it keeps a
+    # running count (daily() does); scanning every live episode's cut days
+    # for every day of every window was most of the run time - 10 of 18
+    # seconds on 67 days of data, and quadratic in the length of the series.
+    if cut_counts is None:
+        cut_counts = [(r, sum(1 for d in r["cuts"] if since <= d <= day))
+                      for r in on_market]
+        cut_counts = [(r, n) for r, n in cut_counts if n]
+    if edited is None:
+        edited = [r for r in on_market
+                  if any(since <= d <= day for d in r["edits"])]
+    cut_in_window = [r for r, _ in cut_counts]
+    cuts_each = [n for _, n in cut_counts]
+    edited_in_window = edited
+    discounts = [r["discount_pct"] for r in cut_in_window
+                 if r["discount_pct"] is not None
+                 and 0 < r["discount_pct"] <= CORRECTION_CUT_PCT]
 
     # Every rate is per DAY OF DATA, not per nominal day of the window. On
     # the first day the 30-day window covers 29 days that do not exist, and
@@ -281,6 +304,12 @@ def measure(day: date, window: int, segment: str, first_day: date,
         # ended yesterday, and today's supply is an undercount until the day's
         # sweeps have all landed.
         "den_uplny": "ano" if day <= complete_through else "ne",
+        # Whether the whole city was walked that day. On a day without the
+        # night pass nothing outside the watched area is looked at, so
+        # departures pile up on the day after the last pass and arrivals on
+        # the first one back: the 31 Oct - 2 Nov outage read as 200 flats
+        # for sale vanishing and coming back. Empty when the logs do not say.
+        "den_sebran": ("" if collected is None else ("ano" if collected else "ne")),
 
         "nabidka_prumer": round(supply_mean, 2),
         **levels,
@@ -307,8 +336,8 @@ def measure(day: date, window: int, segment: str, first_day: date,
         # when the answer was 1.08.
         "zlevneni_prumer": (round(sum(cuts_each) / len(cuts_each), 2)
                             if cuts_each else None),
-        "sleva_median_pct": median(r["discount_pct"] for r in cut_in_window),
-        "sleva_prumer_pct": mean(r["discount_pct"] for r in cut_in_window),
+        "sleva_median_pct": median(discounts),
+        "sleva_prumer_pct": mean(discounts),
 
         "upravilo": len(edited_in_window),
         "upravilo_pct": share(len(edited_in_window), supply_mean),
@@ -316,7 +345,7 @@ def measure(day: date, window: int, segment: str, first_day: date,
 
 
 def daily(rows: list[dict], today: Optional[date] = None,
-          windows=WINDOWS) -> list[dict]:
+          windows=WINDOWS, collected_days: Optional[set] = None) -> list[dict]:
     """One row per (day, segment, window), over the whole span of the data.
 
     Built from episodes, so a property advertised by three agencies counts
@@ -386,6 +415,31 @@ def daily(rows: list[dict], today: Optional[date] = None,
             for index in leaving_on.get(offset, []):
                 live.pop(id(segment_rows[index]), None)
 
+        # Cuts and edits by the day they happened, and per window a running
+        # count of each episode's events inside it: a day adds its events and
+        # drops those that fell out of the window, instead of every live
+        # episode's history being scanned again for every day of every window.
+        cut_on: dict[int, list[dict]] = defaultdict(list)
+        edit_on: dict[int, list[dict]] = defaultdict(list)
+        for row in segment_rows:
+            for d in row["cuts"]:
+                cut_on[(d - first_day).days].append(row)
+            for d in row["edits"]:
+                edit_on[(d - first_day).days].append(row)
+        first_pass = min(collected_days) if collected_days else None
+        cut_count = {w: defaultdict(int) for w in windows}
+        edit_count = {w: defaultdict(int) for w in windows}
+        by_id = {id(row): row for row in segment_rows}
+
+        def slide(counts, events, offset, window):
+            for row in events.get(offset, []):
+                counts[id(row)] += 1
+            for row in events.get(offset - window, []):
+                key = id(row)
+                counts[key] -= 1
+                if counts[key] <= 0:
+                    del counts[key]
+
         # Walked again, this time keeping the live set so the day's stock is
         # carried forward instead of re-derived.
         live = {}
@@ -394,9 +448,16 @@ def daily(rows: list[dict], today: Optional[date] = None,
             for row in starts.get(offset, []):
                 live[id(row)] = row
             on_market = list(live.values())
+            for window in windows:
+                slide(cut_count[window], cut_on, offset, window)
+                slide(edit_count[window], edit_on, offset, window)
 
             if on_market:
                 levels = levels_on(day, on_market)
+                # Before the first logged night pass the collection was
+                # city-wide every hour, so those days count as walked.
+                collected = (None if not collected_days
+                             else day < first_pass or day in collected_days)
                 for window in windows:
                     low = max(0, offset - window + 1)
                     arrived = [r for d in range(low, offset + 1)
@@ -405,9 +466,14 @@ def daily(rows: list[dict], today: Optional[date] = None,
                             for r in ends.get(d, [])]
                     covered = offset - low + 1
                     supply_mean = (running[offset + 1] - running[low]) / covered
+                    cut_counts = [(by_id[k], n) for k, n in cut_count[window].items()
+                                  if k in live]
+                    edited = [by_id[k] for k in edit_count[window] if k in live]
                     out.append(measure(day, window, segment, first_day,
                                        on_market, arrived, left, supply_mean,
-                                       levels, covered, complete_through))
+                                       levels, covered, complete_through,
+                                       cut_counts=cut_counts, edited=edited,
+                                       collected=collected))
 
             for index in leaving_on.get(offset, []):
                 live.pop(id(segment_rows[index]), None)
@@ -443,14 +509,47 @@ def summary(series: list[dict], window: int = 30) -> list[dict]:
     return out
 
 
-def export(data_dir: Path = storage.DATA_DIR, window: int = 30) -> dict:
+def collected_days(logs_dir: Path) -> Optional[set]:
+    """The Prague days on which the whole city was walked, from the run log.
+
+    Every day before the first logged night pass counts as walked: the
+    collection then was city-wide every hour, so the question did not arise.
+    None when there is no log at all - not knowing is not a gap.
+    """
+    import json
+
+    passes = set()
+    any_log = False
+    for path in sorted(Path(logs_dir).glob("*.jsonl")) if Path(logs_dir).exists() else []:
+        any_log = True
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue
+                if entry.get("scope") != "city" or not entry.get("started_at"):
+                    continue
+                try:
+                    passes.add(cas.to_prague(datetime.fromisoformat(
+                        entry["started_at"])).date())
+                except (TypeError, ValueError):
+                    continue
+    if not any_log or not passes:
+        return None
+    return passes
+
+
+def export(data_dir: Path = storage.DATA_DIR, window: int = 30,
+           logs_dir: Optional[Path] = None) -> dict:
     history = data_dir / "csv" / "historie_nemovitosti.csv"
     if not history.exists():
         episodes.export(data_dir)
     with open(history, encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
 
-    series = daily(rows)
+    series = daily(rows, collected_days=collected_days(
+        logs_dir if logs_dir is not None else data_dir.parent / "logs"))
     out_dir = data_dir / "csv"
     out_dir.mkdir(parents=True, exist_ok=True)
 

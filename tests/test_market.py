@@ -380,3 +380,61 @@ def test_the_day_in_progress_is_prague_s_not_greenwich_s():
     by_day = {r["den"]: r["den_uplny"] for r in rows if r["okno_dnu"] == 1}
     assert by_day.get("2026-03-01") == "ano", by_day
     assert by_day.get("2026-03-02") == "ne", by_day
+
+
+# --- 2026-11-23: quarter and year, gaps, discounts that are not discounts -----
+
+
+def test_the_quarter_and_the_year_are_measured():
+    series = market.daily(market_of(10, **LONG))
+    for window in (90, 365):
+        assert cell(series, "2026-03-31", window=window)["nabidka"] == 10
+
+
+def test_cuts_and_edits_slide_out_of_the_window():
+    """The running count must drop what fell out of the window, or every cut
+    ever made would count as 'this week'."""
+    rows = market_of(10, cuts=("2026-01-10",), edits=("2026-01-10",),
+                     discount_pct="5", **LONG)
+    series = market.daily(rows)
+    assert cell(series, "2026-01-12", window=7)["zlevnilo"] == 10
+    assert cell(series, "2026-01-12", window=7)["upravilo"] == 10
+    assert cell(series, "2026-01-20", window=7)["zlevnilo"] == 0
+    assert cell(series, "2026-01-20", window=7)["upravilo"] == 0
+    assert cell(series, "2026-01-20", window=30)["zlevnilo"] == 10
+
+
+def test_a_correction_or_a_rise_is_not_a_discount():
+    """W47: "průměr slevy" for rent read -105 % - a price typed ten times too
+    high and then put right, averaged in with the real discounts."""
+    rows = (market_of(6, cuts=("2026-02-01",), discount_pct="5", **LONG)
+            + [episode("typo", cuts=("2026-02-01",), discount_pct="-900", **LONG),
+               episode("slip", cuts=("2026-02-01",), discount_pct="90", **LONG)])
+    today = cell(market.daily(rows), "2026-02-01")
+    assert today["zlevnilo"] == 8, "they still changed price"
+    assert today["sleva_prumer_pct"] == 5.0
+    assert today["sleva_median_pct"] == 5.0
+
+
+def test_a_day_without_the_night_pass_is_marked(tmp_path):
+    """31 Oct - 2 Nov: no city pass, and supply 'fell' by 200 flats."""
+    import json
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    for day in ("2026-01-30", "2026-02-02"):
+        (logs / f"{day}.jsonl").write_text(
+            json.dumps({"started_at": f"{day}T01:00:00+00:00", "scope": "city"}) + "\n")
+    (logs / "2026-01-31.jsonl").write_text(
+        json.dumps({"started_at": "2026-01-31T12:00:00+00:00", "scope": "area"}) + "\n")
+    days = market.collected_days(logs)
+    series = market.daily(market_of(10, **LONG), collected_days=days)
+    assert cell(series, "2026-01-31")["den_sebran"] == "ne"
+    assert cell(series, "2026-02-01")["den_sebran"] == "ne"
+    assert cell(series, "2026-02-02")["den_sebran"] == "ano"
+    assert cell(series, "2026-01-10")["den_sebran"] == "ano", \
+        "before the first night pass the collection was city-wide hourly"
+
+
+def test_no_log_says_nothing_about_gaps(tmp_path):
+    assert market.collected_days(tmp_path / "missing") is None
+    assert cell(market.daily(market_of(10, **LONG)), "2026-02-01")["den_sebran"] == ""

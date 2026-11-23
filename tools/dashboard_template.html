@@ -1,0 +1,395 @@
+<title>Pražský trh v grafech</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column of chart panels, each with its own controls above the
+   plot and a small table of what the plotted range did beneath it. */
+:root {
+  --bg: #f4f5f2;
+  --surface: #ffffff;
+  --fg: #1c2320;
+  --muted: #5d6862;
+  --line: #d9ddd6;
+  --accent: #1f5fad;
+  --gap: rgba(120, 128, 118, 0.14);
+  --s1: #1f5fad; --s2: #2e8448; --s3: #b45d14;
+  --s4: #8a3fa0; --s5: #c2385c; --s6: #6b7a12;
+  --font-head: "Instrument Sans", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141816; --surface: #1c211f; --fg: #e6ebe7; --muted: #9aa59f;
+    --line: #313834; --accent: #79a8e8; --gap: rgba(200, 210, 200, 0.08);
+    --s1: #79a8e8; --s2: #6cc48a; --s3: #e79a5b; --s4: #c391d6; --s5: #ee8aa4; --s6: #b8c65a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141816; --surface: #1c211f; --fg: #e6ebe7; --muted: #9aa59f;
+  --line: #313834; --accent: #79a8e8; --gap: rgba(200, 210, 200, 0.08);
+  --s1: #79a8e8; --s2: #6cc48a; --s3: #e79a5b; --s4: #c391d6; --s5: #ee8aa4; --s6: #b8c65a;
+  color-scheme: dark;
+}
+/* uPlot 1.6.30 (MIT, Leon Sorokin) - its stylesheet, inlined */
+.uplot,.uplot *,.uplot *::before,.uplot *::after{box-sizing:border-box}.uplot{font-family:var(--font-body);line-height:1.5;width:min-content}.u-wrap{position:relative;user-select:none}.u-over,.u-under{position:absolute}.u-under{overflow:hidden}.uplot canvas{display:block;position:relative;width:100%;height:100%}.u-axis{position:absolute}.u-legend{font-size:13px;margin:auto;text-align:left}.u-inline{display:block}.u-inline *{display:inline-block}.u-inline tr{margin-right:14px}.u-legend th{font-weight:500}.u-legend th>*{vertical-align:middle;display:inline-block}.u-legend .u-marker{width:.9em;height:.9em;margin-right:4px;background-clip:padding-box!important}.u-inline.u-live th::after{content:":";vertical-align:middle}.u-inline:not(.u-live) .u-value{display:none}.u-series>*{padding:2px 4px}.u-series th{cursor:pointer}.u-legend .u-off>*{opacity:.3}.u-select{background:var(--gap);position:absolute;pointer-events:none}.u-cursor-x,.u-cursor-y{position:absolute;left:0;top:0;pointer-events:none;will-change:transform}.u-hz .u-cursor-x,.u-vt .u-cursor-y{height:100%;border-right:1px dashed var(--muted)}.u-hz .u-cursor-y,.u-vt .u-cursor-x{width:100%;border-bottom:1px dashed var(--muted)}.u-cursor-pt{position:absolute;top:0;left:0;border-radius:50%;border:0 solid;pointer-events:none;will-change:transform;background-clip:padding-box!important}.u-axis.u-off,.u-select.u-off,.u-cursor-x.u-off,.u-cursor-y.u-off,.u-cursor-pt.u-off{display:none}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body);
+  font-size: 15px; line-height: 1.5; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.page { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; gap: 6px; }
+h1 { font-family: var(--font-head); font-weight: 700; font-size: 28px; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.meta { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.note { color: var(--muted); font-size: 13px; max-width: 75ch; margin: 0; }
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px; display: grid; gap: 14px; min-width: 0;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.panel-head h2 { font-family: var(--font-head); font-weight: 600; font-size: 18px; margin: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+select, input[type="date"] {
+  font: inherit; font-size: 14px; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; max-width: 100%;
+}
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; flex-wrap: wrap; }
+.seg button {
+  font: inherit; font-size: 13px; padding: 5px 10px; border: 0; background: var(--bg);
+  color: var(--fg); cursor: pointer; border-right: 1px solid var(--line); font-variant-numeric: tabular-nums;
+}
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.seg button:disabled { opacity: 0.4; cursor: not-allowed; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--fg); cursor: pointer;
+}
+.chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--c); opacity: 0.35; }
+.chip[aria-pressed="true"] { border-color: var(--c); }
+.chip[aria-pressed="true"] i { opacity: 1; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plot { min-width: 0; width: 100%; }
+.plot .u-legend { color: var(--fg); }
+.empty { color: var(--muted); font-size: 14px; padding: 40px 0; text-align: center; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; width: 100%; }
+th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+td .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+.up { color: var(--s2); } .down { color: var(--s5); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+  font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent);
+}
+.btn.quiet { border-color: var(--line); color: var(--muted); font-size: 13px; padding: 4px 10px; }
+@media (max-width: 560px) { h1 { font-size: 22px; } .panel { padding: 12px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page" lang="cs">
+  <header>
+    <h1>Pražský trh v grafech</h1>
+    <div class="meta" id="meta"></div>
+    <p class="note" id="notes"></p>
+  </header>
+  <main id="panels" style="display:grid;gap:20px"></main>
+  <div class="actions">
+    <button class="btn" id="add" type="button">Přidat graf</button>
+    <button class="btn quiet" id="reset" type="button">Výchozí grafy</button>
+  </div>
+  <p class="note">Ukazatele „Stav“ jsou hodnota daného dne; ukazatele „Tok“ se počítají za zvolené okno končící tím dnem (např. „Nové“ v okně 30 dnů = nové inzeráty za posledních 30 dnů). Zmizení se potvrzuje až po 5 dnech, takže poslední dny řady odchody podhodnocují. Zmizení neznamená prodej.</p>
+</div>
+
+<script type="application/json" id="trh-data">/*__DATA__*/</script>
+<script src="https://cdn.jsdelivr.net/npm/uplot@1.6.30/dist/uPlot.iife.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  const D = JSON.parse(document.getElementById("trh-data").textContent);
+  const SEG_LABEL = {
+    "vse/prodej": "Vše – prodej", "byt/prodej": "Byty – prodej", "dum/prodej": "Domy – prodej",
+    "vse/pronajem": "Vše – nájem", "byt/pronajem": "Byty – nájem", "dum/pronajem": "Domy – nájem",
+  };
+  const SEG_COLOR = {
+    "vse/prodej": "--s1", "byt/prodej": "--s2", "dum/prodej": "--s3",
+    "vse/pronajem": "--s4", "byt/pronajem": "--s5", "dum/pronajem": "--s6",
+  };
+  const METRIC = Object.fromEntries(D.metrics.map(m => [m.key, m]));
+  const RANGES = [["7", "7 dní"], ["30", "30 dní"], ["90", "90 dní"], ["365", "Rok"], ["all", "Vše"]];
+  const DAY = 86400;
+  const ts = d => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), 12) / 1000;
+  const xs = D.days.map(ts);
+  const gapSet = new Set(D.gaps);
+  const nf0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+  const nf2 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 2 });
+  const fmtDay = d => { const t = new Date(d * 1000); return t.getUTCDate() + ". " + (t.getUTCMonth() + 1) + ". " + t.getUTCFullYear(); };
+  const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  function fmt(v, unit) {
+    if (v == null || Number.isNaN(v)) return "—";
+    const s = (unit === "Kč" || unit === "ks" || unit === "dnů") ? nf0.format(v) : nf2.format(v);
+    return unit === "%" ? s + " %" : (unit === "Kč" ? s + " Kč" : s);
+  }
+
+  const DEFAULTS = [
+    { metric: "nabidka", window: 1, segments: ["byt/prodej", "byt/pronajem"], range: "all", from: "", to: "", smooth: 0, mode: "value" },
+    { metric: "cena_m2_median", window: 1, segments: ["byt/prodej"], range: "all", from: "", to: "", smooth: 0, mode: "value" },
+    { metric: "mesicu_zasoby", window: 30, segments: ["byt/prodej", "byt/pronajem"], range: "all", from: "", to: "", smooth: 0, mode: "value" },
+  ];
+  let panels;
+  try { panels = JSON.parse(localStorage.getItem("trh-panels") || "null"); } catch (e) { panels = null; }
+  if (!Array.isArray(panels) || !panels.length) panels = JSON.parse(JSON.stringify(DEFAULTS));
+  panels = panels.filter(p => METRIC[p.metric]);
+  if (!panels.length) panels = JSON.parse(JSON.stringify(DEFAULTS));
+  const save = () => { try { localStorage.setItem("trh-panels", JSON.stringify(panels)); } catch (e) { /* the page works without it */ } };
+
+  // The meta line and the notes about the data.
+  document.getElementById("meta").textContent =
+    "Data k " + fmtDay(ts(D.latest)) + " · vygenerováno " + D.generated + " · " + D.days.length + " dnů řady";
+  const notes = [];
+  if (D.comparable_from) notes.push("Před " + fmtDay(ts(D.comparable_from)) + " se sběr teprve rozšiřoval na celou Prahu; volba „Vše“ proto začíná tímto dnem.");
+  if (D.gaps.length) notes.push("Dny bez celoměstského sběru (" + D.gaps.map(d => fmtDay(ts(d))).join(", ") + ") jsou v grafech vynechané a podbarvené.");
+  document.getElementById("notes").textContent = notes.join(" ");
+
+  function rangeBounds(p) {
+    const last = xs.length - 1;
+    let lo = D.comparable_from ? Math.max(0, D.days.indexOf(D.comparable_from)) : 0;
+    let hi = last;
+    if (p.range === "custom") {
+      if (p.from) { const i = D.days.findIndex(d => d >= p.from); if (i >= 0) lo = i; }
+      if (p.to) { let i = -1; D.days.forEach((d, k) => { if (d <= p.to) i = k; }); if (i >= 0) hi = i; }
+    } else if (p.range !== "all") {
+      lo = Math.max(0, last - (+p.range) + 1);
+    }
+    return [Math.min(lo, hi), hi];
+  }
+
+  function seriesFor(p, seg) {
+    const m = METRIC[p.metric];
+    const key = seg + "|" + (m.kind === "level" ? 1 : p.window) + "|" + p.metric;
+    const raw = (D.series[key] || []).map((v, i) => (gapSet.has(D.days[i]) ? null : v));
+    if (!p.smooth) return raw;
+    // Trailing mean of the last `smooth` days that have a value.
+    return raw.map((v, i) => {
+      if (v == null) return null;
+      let sum = 0, n = 0;
+      for (let k = i; k > i - p.smooth && k >= 0; k--) if (raw[k] != null) { sum += raw[k]; n++; }
+      return n ? sum / n : null;
+    });
+  }
+
+  function build(panel, index) {
+    const el = document.createElement("section");
+    el.className = "panel";
+    el.innerHTML = `
+      <div class="panel-head"><h2></h2><button class="btn quiet" type="button" data-act="remove">Odebrat</button></div>
+      <div class="controls">
+        <label class="field"><span>Ukazatel</span><select data-k="metric"></select></label>
+        <div class="field"><span>Okno</span><div class="seg" data-k="window"></div></div>
+        <div class="field"><span>Období</span><div class="seg" data-k="range"></div></div>
+        <label class="field"><span>Od</span><input type="date" data-k="from"></label>
+        <label class="field"><span>Do</span><input type="date" data-k="to"></label>
+        <div class="field"><span>Vyhlazení</span><div class="seg" data-k="smooth"></div></div>
+        <div class="field"><span>Zobrazit</span><div class="seg" data-k="mode"></div></div>
+      </div>
+      <div class="field"><span>Segmenty</span><div class="chips" data-k="segments"></div></div>
+      <div class="plot"></div>
+      <div class="table-wrap"><table></table></div>`;
+    el.querySelectorAll("input, select").forEach((c, k) => { c.id = "p" + index + "-" + c.dataset.k; });
+
+    const sel = el.querySelector('[data-k="metric"]');
+    for (const [group, kind] of [["Stav (hodnota dne)", "level"], ["Tok (za okno)", "flow"]]) {
+      const og = document.createElement("optgroup");
+      og.label = group;
+      D.metrics.filter(m => m.kind === kind).forEach(m => {
+        const o = document.createElement("option");
+        o.value = m.key; o.textContent = m.label + (m.unit ? " (" + m.unit + ")" : "");
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    }
+    sel.value = panel.metric;
+    sel.addEventListener("change", () => { panel.metric = sel.value; update(); });
+
+    const segButtons = (k, items) => {
+      const box = el.querySelector(`[data-k="${k}"]`);
+      items.forEach(([value, label]) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.textContent = label; b.dataset.v = value;
+        b.addEventListener("click", () => {
+          panel[k] = (k === "range" || k === "mode") ? value : +value;
+          if (k === "range") { panel.from = ""; panel.to = ""; }
+          update();
+        });
+        box.appendChild(b);
+      });
+    };
+    segButtons("window", D.windows.map(w => [String(w), w === 1 ? "den" : w + " d"]));
+    segButtons("range", RANGES);
+    segButtons("smooth", [["0", "ne"], ["7", "7 d"], ["30", "30 d"]]);
+    segButtons("mode", [["value", "hodnoty"], ["index", "index = 100"]]);
+
+    for (const k of ["from", "to"]) {
+      const input = el.querySelector(`[data-k="${k}"]`);
+      input.min = D.days[0]; input.max = D.days[D.days.length - 1];
+      input.addEventListener("change", () => { panel[k] = input.value; panel.range = "custom"; update(); });
+    }
+
+    const chips = el.querySelector('[data-k="segments"]');
+    D.segments.forEach(seg => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.dataset.v = seg;
+      b.style.setProperty("--c", `var(${SEG_COLOR[seg] || "--muted"})`);
+      b.innerHTML = "<i></i>"; b.appendChild(document.createTextNode(SEG_LABEL[seg] || seg));
+      b.addEventListener("click", () => {
+        const on = panel.segments.includes(seg);
+        panel.segments = on ? panel.segments.filter(s => s !== seg) : D.segments.filter(s => s === seg || panel.segments.includes(s));
+        update();
+      });
+      chips.appendChild(b);
+    });
+
+    el.querySelector('[data-act="remove"]').addEventListener("click", () => {
+      panels.splice(panels.indexOf(panel), 1); save(); renderAll();
+    });
+
+    let plot = null;
+    const plotBox = el.querySelector(".plot");
+    function update() {
+      save();
+      const m = METRIC[panel.metric];
+      el.querySelector("h2").textContent = m.label + (m.kind === "flow" ? " · okno " + (panel.window === 1 ? "1 den" : panel.window + " dnů") : "");
+      el.querySelectorAll('[data-k="window"] button').forEach(b => {
+        b.disabled = m.kind === "level";
+        b.setAttribute("aria-pressed", String(m.kind !== "level" && +b.dataset.v === panel.window));
+      });
+      for (const k of ["range", "smooth", "mode"])
+        el.querySelectorAll(`[data-k="${k}"] button`).forEach(b => b.setAttribute("aria-pressed", String(String(panel[k]) === b.dataset.v)));
+      el.querySelectorAll('[data-k="segments"] .chip').forEach(b => b.setAttribute("aria-pressed", String(panel.segments.includes(b.dataset.v))));
+      const [lo, hi] = rangeBounds(panel);
+      el.querySelector('[data-k="from"]').value = panel.range === "custom" && panel.from ? panel.from : D.days[lo];
+      el.querySelector('[data-k="to"]').value = panel.range === "custom" && panel.to ? panel.to : D.days[hi];
+      draw(lo, hi);
+    }
+
+    function draw(lo, hi) {
+      if (plot) { plot.destroy(); plot = null; }
+      plotBox.innerHTML = "";
+      const table = el.querySelector("table");
+      table.innerHTML = "";
+      const m = METRIC[panel.metric];
+      const segs = panel.segments.filter(s => D.segments.includes(s));
+      if (!segs.length) { plotBox.innerHTML = '<div class="empty">Vyberte aspoň jeden segment.</div>'; return; }
+      const x = xs.slice(lo, hi + 1);
+      const ys = segs.map(seg => {
+        let y = seriesFor(panel, seg).slice(lo, hi + 1);
+        if (panel.mode === "index") {
+          const base = y.find(v => v != null && v !== 0);
+          y = y.map(v => (v == null || base == null ? null : (100 * v) / base));
+        }
+        return y;
+      });
+      if (!ys.some(y => y.some(v => v != null))) { plotBox.innerHTML = '<div class="empty">Pro tento výběr zatím nejsou data.</div>'; return; }
+      const unit = panel.mode === "index" ? "" : m.unit;
+      const fg = css("--fg"), muted = css("--muted"), line = css("--line"), gapFill = css("--gap");
+      const width = Math.max(280, plotBox.clientWidth || el.clientWidth - 32);
+      const spanDays = (x[x.length - 1] - x[0]) / DAY;
+      const tick = (u, vals) => vals.map(v => {
+        const t = new Date(v * 1000);
+        return spanDays > 400 ? (t.getUTCMonth() + 1) + "/" + String(t.getUTCFullYear()).slice(2) : t.getUTCDate() + ". " + (t.getUTCMonth() + 1) + ".";
+      });
+      const gapIdx = D.days.slice(lo, hi + 1).map(d => gapSet.has(d));
+      plot = new uPlot({
+        width, height: Math.min(380, Math.max(240, Math.round(width * 0.42))),
+        scales: { x: { time: true } },
+        cursor: { points: { size: 6 } },
+        legend: { live: true },
+        series: [
+          { label: "Den", value: (u, v) => (v == null ? "—" : fmtDay(v)) },
+          ...segs.map(seg => ({
+            label: SEG_LABEL[seg] || seg, stroke: css(SEG_COLOR[seg] || "--muted"), width: 2,
+            spanGaps: false, points: { show: x.length < 40, size: 4 },
+            value: (u, v) => fmt(v, unit),
+          })),
+        ],
+        axes: [
+          { stroke: muted, grid: { stroke: line, width: 1 }, ticks: { stroke: line }, values: tick, space: 70 },
+          { stroke: muted, grid: { stroke: line, width: 1 }, ticks: { stroke: line }, size: 70,
+            values: (u, vals) => vals.map(v => fmt(v, unit === "Kč" ? "ks" : unit)) },
+        ],
+        hooks: {
+          drawClear: [u => {
+            // Shade the days without the night pass.
+            const ctx = u.ctx;
+            ctx.save(); ctx.fillStyle = gapFill;
+            gapIdx.forEach((g, i) => {
+              if (!g) return;
+              const a = u.valToPos(x[i] - DAY / 2, "x", true), b = u.valToPos(x[i] + DAY / 2, "x", true);
+              ctx.fillRect(a, u.bbox.top, b - a, u.bbox.height);
+            });
+            ctx.restore();
+          }],
+        },
+      }, [x, ...ys], plotBox);
+      plotBox.querySelectorAll(".u-legend").forEach(l => { l.style.color = fg; });
+
+      // What the plotted range did, per segment.
+      const head = "<tr><th>Segment</th><th>Začátek</th><th>Konec</th><th>Změna</th><th>Min.</th><th>Max.</th></tr>";
+      const rows = segs.map((seg, k) => {
+        const pts = ys[k].map((v, i) => [x[i], v]).filter(p => p[1] != null);
+        if (!pts.length) return "";
+        const first = pts[0], last = pts[pts.length - 1];
+        const vals = pts.map(p => p[1]);
+        const pct = first[1] ? (100 * (last[1] - first[1])) / Math.abs(first[1]) : null;
+        const cls = pct == null || Math.abs(pct) < 0.5 ? "" : pct > 0 ? "up" : "down";
+        const chg = pct == null ? "—" : (pct > 0 ? "+" : "") + nf2.format(pct) + " %";
+        return `<tr><td style="--c:var(${SEG_COLOR[seg] || "--muted"})"><span class="dot"></span>${SEG_LABEL[seg] || seg}</td>` +
+          `<td title="${fmtDay(first[0])}">${fmt(first[1], unit)}</td><td title="${fmtDay(last[0])}">${fmt(last[1], unit)}</td>` +
+          `<td class="${cls}">${chg}</td><td>${fmt(Math.min(...vals), unit)}</td><td>${fmt(Math.max(...vals), unit)}</td></tr>`;
+      }).join("");
+      table.innerHTML = head + rows;
+    }
+
+    el._update = update;
+    return el;
+  }
+
+  const host = document.getElementById("panels");
+  function renderAll() {
+    host.innerHTML = "";
+    panels.forEach((p, i) => { const el = build(p, i); host.appendChild(el); el._update(); });
+  }
+  document.getElementById("add").addEventListener("click", () => {
+    panels.push({ metric: "zlevnilo_pct", window: 30, segments: ["byt/prodej"], range: "all", from: "", to: "", smooth: 0, mode: "value" });
+    save(); renderAll();
+  });
+  document.getElementById("reset").addEventListener("click", () => {
+    panels = JSON.parse(JSON.stringify(DEFAULTS)); save(); renderAll();
+  });
+
+  let timer = null;
+  const redraw = () => { clearTimeout(timer); timer = setTimeout(() => host.querySelectorAll(".panel").forEach(el => el._update()), 150); };
+  window.addEventListener("resize", redraw);
+  if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
+  new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  if (window.uPlot) renderAll();
+  else window.addEventListener("load", () => {
+    if (window.uPlot) renderAll();
+    else host.innerHTML = '<div class="panel"><p class="empty">Knihovnu grafů se nepodařilo načíst (cdn.jsdelivr.net). Stránka potřebuje připojení k internetu.</p></div>';
+  });
+})();
+</script>

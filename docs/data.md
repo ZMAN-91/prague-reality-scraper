@@ -195,6 +195,28 @@ ignorovat.
 `trh_souhrn.csv` je totéž jako poslední hodnota vedle hodnoty před 30 dny
 a procentní změna — nejmenší věc, která je ještě trend, a ne odečet.
 
+**Okna** (`okno_dnu`) jsou 1, 7, 30, 90 a 365 dnů — den, týden, měsíc,
+čtvrtletí a rok (90 a 365 od 23. 11. 2026). Report je ukazuje vedle sebe.
+
+**`den_sebran`** říká, jestli ten den proběhl noční celoměstský průchod
+(z `logs/`). V den bez něj se odchody a příchody nevidí a zapíšou se až
+první den po něm — výpadek 31. 10.–2. 11. 2026 vypadal jako 200 bytů, které
+zmizely a vrátily se. Report i grafy tyto dny vynechávají.
+
+**`sleva_median_pct` / `sleva_prumer_pct`** počítají jen poklesy do 50 %;
+větší jsou skoro vždy oprava překlepu v ceně a zdražení slevou není
+(průměr u pronájmů jinak ukazoval −143 %).
+
+### `reports/trh.html` — interaktivní grafy
+
+Vzniká s týdenním reportem (`tools/dashboard.py`, šablona
+`tools/dashboard_template.html`) a obsahuje celou `trh_denne.csv`: libovolný
+ukazatel, segmenty vedle sebe, okno, období (7/30/90 dní, rok, vše, vlastní),
+vyhlazení a index začátku období = 100. Data jsou ve stránce, takže se dá
+otevřít i stažená z disku; knihovna grafů (uPlot) se načítá z
+cdn.jsdelivr.net. Report na ni odkazuje — na adresu v
+`reports/dashboard_url.txt`, když stránka někde visí, jinak na soubor.
+
 ## Na co si dát pozor
 
 **`price_per_m2` může chybět.** Když index portálu pošle cenu bez plochy,
